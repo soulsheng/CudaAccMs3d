@@ -1,0 +1,48 @@
+cuda加速骨骼动画的算法
+
+一、数据结构
+
+typedef float3 POS; // 坐标
+typedef int   INDEX;// 绑定关节的索引
+
+struct Vertexes{
+POS*  pVertex;
+INDEX*  pIndex;
+int   nSize;// 顶点的数目
+
+// 获取顶点坐标
+void Vertexes::initialize(int size, float* pBufferPOS, int* pBufferIndex){
+nSize = size;
+pVertex = new POS[nSize];
+pIndex = new INDEX[nSize];
+memcpy( pVertex, pBufferPOS, sizeof(POS) * nSize;
+memcpy( pIndex, pBufferIndex, sizeof(INDEX) * nSize;
+}
+Vertexes(){
+pVertex=NULL;
+pIndex=NULL;
+}
+~Vertexes(){
+delete[] pVertex;
+delete[] pIndex;
+}
+};// 顶点的集合
+
+typedef float3[3]	MAT;// 矩阵
+
+struct Joints{
+MAT*  pMat;
+int   nSize;// 关节的数目
+};// 关节的集合
+
+二、数据与算法
+1、数据
+
+Vertexes	_vertexes;
+Joints		_joints;
+
+2、算法
+
+
+
+三、环境配置
