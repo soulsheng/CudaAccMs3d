@@ -1,4 +1,4 @@
-cuda加速骨骼动画的算法
+﻿cuda加速骨骼动画的算法
 
 一、数据结构
 
@@ -6,43 +6,60 @@ typedef float3 POS; // 坐标
 typedef int   INDEX;// 绑定关节的索引
 
 struct Vertexes{
+
+// 获取顶点坐标
+void initialize(int size, float* pBufferPOS, int* pBufferIndex){
+nSize = size;
+pVertex = new POS[nSize];
+pIndex = new INDEX[nSize];
+memcpy( pVertex, pBufferPOS, sizeof(POS) * nSize );
+memcpy( pIndex, pBufferIndex, sizeof(INDEX) * nSize );
+}
+
 POS*  pVertex;
 INDEX*  pIndex;
 int   nSize;// 顶点的数目
 
-// 获取顶点坐标
-void Vertexes::initialize(int size, float* pBufferPOS, int* pBufferIndex){
-nSize = size;
-pVertex = new POS[nSize];
-pIndex = new INDEX[nSize];
-memcpy( pVertex, pBufferPOS, sizeof(POS) * nSize;
-memcpy( pIndex, pBufferIndex, sizeof(INDEX) * nSize;
-}
-Vertexes(){
-pVertex=NULL;
-pIndex=NULL;
-}
-~Vertexes(){
-delete[] pVertex;
-delete[] pIndex;
-}
 };// 顶点的集合
 
 typedef float3[3]	MAT;// 矩阵
 
 struct Joints{
+
+// 获取关节矩阵
+void initialize( int size, float* pBufferMAT ){
+nSize = size;
+pMat = new MAT[nSize];
+memcpy( pMat, pBufferMAT, sizeof(MAT) * nSize );
+}
+
 MAT*  pMat;
 int   nSize;// 关节的数目
+
 };// 关节的集合
 
 二、数据与算法
 1、数据
-
 Vertexes	_vertexes;
 Joints		_joints;
 
 2、算法
-
+数据初始化
 
 
 三、环境配置
+1、运行环境
+操作系统：Windows 7
+显卡：Nvidia Geforce GTX 670（1344核）
+CPU： Intel i7 3770k（4核）
+
+2、编程环境
+CUDA工具包：CUDA v4.2
+编译工具：Visual Studio 2010
+
+3、问题建模
+在使用计算机的前沿技术解决现实中的某个应用难题时，为了探索一套行之有效而又具有普遍参考价值的方案，需要先为问题的原型建立抽象的数学模型。本文的问题原型是如何提升三维计算机动画绘制过程的时间效率，其中：三维计算机动画以骨骼动画为例；绘制过程划分为以下三个环节，从文件解析并获取骨骼关节矩阵和顶点坐标，更新关节矩阵和顶点坐标，以动态三维纹理面片的方式输出顶点坐标最终形成三维动画；时间效率的指标是单位时间内绘制过程可被循环执行的次数。问题原型的核心是绘制过程，绘制过程的三个环节可以抽象为对两种数据结构的三种操作，其中数据结构指关节矩阵和顶点坐标，操作包含输入矩阵和坐标、更新矩阵和坐标、输出坐标。
+本文基于以上抽象模型展开一系列理论分析和实验印证，探索得到解决方案，最终反馈到问题原型，通过实际应用进一步验证问题解决方案的可行性。
+基于以上抽象模型，通过理论分析评估时间效率的瓶颈位置，然后通过实验进行验证，并逐渐缩小瓶颈范围，最终得到粒度适中的瓶颈区域，以该区域作为优化目标进行优化，以求弱化或消除瓶颈。1）第一个环节是一次性的初始化工作，本身不占用实时计算与渲染的时间，所产生数据的内容与时间效率无关；2）第二个环节占用95%以上的时间，划分为以下2个部分：顶点更新，关节矩阵更新，顶点的运算量远远大于关节矩阵，而且顶点的运算量与。着重关注更新运算，上游解析数据用模拟数据代替，并忽略下游结果输出。实验结束以后，将用真实骨骼动画数据进行验证。
+更新运算
+
