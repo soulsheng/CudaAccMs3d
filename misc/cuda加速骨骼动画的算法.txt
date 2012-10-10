@@ -7,38 +7,39 @@
 
 二、数据结构
 
-typedef float3 POS; // 坐标
-typedef int   INDEX;// 绑定关节的索引
+typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
 
 struct Vertexes{
 
 // 获取顶点坐标
 void initialize(int size, float* pBufferPOS, int* pBufferIndex){
 nSize = size;
-pVertex = new POS[nSize];
-pIndex = new INDEX[nSize];
-memcpy( pVertex, pBufferPOS, sizeof(POS) * nSize );
-memcpy( pIndex, pBufferIndex, sizeof(INDEX) * nSize );
+pVertex = new Vertex[nSize];
+for(int i=0;i<nSize;i++){
+pVertex[i].x = pBufferPos[i*3];
+pVertex[i].y = pBufferPos[i*3+1];
+pVertex[i].z = pBufferPos[i*3+2];
+pVertex[i].w = pBufferIndex[i];
+}
 }
 
-POS*  pVertex;
-INDEX*  pIndex;
+Vertex*  pVertex;
 int   nSize;// 顶点的数目
 
 };// 顶点的集合
 
-typedef float3[3]	MAT;// 矩阵
+typedef float3[3]	MATRIX;// 矩阵
 
 struct Joints{
 
 // 获取关节矩阵
 void initialize( int size, float* pBufferMAT ){
 nSize = size;
-pMat = new MAT[nSize];
+pMat = new MATRIX[nSize];
 memcpy( pMat, pBufferMAT, sizeof(MAT) * nSize );
 }
 
-MAT*  pMat;
+MATRIX*  pMat;
 int   nSize;// 关节的数目
 
 };// 关节的集合
