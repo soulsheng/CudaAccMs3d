@@ -1,4 +1,4 @@
 CudaAccMs3d
 ===========
 
-Accelarate Ms3d with Nvidia CUDDA
+Accelarate Ms3d with Nvidia CUDA
