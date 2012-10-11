@@ -33,7 +33,7 @@
     <ClInclude Include="Vector.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="stopwatch_win.h">
+    <ClInclude Include="..\common\stopwatch_win.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -44,7 +44,7 @@
     <ClCompile Include="updateVectorByMatrix.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="stopwatch_win.cpp">
+    <ClCompile Include="..\common\stopwatch_win.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
