@@ -6,6 +6,7 @@
 #include "Vertex.h"
 #include "Joint.h"
 #include "Vector.h"
+#include "stopwatch_win.h"
 
 // 数据定义
 Vertexes  _vertexesStatic;//静态顶点坐标
@@ -23,9 +24,23 @@ int _tmain(int argc, _TCHAR* argv[])
 	// 数据初始化：坐标、矩阵
 	initialize(PROBLEM_SIZE, JOINT_SIZE);
 	
-	// 执行运算：坐标矩阵变换
-	updateVectorByMatrix(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
+	int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
 	
+	StopWatchWin timer;
+	timer.start();
+	
+	while ( timer.getTime() < 1000  )
+	{
+		// 执行运算：坐标矩阵变换
+		updateVectorByMatrix(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
+		nRepeatPerSecond ++;
+	}
+	
+	timer.stop();
+	
+	// 查看时间效率
+	printf("F=%d, T=%.3f ms", nRepeatPerSecond, 1000.0f/nRepeatPerSecond);
+
 	// 输出结果：绘制坐标，按照点、线、面的形式
 	// ...省略
 
