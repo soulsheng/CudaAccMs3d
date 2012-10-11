@@ -72,6 +72,7 @@ pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
 void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
+#pragma omp parallel for
 	for(int i=0;i<size;i++){
 		float4   vertexIn, vertexOut;
 		float3   matrix[3];
