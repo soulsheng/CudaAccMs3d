@@ -25,3 +25,5 @@
 /code/bin/Debug_OpenMP/*.pdb
 /code/bin/Release/*.pdb
 /code/bin/Release_OpenMP/*.pdb
+/code/source/*.suo
+/code/source/updateVectorByMatrixPro/*.user
