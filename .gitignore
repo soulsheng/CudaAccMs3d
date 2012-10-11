@@ -19,3 +19,9 @@
 /code/source/updateVectorByMatrix/Debug_OpenMP
 /code/source/updateVectorByMatrix/Release_OpenMP
 /code/source/updateVectorByMatrix/Release
+/code/bin/Debug/*.ilk
+/code/bin/Debug/*.pdb
+/code/bin/Debug_OpenMP/*.ilk
+/code/bin/Debug_OpenMP/*.pdb
+/code/bin/Release/*.pdb
+/code/bin/Release_OpenMP/*.pdb
