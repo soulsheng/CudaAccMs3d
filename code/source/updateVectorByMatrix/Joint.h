@@ -29,6 +29,12 @@ struct Joints{
 		}
 	}
 
+	// 释放空间
+	void unInitialize()
+	{
+		if (pMatrix) delete[] pMatrix;
+	}
+
 	Matrix*  pMatrix;
 	int   nSize;// 关节的数目
 

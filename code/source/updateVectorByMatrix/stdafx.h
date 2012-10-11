@@ -11,8 +11,6 @@
 #include <tchar.h>
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
-#define    PROBLEM_SCALE 1 // 1, 4, 16, 64, 256
-#define    PROBLEM_SIZE  ( MEGA_SIZE * PROBLEM_SCALE )  // n Mega elements
 #define    JOINT_SIZE    100
 
 

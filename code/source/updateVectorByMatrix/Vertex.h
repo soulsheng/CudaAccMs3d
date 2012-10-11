@@ -32,6 +32,12 @@ struct Vertexes{
 		}
 	}
 
+	// 释放空间
+	void unInitialize()
+	{
+		if (pVertex) delete[] pVertex;
+	}
+
 	Vertex*  pVertex;
 	int   nSize;// 顶点的数目
 
