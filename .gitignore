@@ -27,3 +27,9 @@
 /code/bin/Release_OpenMP/*.pdb
 /code/source/*.suo
 /code/source/updateVectorByMatrixPro/*.user
+/code/source/Release/*.pdb
+/code/source/updateVectorByMatrixPro/Release
+/code/source/*.sdf
+/code/source/*.opensdf
+/code/source/ipch/updatevectorbymatrixpro-9624ac49/*.ipch
+/code/Release/*.pdb
