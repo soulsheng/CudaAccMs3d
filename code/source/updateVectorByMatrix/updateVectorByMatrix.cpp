@@ -8,7 +8,7 @@
 #include "Vector.h"
 #include "stopwatch_win.h"
 
-float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32, 64 }; // 问题规模档次，9档，250K至64M，2倍递增
+float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
 int iClass=6;
 

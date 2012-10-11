@@ -16,3 +16,6 @@
 /code/source/updateVectorByMatrix/*.sdf
 /code/source/updateVectorByMatrix/*.opensdf
 /code/source/updateVectorByMatrix/*.suo
+/code/source/updateVectorByMatrix/Debug_OpenMP
+/code/source/updateVectorByMatrix/Release_OpenMP
+/code/source/updateVectorByMatrix/Release
