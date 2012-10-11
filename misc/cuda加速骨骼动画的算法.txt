@@ -8,15 +8,15 @@
 二、数据结构
 
 //关节矩阵---------------------------------------------------------
-typedef float3[3]  Matrix;// 矩阵
+typedef float3  Matrix[3];// 矩阵
 
 struct Joints{
 
 // 获取关节矩阵
-void initialize( int size, float* pBufferMAT ){
+void initialize( int size, float* pBufferMatrix ){
 nSize = size;
 pMatrix = new Matrix[nSize];
-memcpy( pMatrix, pBufferMAT, sizeof(Matrix) * nSize );
+memcpy( pMatrix, pBufferMatrix, sizeof(Matrix) * nSize );
 }
 
 // 获取关节矩阵 模拟
@@ -24,7 +24,7 @@ void initialize( int size ){
 nSize = size;
 pMatrix = new Matrix[nSize];
 for(int i=0;i<nSize;i++){
-for(int j=0;i<3;j++){
+for(int j=0;j<3;j++){
 pMatrix[i][j].x = rand();
 pMatrix[i][j].y = rand();
 pMatrix[i][j].z = rand();
@@ -43,13 +43,13 @@ typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
 struct Vertexes{
 
 // 获取顶点坐标
-void initialize(int size, float* pBufferPOS, int* pBufferIndex){
+void initialize(int size, float* pBufferCoord, int* pBufferIndex){
 nSize = size;
 pVertex = new Vertex[nSize];
 for(int i=0;i<nSize;i++){
-pVertex[i].x = pBufferPos[i*3];
-pVertex[i].y = pBufferPos[i*3+1];
-pVertex[i].z = pBufferPos[i*3+2];
+pVertex[i].x = pBufferCoord[i*3];
+pVertex[i].y = pBufferCoord[i*3+1];
+pVertex[i].z = pBufferCoord[i*3+2];
 pVertex[i].w = pBufferIndex[i];
 }
 }
@@ -74,12 +74,12 @@ int   nSize;// 顶点的数目
 三、算法
 
 /* 坐标矩阵变换
-pVertexIn  : 初始坐标数组参数输入
+pVertexIn  : 静态坐标数组参数输入
 size : 坐标个数参数
 pMatrix : 矩阵数组参数
-pVertexOut : 新坐标数组结果输出
+pVertexOut : 动态坐标数组结果输出
 */
-void updateVertexPositionByJointMatrix(Vertexes* pVertexIn, int size, Matrix* pMatrix, Vertexes* pVertexOut){
+void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
 for(int i=0;i<size;i++){
 float4   vertexIn, vertexOut;
 float3   matrix[3];
@@ -106,7 +106,7 @@ pVertexOut[i] = vertexOut;
 }
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
-#define    PROBLEM_SCALE 1
+#define    PROBLEM_SCALE 1 // 1, 4, 16, 64, 256
 #define    PROBLEM_SIZE  ( MEGA_SIZE * PROBLEM_SCALE )  // n Mega elements
 #define    JOINT_SIZE    100
 
@@ -121,7 +121,7 @@ _vertexesStatic.initialize( PROBLEM_SIZE, JOINT_SIZE );
 _vertexesDynamic.initialize( PROBLEM_SIZE, JOINT_SIZE );
 
 // 执行运算：坐标矩阵变换
-updateVertexPositionByJointMatrix( _vertexesIn.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesOut.pVertex);
+updateVectorByMatrix( _vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
 
 // 输出结果：绘制坐标，按照点、线、面的形式
 // ...省略
