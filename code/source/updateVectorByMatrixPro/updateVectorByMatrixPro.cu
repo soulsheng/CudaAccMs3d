@@ -7,10 +7,12 @@
 #include "Joint.h"
 #include "Vector.h"
 #include "../common/stopwatch_win.h"
+#include "cuda_runtime.h"
+#include "cuda_runtime_api.h"
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
-int iClass=6;
+int iClass=7;
 
 // 数据定义
 Vertexes  _vertexesStatic;//静态顶点坐标
@@ -21,7 +23,7 @@ Joints		_joints;//关节矩阵
 void initialize(int problem_size, int joint_size);
 
 // 坐标矩阵变换
-void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut);
+__global__ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut);
 
 // 数据销毁：坐标、矩阵
 void unInitialize();
@@ -45,7 +47,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		while ( timer.getTime() < 10000  )
 		{
 			// 执行运算：坐标矩阵变换
-			updateVectorByMatrix(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
+			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertexDevice);
+			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
 		}
 
@@ -71,9 +74,9 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
-void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
-#pragma omp parallel for
-	for(int i=0;i<size;i++){
+__global__ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
+	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
+	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 		float4   vertexIn, vertexOut;
 		float3   matrix[3];
 		int      matrixIndex;
@@ -95,7 +98,6 @@ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* 
 		// 写入操作结果：新坐标
 		pVertexOut[i] = vertexOut;
 	}
-
 }
 
 // 数据初始化：坐标、矩阵

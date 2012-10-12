@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "Vector.h"
+#include "cuda_runtime.h"
 
 //关节矩阵---------------------------------------------------------
 typedef float3  Matrix[3];// 矩阵
@@ -14,6 +15,9 @@ struct Joints{
 		nSize = size;
 		pMatrix = new Matrix[nSize];
 		memcpy( pMatrix, pBufferMatrix, sizeof(Matrix) * nSize );
+
+		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;//Vertex[nSize];
+		cudaMemcpy( pMatrixDevice, pMatrix, sizeof(Matrix)*nSize, cudaMemcpyHostToDevice );
 	}
 
 	// 获取关节矩阵 模拟
@@ -27,15 +31,19 @@ struct Joints{
 				pMatrix[i][j].z = rand() * 1.0f;
 			}
 		}
+
+		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;//Vertex[nSize];
+		cudaMemcpy( pMatrixDevice, pMatrix, sizeof(Matrix) * nSize, cudaMemcpyHostToDevice );
 	}
 
 	// 释放空间
 	void unInitialize()
 	{
 		if (pMatrix) delete[] pMatrix;
+		if (pMatrixDevice) cudaFree(pMatrixDevice) ;
 	}
 
-	Matrix*  pMatrix;
+	Matrix*  pMatrix, *pMatrixDevice;
 	int   nSize;// 关节的数目
 
 };// 关节的集合
