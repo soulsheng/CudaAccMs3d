@@ -35,3 +35,5 @@
 /code/Release/*.pdb
 /code/source/updateVectorByMatrixPro/Debug
 /code/source/ipch/updatevectorbymatrix-16e3b779/*.ipch
+/code/source/ipch/updatevectorbymatrixpro-fb21061b/*.ipch
+/code/source/updateVectorByMatrixPro/*.pdb
