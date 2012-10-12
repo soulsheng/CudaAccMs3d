@@ -12,7 +12,7 @@
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
-int iClass=7;
+int iClass=6; // 问题规模最大值，16M/1G显存、32M/2G显存
 
 // 数据定义
 Vertexes  _vertexesStatic;//静态顶点坐标

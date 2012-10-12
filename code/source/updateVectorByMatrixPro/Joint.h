@@ -16,7 +16,7 @@ struct Joints{
 		pMatrix = new Matrix[nSize];
 		memcpy( pMatrix, pBufferMatrix, sizeof(Matrix) * nSize );
 
-		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;//Vertex[nSize];
+		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;
 		cudaMemcpy( pMatrixDevice, pMatrix, sizeof(Matrix)*nSize, cudaMemcpyHostToDevice );
 	}
 
@@ -32,7 +32,7 @@ struct Joints{
 			}
 		}
 
-		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;//Vertex[nSize];
+		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;
 		cudaMemcpy( pMatrixDevice, pMatrix, sizeof(Matrix) * nSize, cudaMemcpyHostToDevice );
 	}
 
