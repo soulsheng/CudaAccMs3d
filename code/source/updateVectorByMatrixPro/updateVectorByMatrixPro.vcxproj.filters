@@ -30,13 +30,13 @@
     <ClInclude Include="Joint.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Vector.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Vertex.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\common\stopwatch_win.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="updateVectorByMatrix.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

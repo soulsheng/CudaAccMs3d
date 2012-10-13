@@ -5,7 +5,7 @@
 #include "Vector.h"
 
 //¹Ø½Ú¾ØÕó---------------------------------------------------------
-typedef float3  Matrix[3];// ¾ØÕó
+typedef float4  Matrix[3];// ¾ØÕó
 
 struct Joints{
 
@@ -25,6 +25,7 @@ struct Joints{
 				pMatrix[i][j].x = rand() * 1.0f;
 				pMatrix[i][j].y = rand() * 1.0f;
 				pMatrix[i][j].z = rand() * 1.0f;
+				pMatrix[i][j].w = rand() * 1.0f;
 			}
 		}
 	}

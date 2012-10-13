@@ -8,6 +8,7 @@
 #include "Vector.h"
 #include "../common/stopwatch_win.h"
 #include "updateVectorByMatrixPro.cuh"
+#include "updateVectorByMatrix.h"
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
@@ -43,13 +44,16 @@ int _tmain(int argc, _TCHAR* argv[])
 		while ( timer.getTime() < 10000  )
 		{
 			// 执行运算：坐标矩阵变换
-			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertexDevice);
+			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
 			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
 		}
 
 		timer.stop();
 		timer.reset();
+
+		// 验证GPU运算的正确性，是否和CPU运算结果一致
+		//updateVectorByMatrixGold(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
 		
 		// 数据销毁：坐标、矩阵
 		unInitialize();

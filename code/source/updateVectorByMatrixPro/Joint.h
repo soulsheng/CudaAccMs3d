@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "Vector.h"
 #include "cuda_runtime.h"
 
 //¹Ø½Ú¾ØÕó---------------------------------------------------------

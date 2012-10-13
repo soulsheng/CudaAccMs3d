@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Joint.h"
-#include "Vector.h"
 #include "cuda_runtime.h"
 
 //¶¥µã×ø±ê---------------------------------------------------------

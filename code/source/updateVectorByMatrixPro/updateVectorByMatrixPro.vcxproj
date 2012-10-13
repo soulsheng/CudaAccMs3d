@@ -98,7 +98,7 @@
     <ClInclude Include="Joint.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="Vector.h" />
+    <ClInclude Include="updateVectorByMatrix.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
