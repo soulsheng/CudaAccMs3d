@@ -59,8 +59,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		updateVectorByMatrixGold(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
 
 		// 获取GPU运算结果
-		Vertex *pVertex = new Vertex[PROBLEM_SIZE];
-		cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(Vertex) * PROBLEM_SIZE, cudaMemcpyDeviceToHost );
+		Vector4 *pVertex = new Vector4[PROBLEM_SIZE];
+		cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(Vector4) * PROBLEM_SIZE, cudaMemcpyDeviceToHost );
 		
 		// 比较结果
 		bResult = equalVector( _vertexesDynamic.pVertex , PROBLEM_SIZE, pVertex );

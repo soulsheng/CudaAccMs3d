@@ -10,11 +10,11 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
-void updateVectorByMatrixGold(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
+void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
-		float4   vertexIn, vertexOut;
-		float4   matrix[3];
+		Vector4   vertexIn, vertexOut;
+		Vector4   matrix[3];
 		int      matrixIndex;
 
 		// 读取操作数：初始的顶点坐标
@@ -43,11 +43,11 @@ size : 坐标个数
 pVertexBase : 参考坐标数组
 返回值： 1表示坐标相同，0表示坐标不同
 */
-bool equalVector(Vertex* pVertex, int size, Vertex* pVertexBase)
+bool equalVector(Vector4* pVertex, int size, Vector4* pVertexBase)
 {
 	for(int i=0;i<size;i++)
 	{
-		float4   vertex, vertexBase;
+		Vector4   vertex, vertexBase;
 		vertex = pVertex[i];
 		vertexBase = pVertexBase[i];
 		if (fabs(vertex.x - vertexBase.x) / vertexBase.x >1.0e-3 || 

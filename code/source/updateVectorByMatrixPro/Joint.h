@@ -4,8 +4,16 @@
 #include <string.h>
 #include "cuda_runtime.h"
 
+#define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
+
+#if ALIGNED_STRUCT
+typedef float4	Vector4;
+#else
+struct Vector4 { float x,y,z,w; };
+#endif
+
 //关节矩阵---------------------------------------------------------
-typedef float4  Matrix[3];// 矩阵
+typedef Vector4  Matrix[3];// 矩阵
 
 struct Joints{
 

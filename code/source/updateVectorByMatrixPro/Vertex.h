@@ -4,14 +4,13 @@
 #include "cuda_runtime.h"
 
 //顶点坐标---------------------------------------------------------
-typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
-
+//typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
 struct Vertexes{
 
 	// 获取顶点坐标，内存到显存
 	void initialize(int size, float* pBufferCoord, int* pBufferIndex){
 		nSize = size;
-		pVertex = new Vertex[nSize];
+		pVertex = new Vector4[nSize];
 		for(int i=0;i<nSize;i++){
 			pVertex[i].x = pBufferCoord[i*3];
 			pVertex[i].y = pBufferCoord[i*3+1];
@@ -19,15 +18,15 @@ struct Vertexes{
 			pVertex[i].w = pBufferIndex[i] * 1.0f;
 		}
 
-		cudaMalloc( &pVertexDevice, sizeof(Vertex) * nSize ) ;//Vertex[nSize];
-		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vertex) * nSize, cudaMemcpyHostToDevice );
+		cudaMalloc( &pVertexDevice, sizeof(Vector4) * nSize ) ;//Vertex[nSize];
+		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vector4) * nSize, cudaMemcpyHostToDevice );
 
 	}
 
 	// 获取顶点坐标 模拟
 	void initialize(int size, int sizeJoint){
 		nSize = size;
-		pVertex = new Vertex[nSize];
+		pVertex = new Vector4[nSize];
 		for(int i=0;i<nSize;i++){
 			pVertex[i].x = rand() * 1.0f;
 			pVertex[i].y = rand() * 1.0f;
@@ -35,8 +34,8 @@ struct Vertexes{
 			pVertex[i].w = rand() % sizeJoint  * 1.0f;
 		}
 
-		cudaMalloc( &pVertexDevice, sizeof(Vertex) * nSize ) ;//Vertex[nSize];
-		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vertex) * nSize, cudaMemcpyHostToDevice );
+		cudaMalloc( &pVertexDevice, sizeof(Vector4) * nSize ) ;//Vertex[nSize];
+		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vector4) * nSize, cudaMemcpyHostToDevice );
 
 	}
 
@@ -47,7 +46,7 @@ struct Vertexes{
 		if (pVertexDevice) cudaFree(pVertex) ;
 	}
 
-	Vertex*  pVertex, *pVertexDevice;
+	Vector4*  pVertex, *pVertexDevice;
 	int   nSize;// 顶点的数目
 
 };// 顶点的集合

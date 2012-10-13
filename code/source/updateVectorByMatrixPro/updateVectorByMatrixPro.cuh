@@ -13,12 +13,12 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
-__global__ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut)
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut)
 {
 	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
 	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
-		float4   vertexIn, vertexOut;
-		float4   matrix[3];
+		Vector4   vertexIn, vertexOut;
+		Vector4   matrix[3];
 		int      matrixIndex;
 
 		// 读取操作数：初始的顶点坐标
