@@ -6,7 +6,7 @@
 #include "cuda_runtime.h"
 
 //¹Ø½Ú¾ØÕó---------------------------------------------------------
-typedef float3  Matrix[3];// ¾ØÕó
+typedef float4  Matrix[3];// ¾ØÕó
 
 struct Joints{
 

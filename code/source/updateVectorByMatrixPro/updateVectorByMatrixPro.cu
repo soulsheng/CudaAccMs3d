@@ -78,7 +78,7 @@ __global__ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatri
 	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
 	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 		float4   vertexIn, vertexOut;
-		float3   matrix[3];
+		float4   matrix[3];
 		int      matrixIndex;
 
 		// 读取操作数：初始的顶点坐标
@@ -91,9 +91,9 @@ __global__ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatri
 		matrix[2] = pMatrix[matrixIndex][2];
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z ; 
-		vertexOut.y = vertexIn.x * matrix[1].x + vertexIn.y * matrix[1].y + vertexIn.z * matrix[1].z ; 
-		vertexOut.z = vertexIn.x * matrix[2].x + vertexIn.y * matrix[2].y + vertexIn.z * matrix[2].z ; 
+		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z + matrix[0].w ; 
+		vertexOut.y = vertexIn.x * matrix[1].x + vertexIn.y * matrix[1].y + vertexIn.z * matrix[1].z + matrix[1].w ; 
+		vertexOut.z = vertexIn.x * matrix[2].x + vertexIn.y * matrix[2].y + vertexIn.z * matrix[2].z + matrix[2].w ; 
 
 		// 写入操作结果：新坐标
 		pVertexOut[i] = vertexOut;
