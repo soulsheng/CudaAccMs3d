@@ -7,6 +7,7 @@
 #include "Joint.h"
 #include "Vector.h"
 #include "../common/stopwatch_win.h"
+#include "updateVectorByMatrix.h"
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
@@ -63,39 +64,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	// ...省略
 
 	return 0;
-}
-
-/* 坐标矩阵变换
-pVertexIn  : 静态坐标数组参数输入
-size : 坐标个数参数
-pMatrix : 矩阵数组参数
-pVertexOut : 动态坐标数组结果输出
-*/
-void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
-#pragma omp parallel for
-	for(int i=0;i<size;i++){
-		float4   vertexIn, vertexOut;
-		float3   matrix[3];
-		int      matrixIndex;
-
-		// 读取操作数：初始的顶点坐标
-		vertexIn = pVertexIn[i];
-
-		// 读取操作数：顶点对应的矩阵
-		matrixIndex = int(vertexIn.w + 0.5);// float to int
-		matrix[0] = pMatrix[matrixIndex][0];
-		matrix[1] = pMatrix[matrixIndex][1];
-		matrix[2] = pMatrix[matrixIndex][2];
-
-		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z ; 
-		vertexOut.y = vertexIn.x * matrix[1].x + vertexIn.y * matrix[1].y + vertexIn.z * matrix[1].z ; 
-		vertexOut.z = vertexIn.x * matrix[2].x + vertexIn.y * matrix[2].y + vertexIn.z * matrix[2].z ; 
-
-		// 写入操作结果：新坐标
-		pVertexOut[i] = vertexOut;
-	}
-
 }
 
 // 数据初始化：坐标、矩阵

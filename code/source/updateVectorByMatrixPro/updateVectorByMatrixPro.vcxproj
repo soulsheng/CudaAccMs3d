@@ -91,6 +91,7 @@
     <CudaCompile Include="updateVectorByMatrixPro.cu">
       <FileType>Document</FileType>
     </CudaCompile>
+    <None Include="updateVectorByMatrixPro.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\stopwatch_win.h" />
