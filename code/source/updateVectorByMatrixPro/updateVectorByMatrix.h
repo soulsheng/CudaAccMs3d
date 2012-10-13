@@ -36,3 +36,27 @@ void updateVectorByMatrixGold(Vertex* pVertexIn, int size, Matrix* pMatrix, Vert
 	}
 
 }
+
+/* 检测坐标是否相同
+pVertex  : 待检测坐标数组
+size : 坐标个数
+pVertexBase : 参考坐标数组
+返回值： 1表示坐标相同，0表示坐标不同
+*/
+bool equalVector(Vertex* pVertex, int size, Vertex* pVertexBase)
+{
+	for(int i=0;i<size;i++)
+	{
+		float4   vertex, vertexBase;
+		vertex = pVertex[i];
+		vertexBase = pVertexBase[i];
+		if (fabs(vertex.x - vertexBase.x) / vertexBase.x >1.0e-3 || 
+			fabs(vertex.y - vertexBase.y) / vertexBase.y >1.0e-3 || 
+			fabs(vertex.z - vertexBase.z) / vertexBase.z >1.0e-3 )
+		{
+			return false;
+		}
+	}
+
+	return true;
+}

@@ -53,8 +53,19 @@ int _tmain(int argc, _TCHAR* argv[])
 		timer.reset();
 
 		// 验证GPU运算的正确性，是否和CPU运算结果一致
-		//updateVectorByMatrixGold(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
+		bool bResult = false;
+
+		// 获取CPU运算结果
+		updateVectorByMatrixGold(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
+
+		// 获取GPU运算结果
+		Vertex *pVertex = new Vertex[PROBLEM_SIZE];
+		cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(Vertex) * PROBLEM_SIZE, cudaMemcpyDeviceToHost );
 		
+		// 比较结果
+		bResult = equalVector( _vertexesDynamic.pVertex , PROBLEM_SIZE, pVertex );
+		printf("%s\n", bResult?"Right":"Wrong");
+
 		// 数据销毁：坐标、矩阵
 		unInitialize();
 
