@@ -29,6 +29,7 @@ struct Joints{
 				pMatrix[i][j].x = rand() * 1.0f;
 				pMatrix[i][j].y = rand() * 1.0f;
 				pMatrix[i][j].z = rand() * 1.0f;
+				pMatrix[i][j].w = rand() * 1.0f;
 			}
 		}
 
