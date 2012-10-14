@@ -1,0 +1,140 @@
+﻿cuda加速骨骼动画的算法
+
+一、问题建模
+    在使用计算机的前沿技术解决现实中的某个应用难题时，为了探索一套行之有效而又具有普遍参考价值的方案，需要先为问题的原型建立抽象的数学模型。本文的问题原型是如何提升计算机三维动画实时绘制的时间效率，其中：计算机三维动画以骨骼动画为例；实时绘制完整过程可以划分为以下三个环节，从文件解析动画数据包括骨骼关节矩阵和顶点坐标，更新关节矩阵和顶点坐标，以动态三维纹理面片的方式输出顶点坐标最终形成三维动画；时间效率的指标是每秒实时绘制的次数。问题原型的核心是绘制过程，绘制过程的三个环节可以抽象为对两种数据结构的三种操作，其中数据结构指关节矩阵和顶点坐标，操作包含初始化矩阵和坐标、更新矩阵和坐标、输出坐标。
+    本文基于以上抽象模型展开一系列理论分析和实验印证，探索得到适用于抽象模型的解决方案，最终反馈到现实中的问题原型，通过实际应用进一步验证解决方案的可行性。抽象模型结合问题原型，通过理论分析可以初步评估时间效率的瓶颈位置，然后通过实验进行验证，经过以上评估和验证的多次迭代，逐渐缩小瓶颈范围，最终得到粒度适中的瓶颈区域，以该区域作为优化目标进行优化，以求弱化或消除瓶颈。本文评估结论如下：1）第一个环节输入数据本身不占用实时绘制时间；2）第二个环节更新数据占用绝大部分时间，进一步细分为关节矩阵更新和顶点更新两个步骤，顶点数据的规模远远大于关节，针对顶点的运算量和运算时间远远大于关节；3）第三个环节输出数据，占用极小的时间比重。进一步得出结论，瓶颈位置是顶点更新运算。本文接下来着重关注顶点更新运算，抽象淡化其它背景运算和数据，包括：上游数据用模拟数据代替、忽略下游结果输出、将关节数据规模常量化并忽略其运算时间。得到基于抽象模型的解决方案以后，将抽象模型还原为问题原型，即采用真实数据进行验证。
+    针对问题抽象模型的核心即顶点更新运算的时间效率，本文拟采用多核多线程并行算法提升时间效率。先后采用两种方案，即基于OpenMP的CPU多核并行和基于CUDA的GPU多核并行。探索三维动画绘制时间效率问题的解决方案只是本文研究目的之一，此外本文将以CPU多核作为参照分析GPU多核的加速性能。Nvidia随CUDA SDK发布的编程指南声称CUDA不适于实时运算，本文挑战CUDA在实时运算领域的适用性，将CUDA用于毫秒、亚毫米级别的实时场合，解决CUDA在实时运算领域的研究相对匮乏这一问题。
+
+二、数据结构
+
+//关节矩阵---------------------------------------------------------
+typedef float4  Matrix[3];// 矩阵
+
+struct Joints{
+
+// 获取关节矩阵
+void initialize( int size, float* pBufferMatrix ){
+nSize = size;
+pMatrix = new Matrix[nSize];
+memcpy( pMatrix, pBufferMatrix, sizeof(Matrix) * nSize );
+}
+
+// 获取关节矩阵 模拟
+void initialize( int size ){
+nSize = size;
+pMatrix = new Matrix[nSize];
+for(int i=0;i<nSize;i++){
+for(int j=0;j<3;j++){
+pMatrix[i][j].x = rand();
+pMatrix[i][j].y = rand();
+pMatrix[i][j].z = rand();
+pMatrix[i][j].w = rand();
+}
+}
+}
+
+Matrix*  pMatrix;
+int   nSize;// 关节的数目
+
+};// 关节的集合
+
+//顶点坐标---------------------------------------------------------
+typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
+
+struct Vertexes{
+
+// 获取顶点坐标
+void initialize(int size, float* pBufferCoord, int* pBufferIndex){
+nSize = size;
+pVertex = new Vertex[nSize];
+for(int i=0;i<nSize;i++){
+pVertex[i].x = pBufferCoord[i*3];
+pVertex[i].y = pBufferCoord[i*3+1];
+pVertex[i].z = pBufferCoord[i*3+2];
+pVertex[i].w = pBufferIndex[i];
+}
+}
+
+// 获取顶点坐标 模拟
+void initialize(int size, int sizeJoint){
+nSize = size;
+pVertex = new Vertex[nSize];
+for(int i=0;i<nSize;i++){
+pVertex[i].x = rand();
+pVertex[i].y = rand();
+pVertex[i].z = rand();
+pVertex[i].w = rand() % sizeJoint;
+}
+}
+
+Vertex*  pVertex;
+int   nSize;// 顶点的数目
+
+};// 顶点的集合
+
+三、算法
+
+/* 坐标矩阵变换
+pVertexIn  : 静态坐标数组参数输入
+size : 坐标个数参数
+pMatrix : 矩阵数组参数
+pVertexOut : 动态坐标数组结果输出
+*/
+void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
+for(int i=0;i<size;i++){
+float4   vertexIn, vertexOut;
+float4   matrix[3];
+int      matrixIndex;
+
+// 读取操作数：初始的顶点坐标
+vertexIn = pVertexIn[i];
+
+// 读取操作数：顶点对应的矩阵
+matrixIndex = int(vertexIn.w + 0.5);// float to int
+matrix[0] = pMatrix[matrixIndex][0];
+matrix[1] = pMatrix[matrixIndex][1];
+matrix[2] = pMatrix[matrixIndex][2];
+
+// 执行操作：对坐标执行矩阵变换，得到新坐标
+vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z + matrix[0].w; 
+vertexOut.y = vertexIn.x * matrix[1].x + vertexIn.y * matrix[1].y + vertexIn.z * matrix[1].z + matrix[1].w; 
+vertexOut.z = vertexIn.x * matrix[2].x + vertexIn.y * matrix[2].y + vertexIn.z * matrix[2].z + matrix[2].w; 
+
+// 写入操作结果：新坐标
+pVertexOut[i] = vertexOut;
+}
+
+}
+
+#define    MEGA_SIZE     (1<<20)  // Mega, or million
+#define    PROBLEM_SCALE 1 // 1, 4, 16, 64, 256
+#define    PROBLEM_SIZE  ( MEGA_SIZE * PROBLEM_SCALE )  // n Mega elements
+#define    JOINT_SIZE    100
+
+// 数据定义
+Vertexes  _vertexesStatic;//静态顶点坐标
+Vertexes  _vertexesDynamic;//动态顶点坐标
+Joints		_joints;//关节矩阵
+
+// 数据初始化：坐标、矩阵
+_joints.initialize( JOINT_SIZE );
+_vertexesStatic.initialize( PROBLEM_SIZE, JOINT_SIZE );
+_vertexesDynamic.initialize( PROBLEM_SIZE, JOINT_SIZE );
+
+// 执行运算：坐标矩阵变换
+updateVectorByMatrix( _vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
+
+// 输出结果：绘制坐标，按照点、线、面的形式
+// ...省略
+
+四、实验配置
+1、运行环境
+操作系统：Windows 7
+显卡：Nvidia Geforce GTX 670（1344核）
+CPU： Intel i7 3770k（4核）
+
+2、编程环境
+CUDA工具包：CUDA v4.2
+编译工具：Visual Studio 2010
+
+五、实验过程

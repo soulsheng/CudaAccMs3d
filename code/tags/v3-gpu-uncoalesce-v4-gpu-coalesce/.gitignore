@@ -1,0 +1,39 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+/code/source/updateVectorByMatrix/Debug
+/code/source/updateVectorByMatrix/ipch
+/code/source/updateVectorByMatrix/*.user
+/code/source/updateVectorByMatrix/*.sdf
+/code/source/updateVectorByMatrix/*.opensdf
+/code/source/updateVectorByMatrix/*.suo
+/code/source/updateVectorByMatrix/Debug_OpenMP
+/code/source/updateVectorByMatrix/Release_OpenMP
+/code/source/updateVectorByMatrix/Release
+/code/bin/Debug/*.ilk
+/code/bin/Debug/*.pdb
+/code/bin/Debug_OpenMP/*.ilk
+/code/bin/Debug_OpenMP/*.pdb
+/code/bin/Release/*.pdb
+/code/bin/Release_OpenMP/*.pdb
+/code/source/*.suo
+/code/source/updateVectorByMatrixPro/*.user
+/code/source/Release/*.pdb
+/code/source/updateVectorByMatrixPro/Release
+/code/source/*.sdf
+/code/source/*.opensdf
+/code/source/ipch/updatevectorbymatrixpro-9624ac49/*.ipch
+/code/Release/*.pdb
+/code/source/updateVectorByMatrixPro/Debug
+/code/source/ipch/updatevectorbymatrix-16e3b779/*.ipch
+/code/source/ipch/updatevectorbymatrixpro-fb21061b/*.ipch
+/code/source/updateVectorByMatrixPro/*.pdb

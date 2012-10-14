@@ -1,0 +1,868 @@
+Revision: 167
+Author: study
+Date: 13:52:50, 2012年9月28日
+Message:
+补充上传，cpu并行版本release开启openmp
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+
+Revision: 166
+Author: study
+Date: 13:50:25, 2012年9月28日
+Message:
+release cpu多线程重新测试
+复杂度  单线程    cpu多线程openmp         
+  1        0.36         0.24         （当前）
+  4        1.4          0.87                 
+ 16        4.5          4.0             
+ 64       17           15               
+256       68           60                 
+结论：1）多线程cpu 加速百分比跟复杂度有关，1(50%)/4(61%)/16(13%)/64(13%)/256(13%)；
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 165
+Author: study
+Date: 13:35:21, 2012年9月28日
+Message:
+配置单线程release
+
+耗时与多线程加速版本关系如下：
+gtx670/i7 3770 Release版本
+复杂度  单线程    cpu多线程openmp     gpu多线程cuda    
+  1        0.36         0.9             0.26
+  4        1.4          1.5             0.32      
+ 16        4.5          4.5             0.51 
+ 64       17           17               1.33 
+256       68           66               4.00                                   
+512不支持，因为每个节点占用显存保守估计最少0.8M*2=1.6M，将耗费800多M；256个耗费400M。
+结论：1）对于硬件gtx670/i7 3770，cpu单线程与cpu多线程性能相近；
+      2）多线程cuda加速百分比跟复杂度有关，1(38%)/4(340%)/16(225%)/64(780%)/256(1600%)；
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Debug/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/Innovate_vc10.sln
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+
+Revision: 164
+Author: study
+Date: 11:54:55, 2012年9月28日
+Message:
+耗时与多线程加速版本关系如下：
+gts250/i7 870 Debug版本
+复杂度  单线程    cpu多线程openmp     gpu多线程cuda    
+  1       1.3           0.7             1.0
+  4       3.8           1.5             1.8      
+ 16       13            4.0             4.0 
+ 64       50           13.4            13.1  
+256       200          51              50                                    
+
+结论：1）对于硬件gts250/i7 870，cpu多线程与gpu多线程性能相近；
+      2）多线程加速百分比跟复杂度有关，1(30%)/4(111%)/16(225%)/64(285%)/256(300%)；
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/version_history.txt
+
+Revision: 163
+Author: study
+Date: 11:39:49, 2012年9月28日
+Message:
+cuda关于关节矩阵的源码整理；
+解决不能运行的问题，面片索引初始化时需要重复；
+
+配置多线程加速版本，开启cuda，gpu多线程
+gts250/i7 870耗时与模型复杂度关系如下：
+复杂度   耗时ms   时间倍数
+  1       1.0
+  4       1.8      1.8  (当前exe)
+ 16       4.0      2.2 
+ 64       13.1     3.3   
+256       50       3.8       
+结论：重复度64以上总时间线性增长，平均耗时稳定0.2；重复度64以内，平均耗时递减。
+复杂度   耗时ms   平均耗时
+  1       1.0      1.00
+  4       1.8      0.45
+ 16       4.0      0.25 
+ 64       13.1     0.20   
+256       50       0.20
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Debug/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 162
+Author: study
+Date: 11:18:03, 2012年9月28日
+Message:
+删除冗余代码；
+cuda版本无法运行，待改正；
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+
+Revision: 161
+Author: study
+Date: 11:06:24, 2012年9月28日
+Message:
+配置多线程加速版本，开启openmp，cpu多线程
+gts250/i7 870耗时与模型复杂度关系如下：
+复杂度   耗时ms   时间倍数
+  1       0.7
+  4       1.5      2.1  (当前exe)
+ 16       4.0      2.7 
+ 64       13.4     3.4   
+256       51       3.8       
+结论：重复度256以上总时间线性增长，平均耗时稳定0.2；重复度256以内，平均耗时递减。
+复杂度   耗时ms   平均耗时
+  1       0.7      0.70
+  4       1.5      0.38
+ 16       4.0      0.25 
+ 64       13.4     0.21   
+256       51       0.20
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Debug/ms3d-acc.exe
+
+Revision: 160
+Author: study
+Date: 10:54:40, 2012年9月28日
+Message:
+配置原始版本，未开启openmp、cuda，cpu单线程
+gts250/i7 870耗时与模型复杂度关系如下：
+复杂度   耗时ms   时间倍数
+  1       1.3
+  4       3.8      2.9
+ 16       13       3.4 
+ 64       50       3.8   
+256       200      4.0       
+结论：重复度64以上总时间线性增长，平均耗时稳定；重复度64以内，平均耗时递减。
+复杂度   耗时ms   平均耗时
+  1       1.3      1.3
+  2       2.0      1.0
+  4       3.8      0.95
+ 10       8.74     0.87
+ 16       13       0.81
+ 64       50       0.78
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Debug/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+
+Revision: 159
+Author: study
+Date: 10:28:21, 2012年9月28日
+Message:
+cpu端支持模型数据内部重复拷贝
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Debug/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 158
+Author: study
+Date: 09:47:40, 2012年9月28日
+Message:
+cpu端合并顶点。时间降为：0.7(debug)/0.65(release)，原先是2.5，提速：200%
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/DrawScene.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 157
+Author: study
+Date: 08:49:10, 2012年9月28日
+Message:
+cpu端代码简化，不涉及功能效率的改变
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.h
+
+Revision: 156
+Author: study
+Date: 08:43:02, 2012年9月28日
+Message:
+cpu单个动画耗时2.46ms(gts250 debug)，时间分布如下： 
+
+  updateJoint  ： updateVertex  :  render   :  totalAdd    :   totalReal
+=    0.25       :      2.20     :    0.23   :     2.68     :      2.50
+=      9%       :      82%      :      9%
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Debug/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.cpp
+
+Revision: 155
+Author: study
+Date: 08:25:10, 2012年9月28日
+Message:
+gts250上，cpu版本测量时间，准备和cuda对比。
+耗时1.1ms 每个动画。和gtx670的0.89相近。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+
+Revision: 154
+Author: study
+Date: 08:11:20, 2012年9月28日
+Message:
+gtx670机器上，cpu版本测量时间，准备和cuda对比。
+耗时0.89ms 每个动画。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Debug/ms3d-acc.exe
+
+Revision: 153
+Author: study
+Date: 08:05:25, 2012年9月28日
+Message:
+顶点备份拆分多个子数组，为了合并访问，已做补丁，待完成；
+----
+Added : /branches/experiment/v61_ms3d-optimize-step/misc/patches
+Added : /branches/experiment/v61_ms3d-optimize-step/misc/patches/2012-9-28-7.patch
+
+Revision: 152
+Author: study
+Date: 22:54:46, 2012年9月27日
+Message:
+总结，对比v126（2012-9-27 7:13:32） ，47 ms 降到 4 ms ，效率提升：1000%（10倍）
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/version_history.txt
+
+Revision: 151
+Author: study
+Date: 22:49:10, 2012年9月27日
+Message:
+模型复杂度256
+gtx670块数配置，最优为每个mp 2个块共14个块。
+块数和耗时对应关系如下：
+块数/mp  耗时
+ 1       0.93
+ 2       4.1   最优，相对起初4.5，效率提升：10%
+ 4       4.5   
+ 8       6.5
+ 16      6.5
+ 32      6.5
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 150
+Author: study
+Date: 22:41:32, 2012年9月27日
+Message:
+kernel 时钟周期分布
+总共  read  calculate  write
+ 5M    1.5      0.1      3.5 （无法测量，估计）
+       27%      2%       64% 
+待优化backup，支持合并访问；优化块数；
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+
+Revision: 149
+Author: study
+Date: 22:22:24, 2012年9月27日
+Message:
+16倍复杂度的模型，VBOMap 和 顶点更新 时间比 接近1:1，kernel局部优化空间最多100%，待加大复杂度。
+256倍复杂度的模型，继续优化。
+初始耗时4.5ms，时间分布如下：
+
+  updateJoint  ： updateVertex  :  render   :  totalAdd    :   totalReal
+=    0.10       :      4.25     :    0.01   :     4.36     :      4.52
+=      2%       :      97%      :    0%
+
+  updateJointInCPU : copyJointToGPU : mapVertex : updateVertexInGPUKernel : unmapVertex   :  render  :  totalAdd    :   totalReal
+=       0.04       :       0.02     :    0.22   :           4.16          :    0.08       :   0.01   :     4.53     :     4.53
+=        1%        :         0%     :      5%   :            92%          :      2%       :    0%
+=        8%        :         4%     :     31%   :            51%          :      4%       :    2% (上一步)  
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 148
+Author: study
+Date: 22:00:50, 2012年9月27日
+Message:
+简化kernel算法，效率不变
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 147
+Author: study
+Date: 21:53:50, 2012年9月27日
+Message:
+gtx670
+线程粒度细化、优化块数，再次细节测时：
+
+  updateJoint  ： updateVertex  :  render   :  totalAdd    :   totalReal
+=    0.06       :      0.38     :    0.01   :     0.45     :      0.40
+=     13%       :      84%      :    3%
+
+  updateJointInCPU : copyJointToGPU : mapVertex : updateVertexInGPUKernel : unmapVertex   :  render  :  totalAdd    :   totalReal
+=       0.04       :       0.02     :    0.15   :           0.25          :    0.02       :   0.01   :     0.49     :     0.34
+=        8%        :         4%     :     31%   :            51%          :      4%       :    2%
+=       10%        :         5%     :     38%   :            40%          :      5%       :    2% (之前)  
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 146
+Author: study
+Date: 21:41:23, 2012年9月27日
+Message:
+gtx670 时钟周期， 优化块数后，时间从0.51降到0.41，提升24%，对应从358k降到230k，提升：56%
+发现bug，测量kernel的clock，不稳定，一直增长，取最开始的值，按住窗口可以取到，待解决，暂时不影响实验；
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 145
+Author: study
+Date: 20:53:06, 2012年9月27日
+Message:
+gtx670块数配置，最优为每个mp 4个块共28个块。
+块数和耗时对应关系如下：
+块数/mp  耗时
+ 1       0.93
+ 2       0.51
+ 3       0.42
+ 4       0.41   最优，相对起初0.90，效率提升：120%
+ 5       0.43
+ 6       0.50
+ 7       0.54
+ 8       0.58
+ 16      0.56
+ 32      0.54 
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 144
+Author: study
+Date: 20:31:25, 2012年9月27日
+Message:
+线程粒度从面片进一步划分到顶点，效率明显改进
+gtx670  kernel时钟周期     总耗时
+          1436k            0.90
+           358k            0.55
+提升：     300%            64%
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+
+Revision: 143
+Author: study
+Date: 20:10:38, 2012年9月27日
+Message:
+多用寄存器，读、计算、写，拆分3个环节 （gtx670）
+总周期  read-Vec3    calculate-Vec3*Mat33  write-Vec3
+11          3                1               7
+            27%              9%              64%    
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+
+Revision: 142
+Author: study
+Date: 17:27:11, 2012年9月27日
+Message:
+使用内存类型，Page-locked or pinned memory, 关节数据
+效率不变
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.h
+
+Revision: 141
+Author: study
+Date: 17:01:17, 2012年9月27日
+Message:
+多用寄存器，读、计算、写，拆分3个环节
+总周期  read-Vec3    calculate-Vec3*Mat33  write-Vec3
+27          10                10             7
+            37%               37%            26%    
+尝试1）Vec3按结构体读写，效率不变；
+尝试2）Vec3读写相同位置（不备份顶点初始化数据），效率不变；
+拟：1）Mat33存储类型由Constant改为Shared；
+    2）顶点初始化数据只读，存储在纹理中；
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 140
+Author: study
+Date: 13:46:13, 2012年9月27日
+Message:
+矩阵改用cuda内部float4
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 139
+Author: study
+Date: 13:31:19, 2012年9月27日
+Message:
+小改
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 138
+Author: study
+Date: 13:29:00, 2012年9月27日
+Message:
+releasea输出ptx信息，便于查看寄存器数目，
+cp1.x   cp2.x   cp3.x
+ 10       19      21
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+
+Revision: 137
+Author: study
+Date: 13:21:12, 2012年9月27日
+Message:
+整体时间，2.8ms 减到 1.4ms，效率提升100%
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 136
+Author: study
+Date: 13:14:16, 2012年9月27日
+Message:
+优化代码，虽然效率无改变
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 135
+Author: study
+Date: 13:09:18, 2012年9月27日
+Message:
+reset去除重复 (gtx670)
+kernel内部时钟周期分布，
+总周期 reset   update 
+25      14       11
+        56%      44%
+变为：
+11      2       9
+       18%      82%
+效率提升127%
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+
+Revision: 134
+Author: study
+Date: 12:55:23, 2012年9月27日
+Message:
+reset去除重复
+kernel内部时钟周期分布，
+总周期 reset   update 
+48      22       26
+        46%      54%
+变为：
+27      10       17
+        37%      63%
+效率提升78%
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 133
+Author: study
+Date: 10:34:22, 2012年9月27日
+Message:
+kernel内部时钟周期分布，
+总周期 reset   update 
+48      22       26
+        46%      54%
+计算单位面片平均周期。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 132
+Author: study
+Date: 10:26:53, 2012年9月27日
+Message:
+针对gts250修改最优化块数
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 131
+Author: study
+Date: 10:21:17, 2012年9月27日
+Message:
+准备数据，预备优化kernel，效率潜力：400%
+问题规模，16倍，面片128K，顶点0.36M，骨骼77个，顶点数据量13M。
+总耗时 kernel  map+joint 
+   5     4    0.9+0.1 = 1
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 130
+Author: study
+Date: 09:46:04, 2012年9月27日
+Message:
+考虑gtx670后，重新估计效率提升潜力。估算方法公式：效率潜力=kernel耗时/VBOMap耗时。
+对于gtx670，优化kernel，提升67%；隐藏VBOMap，提升2至46倍；（参考v126）
+对于gts250，优化kernel，提升33%；隐藏VBOMap，提升1至30倍；（参考v121）
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/version_history.txt
+
+Revision: 129
+Author: study
+Date: 08:26:46, 2012年9月27日
+Message:
+release编译选项，适合cuda架构 2.0 3.0 
+线程适合gtx67,256 * 7 * 8
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+
+Revision: 128
+Author: study
+Date: 07:47:03, 2012年9月27日
+Message:
+估算kernel优化最大的潜力，2/3=67%
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/version_history.txt
+
+Revision: 127
+Author: study
+Date: 07:42:30, 2012年9月27日
+Message:
+gtx670kernel函数，测量各个细分环节的耗时，结果如下：
+kernel空函数：
+
+  updateJoint  ： updateVertex  :  render   :  totalAdd    :   totalReal
+=    0.06       :      0.19     :    0.01   :     0.26     :      0.24
+=     23%       :      73%      :    4%
+
+
+kernel完整功能：
+
+  updateJoint  ： updateVertex  :  render   :  totalAdd    :   totalReal
+=    0.06       :      0.28     :    0.01   :     0.35     :      0.35
+=     17%       :      80%      :    3%
+
+  updateJointInCPU : copyJointToGPU : mapVertex : updateVertexInGPUKernel : unmapVertex   :  render  :  totalAdd    :   totalReal
+=       0.04       :       0.02     :    0.15   :           0.16          :    0.02       :   0.01   :     0.40     :     0.34
+=       10%        :         5%     :     38%   :            40%          :      5%       :    2%
+=        4%        :         8%     :     54%   :            25%          :      8%   (gts250)   
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/DrawScene.cpp
+
+Revision: 126
+Author: study
+Date: 07:13:32, 2012年9月27日
+Message:
+gtx670总结：
+顶点重复   总时长 时长倍数  
+1          0.41   1.0
+4          0.90   2.2
+16         2.84   3.2
+64         11.1   3.9
+256        47.0   4.2
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+
+Revision: 125
+Author: study
+Date: 17:31:28, 2012年9月26日
+Message:
+每个动画，内部通过重复顶点提升复杂度，耗时再次重复累加取平均值
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/DrawScene.cpp
+
+Revision: 124
+Author: study
+Date: 17:28:54, 2012年9月26日
+Message:
+通过编译结果查看寄存器使用量，
+  cp1.x  cp2.x  cp3.x
+  10     21    21
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+
+Revision: 123
+Author: study
+Date: 17:25:57, 2012年9月26日
+Message:
+固定线程数和块数，随着元素增多，每个线程处理元素个数相应增多
+线程数和块数，根据寄存器使用量和显卡cuda计算能力决定，10个寄存器cp1.1设置(256, 3*mp)，21个寄存器cp3.0设置(256, 8*mp) 
+gts250    gtx670
+256, 48   256, 56 
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 122
+Author: study
+Date: 16:38:35, 2012年9月26日
+Message:
+10个寄存器，最优化线程配置，线程256，块3 * 16 = 48，激活线程的占用率为100%。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/temp_cuda_profiler_1_0.csv
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/temp_cuda_profiler_2_0.csv
+Modified : /branches/experiment/v61_ms3d-optimize-step/doc/官方文档/CUDA_Occupancy_Calculator（CUDA工作饱和度计算器）.xls
+
+Revision: 121
+Author: study
+Date: 16:07:33, 2012年9月26日
+Message:
+vbo和显存的map/unmap，跟传输数据量关系？ 结论是，map/unmap耗时跟数据量无关。
+重复   map   unmap   kernel
+1      0.77  0.10     0.32
+4      0.77  0.10     1.0
+16     0.77  0.10     3.8
+64     0.83  0.71     15
+256    0.81  1.13     60
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+
+Revision: 120
+Author: study
+Date: 15:24:09, 2012年9月26日
+Message:
+重命名：m_nSizeVertexTotal  m_nSizeFaceTotal
+顶点重复拷贝：m_nSizeFaceTotal *= REPEAT_COUNT_MS3D
+顶点kernel预备、执行、返回3个细节环节，计时设置开关
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.cpp
+
+Revision: 119
+Author: study
+Date: 12:15:59, 2012年9月26日
+Message:
+分析瓶颈不在kernel， kernel的提升最多带来1/3的加速比。
+调整优化目标：
+内存到显存的拷贝，跟传输数据量关系？
+vbo和显存的map/unmap，跟传输数据量关系？
+考虑合并多个kernel，附带合并拷贝和map。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/version_history.txt
+
+Revision: 118
+Author: study
+Date: 11:50:13, 2012年9月26日
+Message:
+发现kernel函数即便是空函数，每个骨骼动画每帧耗时将近1ms，测量各个细分环节的耗时，结果如下：
+kernel空函数：
+
+  updateJoint  ： updateVertex  :  render   :  totalAdd    :   totalReal
+=    0.14       :      0.77     :    0.01   :     0.92     :      0.84
+=     15%       :      84%      :    1%
+
+
+kernel完整功能：
+
+  updateJoint  ： updateVertex  :  render   :  totalAdd    :   totalReal
+=    0.18       :      0.98     :    0.01   :     1.17     :      1.00
+=     15%       :      84%      :    1%
+
+  updateJointInCPU : copyJointToGPU : mapVertex : updateVertexInGPUKernel : unmapVertex   :  totalAdd    :   totalReal
+=       0.05       :       0.11     :    0.71   :           0.33          :    0.11       :     1.31     :   
+=        4%        :         8%     :     54%   :            25%          :      8%      
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+
+Revision: 117
+Author: study
+Date: 10:34:54, 2012年9月26日
+Message:
+封装测试函数
+void timeBegin();
+void timeEnd(string msg);
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/Model.h
+
+Revision: 116
+Author: study
+Date: 08:54:39, 2012年9月26日
+Message:
+删除骨骼更新kernel相关代码，不使用
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 115
+Author: study
+Date: 08:41:01, 2012年9月26日
+Message:
+新增切换状态，是否测量kernel时钟周期
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 114
+Author: study
+Date: 22:40:59, 2012年9月25日
+Message:
+新增OpenMP的release配置，性能和cuda相当。在显卡gts250对比cpui7的硬件环境下。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/Innovate_vc10.sln
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc10.vcxproj
+
+Revision: 113
+Author: study
+Date: 22:34:20, 2012年9月25日
+Message:
+统计效率：
+整个骨骼动画总耗时： 1.1 ms  （原先1.3，改进18%）
+耗时分布：
+ 关节更新 : 顶点更新 : 顶点渲染 
+= 0.05ms  :   1.11ms :   0.004ms
+=   4%   :     96%  :      0%
+顶点更新kernel时钟周期: 380k
+ 顶点初值  : 矩阵修改
+=  180k    :   200k
+待进一步优化顶点更新！
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+
+Revision: 112
+Author: study
+Date: 22:12:05, 2012年9月25日
+Message:
+用常量显存存储关节点矩阵数据。
+时钟周期明显下降,从280k 304K降到120k，
+ 时钟周期细分：
+重新赋值：60k
+矩阵修改：60k （220降到60，下降3倍多）
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+
+Revision: 111
+Author: study
+Date: 18:00:07, 2012年9月25日
+Message:
+传输到显存的关节点数据，只传输矩阵的16个float。
+时钟周期反倒增加,280k到304K
+ 时钟周期细分：
+其他操作：640
+重新赋值：60k
+矩阵修改：240k  （新增20k），说明矩阵数据访问效率很低
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.h
+
+Revision: 110
+Author: study
+Date: 17:34:43, 2012年9月25日
+Message:
+kernel 面片3个点恢复小循环， 时钟周期细分：
+其他操作：640
+重新赋值：60k   （待优化位置1）
+矩阵修改：220k  （待优化位置2）
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 109
+Author: study
+Date: 16:47:09, 2012年9月25日
+Message:
+线程128 * 62  ， 时钟周期109，几乎不变
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+
+Revision: 108
+Author: study
+Date: 16:17:01, 2012年9月25日
+Message:
+CUDA Visual Profiler 测量结果
+   变量个数   寄存器个数  时钟周期  指令数目   束串行化   局部变量读  局部变量写   性能   块数   线程数  饱和度
+-    6            14        110       3800         0k         0k         0k        100%    31      256    67%
+待优化线程数目配置，获取更大饱和度，使用cuda sdk提供的公式表格CUDA_Occupancy_Calculator.xls
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Added : /branches/experiment/v61_ms3d-optimize-step/bin/Release/temp_cuda_profiler_1_0.csv
+Added : /branches/experiment/v61_ms3d-optimize-step/bin/Release/temp_cuda_profiler_2_0.csv
+
+Revision: 107
+Author: study
+Date: 15:39:09, 2012年9月25日
+Message:
+测量得到kernel时钟周期110/面片，总时钟周期864552。
+理论总耗时: 864552 / ( 1.62 * 1024 * 1024 ) = 0.506ms
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/modifyVertexByJoint.cu
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 106
+Author: study
+Date: 15:33:02, 2012年9月25日
+Message:
+测量耗时分布：
+ 关节更新 : 顶点更新 : 顶点渲染 
+= 0.14ms  :   1.26ms :   0.01ms
+=   10%   :     89%  :    1%
+待进一步优化顶点更新。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/bin/Release/ms3d-acc.exe
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 105
+Author: study
+Date: 15:27:22, 2012年9月25日
+Message:
+主机端测试方法，统一用cutGetTimerValue
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/MilkshapeModel.cpp
+
+Revision: 104
+Author: study
+Date: 11:14:12, 2012年9月25日
+Message:
+骨骼动画个数改成100，耗时130ms，帧速7.7帧。平均每个骨骼动画耗时1.3ms。
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/stdafx.h
+
+Revision: 103
+Author: study
+Date: 10:50:30, 2012年9月25日
+Message:
+更新日志，版本总结
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/version_history.txt
+
+Revision: 64
+Author: study
+Date: 15:00:33, 2012年8月28日
+Message:
+解决方案里面工程改名，保存输出exe名称一致，都是 ms3d-acc.exe
+去掉vs版本标记
+----
+Modified : /branches/experiment/v61_ms3d-optimize-step/src/ms3d-acc/ms3d-acc_vc8.vcproj
+
+Revision: 63
+Author: study
+Date: 11:31:01, 2012年8月22日
+Message:
+create branch
+from : trunk
+usage: optimize cuda step by step as common procedure
+----
+Added : /branches/experiment/v61_ms3d-optimize-step (Copy from path: /trunk/experiment/ms3d-acc, Revision, 61)
+

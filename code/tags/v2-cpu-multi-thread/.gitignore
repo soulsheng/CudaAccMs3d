@@ -1,0 +1,18 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+/code/source/updateVectorByMatrix/Debug
+/code/source/updateVectorByMatrix/ipch
+/code/source/updateVectorByMatrix/*.user
+/code/source/updateVectorByMatrix/*.sdf
+/code/source/updateVectorByMatrix/*.opensdf
+/code/source/updateVectorByMatrix/*.suo
