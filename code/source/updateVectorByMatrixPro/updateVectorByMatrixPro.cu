@@ -30,7 +30,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		while ( timer.getTime() < 10000  )
 		{
-			cudaMemcpy( _joints.pMatrixDevice, _joints.pMatrix, sizeof(Matrix) * JOINT_SIZE, cudaMemcpyHostToDevice );
+			cudaMemcpy( _joints.pMatrixDevice, _joints.pMatrix, sizeof(Matrix) * JOINT_SIZE*BASE_SIZE, cudaMemcpyHostToDevice );
 			nRepeatPerSecond ++;
 		}
 
