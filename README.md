@@ -1,6 +1,7 @@
 CudaAccMs3d
 ===========
 Accelarate Ms3d with Nvidia CUDA, focus kernel function of transforming vertex position by matrix 
+
 加速骨骼动画借用CUDA，核心函数是用变换矩阵更新顶点坐标。
 
 
