@@ -24,7 +24,6 @@ struct Joints{
 		memcpy( pMatrix, pBufferMatrix, sizeof(Matrix) * nSize );
 
 		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;
-		cudaMemcpy( pMatrixDevice, pMatrix, sizeof(Matrix)*nSize, cudaMemcpyHostToDevice );
 	}
 
 	// 获取关节矩阵 模拟
@@ -41,7 +40,6 @@ struct Joints{
 		}
 
 		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;
-		cudaMemcpy( pMatrixDevice, pMatrix, sizeof(Matrix) * nSize, cudaMemcpyHostToDevice );
 	}
 
 	// 释放空间

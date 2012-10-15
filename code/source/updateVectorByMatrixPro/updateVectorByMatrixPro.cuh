@@ -7,6 +7,15 @@
 #include "cuda_runtime.h"
 #include "cuda_runtime_api.h"
 
+
+#define USE_CONSTANT	1
+__constant__ Matrix c_JointMatrix[ JOINT_SIZE ]; 
+
+void constantMemoryUpdate( Matrix * pMatrix  , int nCountJoint)
+{
+    cudaMemcpyToSymbol((const char*)c_JointMatrix, pMatrix, nCountJoint * sizeof(Matrix) );
+}
+
 /* 坐标矩阵变换
 pVertexIn  : 静态坐标数组参数输入
 size : 坐标个数参数
@@ -26,9 +35,15 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
+#if USE_CONSTANT
+		matrix[0] = c_JointMatrix[matrixIndex][0];
+		matrix[1] = c_JointMatrix[matrixIndex][1];
+		matrix[2] = c_JointMatrix[matrixIndex][2];
+#else
 		matrix[0] = pMatrix[matrixIndex][0];
 		matrix[1] = pMatrix[matrixIndex][1];
 		matrix[2] = pMatrix[matrixIndex][2];
+#endif
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z + matrix[0].w ; 
