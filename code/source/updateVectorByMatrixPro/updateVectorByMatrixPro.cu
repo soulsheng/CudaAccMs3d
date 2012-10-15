@@ -41,7 +41,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		unInitialize();
 
 		// 查看时间效率
-		printf("%d: F=%d, T=%.1f us\n", SCALE_CLASS, nRepeatPerSecond/10, 10000000.0f/nRepeatPerSecond);
+		printf("%d: F=%d, T=%.3f ms\n", SCALE_CLASS, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
 	}
 	
 	// 输出结果：绘制坐标，按照点、线、面的形式
