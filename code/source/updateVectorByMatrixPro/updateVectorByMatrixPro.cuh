@@ -8,7 +8,7 @@
 #include "cuda_runtime_api.h"
 
 
-#define USE_CONSTANT	1
+#define USE_CONSTANT	0
 __constant__ Matrix c_JointMatrix[ JOINT_SIZE ]; 
 
 void constantMemoryUpdate( Matrix * pMatrix  , int nCountJoint)
