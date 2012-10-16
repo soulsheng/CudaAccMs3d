@@ -8,9 +8,54 @@
 
 #if ALIGNED_STRUCT
 typedef float4	Vector4;
+typedef Vector4*  Matrix[3];// 矩阵
+
+
+struct Joints{
+
+	// 获取关节矩阵
+	void initialize( int size, float* pBufferMatrix ){
+		nSize = size;
+		for (int i=0;i<3;i++)
+		{
+			pMatrix[i] = new Vector4[nSize];
+			int offset = sizeof(Vector4)/sizeof(float) * nSize;
+			memcpy( pMatrix[i], pBufferMatrix + offset * i, offset*sizeof(float) );
+			cudaMalloc( &pMatrixDevice[i], offset*sizeof(float) ) ;
+		}
+	}
+
+	// 获取关节矩阵 模拟
+	void initialize( int size ){
+		nSize = size;
+		for(int i=0;i<3;i++){
+			pMatrix[i] = new Vector4[nSize];
+			for(int j=0;j<nSize;j++){
+				pMatrix[i][j].x = rand() * 1.0f;
+				pMatrix[i][j].y = rand() * 1.0f;
+				pMatrix[i][j].z = rand() * 1.0f;
+				pMatrix[i][j].w = rand() * 1.0f;
+			}
+			cudaMalloc( &pMatrixDevice[i], sizeof(Vector4) * nSize ) ;
+		}
+	}
+
+	// 释放空间
+	void unInitialize()
+	{
+		for(int i=0;i<3;i++){
+			if (pMatrix[i]) delete[] pMatrix[i];
+			if (pMatrixDevice[i]) cudaFree(pMatrixDevice[i]) ;
+		}
+	}
+
+	Matrix  pMatrix, pMatrixDevice;
+	int   nSize;// 关节的数目
+
+};// 关节的集合
+
 #else
 struct Vector4 { float x,y,z,w; };
-#endif
 
 //关节矩阵---------------------------------------------------------
 typedef Vector4  Matrix[3];// 矩阵
@@ -53,4 +98,7 @@ struct Joints{
 	int   nSize;// 关节的数目
 
 };// 关节的集合
+
+#endif
+
 

@@ -22,9 +22,15 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Matrix* pMatrix, Vec
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
+#if ALIGNED_STRUCT		
+		matrix[0] = (*pMatrix)[0][matrixIndex];
+		matrix[1] = (*pMatrix)[1][matrixIndex];
+		matrix[2] = (*pMatrix)[2][matrixIndex];
+#else
 		matrix[0] = pMatrix[matrixIndex][0];
 		matrix[1] = pMatrix[matrixIndex][1];
 		matrix[2] = pMatrix[matrixIndex][2];
+#endif
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z + matrix[0].w ; 

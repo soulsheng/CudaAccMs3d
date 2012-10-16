@@ -43,14 +43,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		while ( timer.getTime() < 10000  )
 		{
-#if USE_CONSTANT
-			// 改变矩阵存储方式，从全局显存改为常量显存，后者具有缓存
-			constantMemoryUpdate( _joints.pMatrix, JOINT_SIZE );
-#else
-			cudaMemcpy( _joints.pMatrixDevice, _joints.pMatrix, sizeof(Matrix) * JOINT_SIZE, cudaMemcpyHostToDevice );
-#endif
+		#if ALIGNED_STRUCT
+			globalMemoryUpdate( &_joints.pMatrixDevice, &_joints.pMatrix, JOINT_SIZE);
+			// 执行运算：坐标矩阵变换
+			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, &_joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
+		#else
+			globalMemoryUpdate( _joints.pMatrixDevice, _joints.pMatrix, JOINT_SIZE);
 			// 执行运算：坐标矩阵变换
 			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
+		#endif
+
 			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
 		}
