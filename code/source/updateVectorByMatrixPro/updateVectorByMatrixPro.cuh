@@ -8,14 +8,14 @@
 #include "cuda_runtime_api.h"
 
 
-void globalMemoryUpdate( Matrix * pMatrix, Matrix * pMatrixDevice, int nCountJoint)
+void globalMemoryUpdate( Joints* pJoints, int nCountJoint)
 {
 #if ALIGNED_STRUCT
 	for(int i=0;i<3;i++){
-		cudaMemcpy( (*pMatrixDevice)[i], (*pMatrix)[i], sizeof(Vector4) * nCountJoint, cudaMemcpyHostToDevice );
+		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * nCountJoint, cudaMemcpyHostToDevice );
 	}
 #else
-	cudaMemcpy( pMatrixDevice, pMatrix, sizeof(Matrix) * nCountJoint, cudaMemcpyHostToDevice );
+	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(Matrix) * nCountJoint, cudaMemcpyHostToDevice );
 #endif
 }
 
@@ -25,7 +25,11 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
+#if ALIGNED_STRUCT
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2)
+#else
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut)
+#endif
 {
 	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
 	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
@@ -39,9 +43,9 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
 #if ALIGNED_STRUCT
-		matrix[0] = (*pMatrix)[0][matrixIndex];
-		matrix[1] = (*pMatrix)[1][matrixIndex];
-		matrix[2] = (*pMatrix)[2][matrixIndex];
+		matrix[0] = pMatrix0[matrixIndex];
+		matrix[1] = pMatrix1[matrixIndex];
+		matrix[2] = pMatrix2[matrixIndex];
 #else
 		matrix[0] = pMatrix[matrixIndex][0];
 		matrix[1] = pMatrix[matrixIndex][1];

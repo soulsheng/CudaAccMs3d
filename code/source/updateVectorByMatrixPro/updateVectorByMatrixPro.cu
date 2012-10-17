@@ -43,15 +43,15 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		while ( timer.getTime() < 10000  )
 		{
-		#if ALIGNED_STRUCT
-			globalMemoryUpdate( &_joints.pMatrixDevice, &_joints.pMatrix, JOINT_SIZE);
+			globalMemoryUpdate( &_joints, JOINT_SIZE);
+
 			// 执行运算：坐标矩阵变换
-			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, &_joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
-		#else
-			globalMemoryUpdate( _joints.pMatrixDevice, _joints.pMatrix, JOINT_SIZE);
-			// 执行运算：坐标矩阵变换
+#if ALIGNED_STRUCT
+			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
+				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2] );
+#else
 			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
-		#endif
+#endif
 
 			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
@@ -64,7 +64,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		bool bResult = false;
 
 		// 获取CPU运算结果
-		updateVectorByMatrixGold(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex);
+		updateVectorByMatrixGold(_vertexesStatic.pVertex, PROBLEM_SIZE, &_joints, _vertexesDynamic.pVertex);
 
 		// 获取GPU运算结果
 		Vector4 *pVertex = new Vector4[PROBLEM_SIZE];
