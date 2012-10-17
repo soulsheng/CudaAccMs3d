@@ -13,6 +13,6 @@ public:
 	void unInitialize();
 
 protected:
-private:
+public:
 	float *_pointerArray[SIZE_ARRAY];
 };
