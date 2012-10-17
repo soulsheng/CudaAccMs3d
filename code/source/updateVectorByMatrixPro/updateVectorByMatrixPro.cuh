@@ -8,14 +8,14 @@
 #include "cuda_runtime_api.h"
 
 
-void globalMemoryUpdate( Joints* pJoints, int nCountJoint)
+void globalMemoryUpdate( Joints* pJoints )
 {
 #if ALIGNED_STRUCT
 	for(int i=0;i<3;i++){
-		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * nCountJoint, cudaMemcpyHostToDevice );
+		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
 	}
 #else
-	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(Matrix) * nCountJoint, cudaMemcpyHostToDevice );
+	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(Matrix) * pJoints->nSize, cudaMemcpyHostToDevice );
 #endif
 }
 

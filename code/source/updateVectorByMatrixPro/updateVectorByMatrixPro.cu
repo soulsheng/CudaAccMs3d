@@ -43,14 +43,14 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		while ( timer.getTime() < 10000  )
 		{
-			globalMemoryUpdate( &_joints, JOINT_SIZE);
+			globalMemoryUpdate( &_joints );
 
 			// 执行运算：坐标矩阵变换
 #if ALIGNED_STRUCT
-			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
+			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
 				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2] );
 #else
-			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, PROBLEM_SIZE, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
+			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
 #endif
 
 			cudaDeviceSynchronize();
@@ -64,14 +64,14 @@ int _tmain(int argc, _TCHAR* argv[])
 		bool bResult = false;
 
 		// 获取CPU运算结果
-		updateVectorByMatrixGold(_vertexesStatic.pVertex, PROBLEM_SIZE, &_joints, _vertexesDynamic.pVertex);
+		updateVectorByMatrixGold(_vertexesStatic.pVertex, _vertexesStatic.nSize, &_joints, _vertexesDynamic.pVertex);
 
 		// 获取GPU运算结果
-		Vector4 *pVertex = new Vector4[PROBLEM_SIZE];
-		cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(Vector4) * PROBLEM_SIZE, cudaMemcpyDeviceToHost );
+		Vector4 *pVertex = new Vector4[_vertexesStatic.nSize];
+		cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(Vector4) * _vertexesDynamic.nSize, cudaMemcpyDeviceToHost );
 		
 		// 比较结果
-		bResult = equalVector( _vertexesDynamic.pVertex , PROBLEM_SIZE, pVertex );
+		bResult = equalVector( _vertexesDynamic.pVertex , _vertexesDynamic.nSize, pVertex );
 		printf("%s\n", bResult?"Right":"Wrong");
 
 		// 数据销毁：坐标、矩阵
@@ -90,9 +90,9 @@ int _tmain(int argc, _TCHAR* argv[])
 // 数据初始化：坐标、矩阵
 void initialize(int problem_size, int joint_size)
 {
-	_joints.initialize( JOINT_SIZE );
-	_vertexesStatic.initialize( PROBLEM_SIZE, JOINT_SIZE );
-	_vertexesDynamic.initialize( PROBLEM_SIZE, JOINT_SIZE );
+	_joints.initialize( joint_size );
+	_vertexesStatic.initialize( problem_size, joint_size );
+	_vertexesDynamic.initialize( problem_size, joint_size );
 }
 
 // 数据销毁：坐标、矩阵
