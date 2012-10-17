@@ -42,3 +42,6 @@
 /code/source/Debug
 /code/source/ipch/testpointerarray-a57217ed/*.ipch
 /code/source/testPointerArray/*.user
+/code/source/testPointerArray/Release
+/code/source/ipch/updatevectorbymatrixpro-2d53b302/*.ipch
+/code/source/Release/testPointerArray.exe
