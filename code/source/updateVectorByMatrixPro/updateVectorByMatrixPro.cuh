@@ -71,30 +71,15 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	// 一次性读取矩阵，整个block块共享
-	extern __shared__		float sharedMatrix[];
+	__shared__		Vector4 matrix[3][JOINT_SIZE];
 	if( threadIdx.x < sizeJoints )
 	{
-		Vector4   matrix[3];
-#if SEPERATE_STRUCT
-		matrix[0] = pMatrix0[threadIdx.x];
-		matrix[1] = pMatrix1[threadIdx.x];
-		matrix[2] = pMatrix2[threadIdx.x];
-#else
-		matrix[0] = pMatrix[threadIdx.x][0];
-		matrix[1] = pMatrix[threadIdx.x][1];
-		matrix[2] = pMatrix[threadIdx.x][2];
-#endif
-
-		int j=0;
-		for(int i=0; i<3; i++)
+		for( int i=0;i<3;i++)
 		{
-			sharedMatrix[j++] = matrix[i].x;
-			sharedMatrix[j++] = matrix[i].y;
-			sharedMatrix[j++] = matrix[i].z;
-			sharedMatrix[j++] = matrix[i].w;
+			matrix[i][threadIdx.x] = pMatrix[threadIdx.x][i];
 		}
 	}
-	//__syncthreads();
+	__syncthreads();
 
 	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 		Vector4   vertexIn, vertexOut;
@@ -107,9 +92,9 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		vertexOut.x = vertexIn.x * sharedMatrix[0*4+0+matrixIndex] + vertexIn.y * sharedMatrix[0*4+1+matrixIndex] + vertexIn.z * sharedMatrix[0*4+2+matrixIndex] + sharedMatrix[0*4+3+matrixIndex] ; 
-		vertexOut.y = vertexIn.x * sharedMatrix[1*4+0+matrixIndex] + vertexIn.y * sharedMatrix[1*4+1+matrixIndex] + vertexIn.z * sharedMatrix[1*4+2+matrixIndex] + sharedMatrix[1*4+3+matrixIndex] ; 
-		vertexOut.z = vertexIn.x * sharedMatrix[2*4+0+matrixIndex] + vertexIn.y * sharedMatrix[2*4+1+matrixIndex] + vertexIn.z * sharedMatrix[2*4+2+matrixIndex] + sharedMatrix[2*4+3+matrixIndex] ; 
+		vertexOut.x = vertexIn.x * matrix[0][matrixIndex].x + vertexIn.y * matrix[0][matrixIndex].y + vertexIn.z * matrix[0][matrixIndex].z + matrix[0][matrixIndex].w ; 
+		vertexOut.y = vertexIn.x * matrix[1][matrixIndex].x + vertexIn.y * matrix[1][matrixIndex].y + vertexIn.z * matrix[1][matrixIndex].z + matrix[1][matrixIndex].w  ; 
+		vertexOut.z = vertexIn.x * matrix[2][matrixIndex].x + vertexIn.y * matrix[2][matrixIndex].y + vertexIn.z * matrix[2][matrixIndex].z + matrix[2][matrixIndex].w ; 
 
 		// 写入操作结果：新坐标
 		pVertexOut[i] = vertexOut;

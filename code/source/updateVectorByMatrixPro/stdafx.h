@@ -11,7 +11,6 @@
 #include <tchar.h>
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
-#define    JOINT_SIZE    100
 
 
 // TODO: 在此处引用程序需要的其他头文件
