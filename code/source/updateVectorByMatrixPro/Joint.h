@@ -1,4 +1,5 @@
-#pragma once
+#ifndef JOINT_H__
+#define JOINT_H__
 
 #include <stdlib.h>
 #include <string.h>
@@ -109,5 +110,7 @@ struct Joints{
 };// 关节的集合
 
 #endif
+
+#endif//JOINT_H__
 
 

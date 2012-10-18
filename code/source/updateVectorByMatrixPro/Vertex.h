@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VERTEX_H__
+#define VERTEX_H__
 
 #include "Joint.h"
 #include "cuda_runtime.h"
@@ -153,3 +154,5 @@ struct Vertexes{
 	int   nSizeJoint;// 关节的数目
 
 };// 顶点的集合
+
+#endif//VERTEX_H__
