@@ -46,19 +46,30 @@ int _tmain(int argc, _TCHAR* argv[])
 			globalMemoryUpdate( &_joints );
 
 			// 执行运算：坐标矩阵变换
-#if ALIGNED_STRUCT
+#if SEPERATE_STRUCT
 
 #if USE_SHARED
 			int sizeMatrixShared = sizeof(float4) * _joints.nSize * 3 ;
-			updateVectorByMatrix<<<64, 256, sizeMatrixShared>>>(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
+			updateVectorByMatrix<<<64, 256, sizeMatrixShared>>>
+				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
 				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2], _joints.nSize );
 #else
-			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
+			updateVectorByMatrix<<<64, 256>>>
+				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
 				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2] );
 #endif
 
 #else
-			updateVectorByMatrix<<<64, 256>>>(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
+
+#if USE_SHARED
+			int sizeMatrixShared = sizeof(float4) * _joints.nSize * 3 ;
+			updateVectorByMatrix<<<64, 256, sizeMatrixShared>>>
+				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice, _joints.nSize );
+#else
+			updateVectorByMatrix<<<64, 256>>>
+				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
+#endif
+
 #endif
 
 			cudaDeviceSynchronize();

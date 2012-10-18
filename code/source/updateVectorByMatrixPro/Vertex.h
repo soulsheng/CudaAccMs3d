@@ -5,8 +5,8 @@
 #include <map>
 #include <vector>
 
-#define		SORT_ARRAY			0// 顶点按矩阵索引排序：0不排序，1排序
-#define		SORT_ARRAY_LOOP		0// 顶点按矩阵索引循环交替排序：0不排序，1排序    排序如：0~100,0~100...
+#define		SORT_ARRAY				0// 顶点按矩阵索引顺序排序：0不排序，1排序    排序如：0...0, 1...1, ... 100...100
+#define		SORT_ARRAY_CROSS		0// 顶点按矩阵索引交替排序：0不排序，1排序    排序如：0,1~100, 0,1~100...
 
 //顶点坐标---------------------------------------------------------
 //typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
@@ -132,7 +132,7 @@ struct Vertexes{
 #endif
 		
 		nSizeJoint = sizeJoint;
-#if SORT_ARRAY_LOOP
+#if SORT_ARRAY_CROSS
 		sortLoop();
 #endif
 

@@ -10,7 +10,7 @@
 
 void globalMemoryUpdate( Joints* pJoints )
 {
-#if ALIGNED_STRUCT
+#if SEPERATE_STRUCT
 	for(int i=0;i<3;i++){
 		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
 	}
@@ -25,7 +25,7 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
-#if ALIGNED_STRUCT
+#if SEPERATE_STRUCT
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2)
 #else
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut)
@@ -42,7 +42,7 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
-#if ALIGNED_STRUCT
+#if SEPERATE_STRUCT
 		matrix[0] = pMatrix0[matrixIndex];
 		matrix[1] = pMatrix1[matrixIndex];
 		matrix[2] = pMatrix2[matrixIndex];
@@ -62,19 +62,29 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 	}
 }
 
+#if SEPERATE_STRUCT
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2, int sizeJoints)
+#else
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut, int sizeJoints)
+#endif
 {
 	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
 	
 	// 一次性读取矩阵，整个block块共享
 	extern __shared__		float sharedMatrix[];
-	if( indexBase < sizeJoints )
+	if( threadIdx.x < sizeJoints )
 	{
-		float4   matrix[3];
-		matrix[0] = pMatrix0[indexBase];
-		matrix[1] = pMatrix1[indexBase];
-		matrix[2] = pMatrix2[indexBase];
-		
+		Vector4   matrix[3];
+#if SEPERATE_STRUCT
+		matrix[0] = pMatrix0[threadIdx.x];
+		matrix[1] = pMatrix1[threadIdx.x];
+		matrix[2] = pMatrix2[threadIdx.x];
+#else
+		matrix[0] = pMatrix[threadIdx.x][0];
+		matrix[1] = pMatrix[threadIdx.x][1];
+		matrix[2] = pMatrix[threadIdx.x][2];
+#endif
+
 		int j=0;
 		for(int i=0; i<3; i++)
 		{

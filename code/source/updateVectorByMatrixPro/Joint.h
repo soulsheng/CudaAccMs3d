@@ -6,9 +6,16 @@
 
 #define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
 #define		USE_SHARED			0// 共享开关：0不共享，1共享
+#define		SEPERATE_STRUCT	1// 结构体拆分开关：0不拆分，1拆分
 
 #if ALIGNED_STRUCT
 typedef float4	Vector4;
+#else
+struct Vector4 { float x,y,z,w; };
+#endif
+
+#if SEPERATE_STRUCT
+
 typedef Vector4*  Matrix[3];// 矩阵
 
 
@@ -56,7 +63,6 @@ struct Joints{
 };// 关节的集合
 
 #else
-struct Vector4 { float x,y,z,w; };
 
 //关节矩阵---------------------------------------------------------
 typedef Vector4  Matrix[3];// 矩阵

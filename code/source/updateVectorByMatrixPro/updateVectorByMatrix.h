@@ -22,7 +22,7 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
-#if ALIGNED_STRUCT		
+#if SEPERATE_STRUCT		
 		matrix[0] = pJoints->pMatrix[0][matrixIndex];
 		matrix[1] = pJoints->pMatrix[1][matrixIndex];
 		matrix[2] = pJoints->pMatrix[2][matrixIndex];
