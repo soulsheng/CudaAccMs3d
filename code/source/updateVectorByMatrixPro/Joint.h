@@ -5,6 +5,7 @@
 #include "cuda_runtime.h"
 
 #define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
+#define		USE_SHARED			0// 共享开关：0不共享，1共享
 
 #if ALIGNED_STRUCT
 typedef float4	Vector4;

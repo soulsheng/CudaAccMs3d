@@ -61,3 +61,47 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		pVertexOut[i] = vertexOut;
 	}
 }
+
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2, int sizeJoints)
+{
+	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	// 一次性读取矩阵，整个block块共享
+	extern __shared__		float sharedMatrix[];
+	if( indexBase < sizeJoints )
+	{
+		float4   matrix[3];
+		matrix[0] = pMatrix0[indexBase];
+		matrix[1] = pMatrix1[indexBase];
+		matrix[2] = pMatrix2[indexBase];
+		
+		int j=0;
+		for(int i=0; i<3; i++)
+		{
+			sharedMatrix[j++] = matrix[i].x;
+			sharedMatrix[j++] = matrix[i].y;
+			sharedMatrix[j++] = matrix[i].z;
+			sharedMatrix[j++] = matrix[i].w;
+		}
+	}
+	//__syncthreads();
+
+	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+		Vector4   vertexIn, vertexOut;
+		int      matrixIndex;
+
+		// 读取操作数：初始的顶点坐标
+		vertexIn = pVertexIn[i];
+
+		// 读取操作数：顶点对应的矩阵
+		matrixIndex = int(vertexIn.w + 0.5);// float to int
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		vertexOut.x = vertexIn.x * sharedMatrix[0*4+0+matrixIndex] + vertexIn.y * sharedMatrix[0*4+1+matrixIndex] + vertexIn.z * sharedMatrix[0*4+2+matrixIndex] + sharedMatrix[0*4+3+matrixIndex] ; 
+		vertexOut.y = vertexIn.x * sharedMatrix[1*4+0+matrixIndex] + vertexIn.y * sharedMatrix[1*4+1+matrixIndex] + vertexIn.z * sharedMatrix[1*4+2+matrixIndex] + sharedMatrix[1*4+3+matrixIndex] ; 
+		vertexOut.z = vertexIn.x * sharedMatrix[2*4+0+matrixIndex] + vertexIn.y * sharedMatrix[2*4+1+matrixIndex] + vertexIn.z * sharedMatrix[2*4+2+matrixIndex] + sharedMatrix[2*4+3+matrixIndex] ; 
+
+		// 写入操作结果：新坐标
+		pVertexOut[i] = vertexOut;
+	}
+}
