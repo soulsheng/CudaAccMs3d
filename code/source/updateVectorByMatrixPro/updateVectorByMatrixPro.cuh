@@ -7,6 +7,8 @@
 #include "cuda_runtime.h"
 #include "cuda_runtime_api.h"
 
+#define		USE_ELEMENT_CROSS	0	// 同一线程处理多个数据元素， 1表示多元素交替，0表示不交替即顺序
+
 
 void globalMemoryUpdate( Joints* pJoints )
 {
@@ -34,7 +36,15 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 #endif
 {
 	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
-	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+#if  !USE_ELEMENT_CROSS
+	int nElementPerThread = (size+blockDim.x * gridDim.x-1)/(blockDim.x * gridDim.x);
+	for( int j=0; j<nElementPerThread; j++ ){
+		int i = indexBase * nElementPerThread + j;
+		if( i >= size )
+			break;
+#else
+		for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+#endif
 		Vector4   vertexIn, vertexOut;
 		Vector4   matrix[3];
 		int      matrixIndex;
@@ -85,7 +95,15 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 	}
 	__syncthreads();
 
-	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+#if  !USE_ELEMENT_CROSS
+	int nElementPerThread = (size+blockDim.x * gridDim.x-1)/(blockDim.x * gridDim.x);
+	for( int j=0; j<nElementPerThread; j++ ){
+		int i = indexBase * nElementPerThread + j;
+		if( i >= size )
+			break;
+#else
+		for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+#endif
 		Vector4   vertexIn, vertexOut;
 		int      matrixIndex;
 
