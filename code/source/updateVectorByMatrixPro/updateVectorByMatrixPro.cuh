@@ -25,6 +25,8 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
+#if !USE_SHARED
+
 #if SEPERATE_STRUCT
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2)
 #else
@@ -61,6 +63,8 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		pVertexOut[i] = vertexOut;
 	}
 }
+
+#else//USE_SHARED
 
 #if SEPERATE_STRUCT
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2, int sizeJoints)
@@ -100,3 +104,5 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		pVertexOut[i] = vertexOut;
 	}
 }
+
+#endif//USE_SHARED
