@@ -45,8 +45,12 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			globalMemoryUpdate( &_joints );
 			
-			int nBlocksPerGrid = 64; // 块的数目
-			int nThreadsPerBlock = 256; // 单块包含线程的数目
+			dim3 nBlocksPerGrid( 64 ); // 块的数目
+			dim3 nThreadsPerBlock( 256 ); // 单块包含线程的数目
+
+#if USE_ELEMENT_SINGLE
+			nBlocksPerGrid.y = (PROBLEM_SIZE+nThreadsPerBlock.x - 1)/(nThreadsPerBlock.x * nBlocksPerGrid.x);
+#endif
 
 			// 执行运算：坐标矩阵变换
 #if SEPERATE_STRUCT

@@ -8,6 +8,7 @@
 #include "cuda_runtime_api.h"
 
 #define		USE_ELEMENT_CROSS	0	// 同一线程处理多个数据元素， 1表示多元素交替，0表示不交替即顺序
+#define		USE_ELEMENT_SINGLE	1	// 同一线程处理一个数据元素， 1表示一个元素，0表示多个元素且不交替
 
 
 void globalMemoryUpdate( Joints* pJoints )
@@ -35,7 +36,9 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMat
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut)
 #endif
 {
-	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
+	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
+
+#if  !USE_ELEMENT_SINGLE
 #if  !USE_ELEMENT_CROSS
 	int nElementPerThread = (size+blockDim.x * gridDim.x-1)/(blockDim.x * gridDim.x);
 	for( int j=0; j<nElementPerThread; j++ ){
@@ -44,7 +47,14 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 			break;
 #else
 		for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
-#endif
+#endif // USE_ELEMENT_CROSS
+
+#else
+		int i = indexBase;
+		if( i >= size )
+			return;
+#endif // USE_ELEMENT_SINGLE
+
 		Vector4   vertexIn, vertexOut;
 		Vector4   matrix[3];
 		int      matrixIndex;
@@ -71,7 +81,9 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 
 		// 写入操作结果：新坐标
 		pVertexOut[i] = vertexOut;
+#if  !USE_ELEMENT_SINGLE
 	}
+#endif
 }
 
 #else//USE_SHARED
@@ -82,7 +94,7 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMat
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut, int sizeJoints)
 #endif
 {
-	const int indexBase = blockIdx.x * blockDim.x + threadIdx.x;
+	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 	
 	// 一次性读取矩阵，整个block块共享
 	__shared__		Vector4 matrix[3][JOINT_SIZE];
@@ -95,6 +107,7 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 	}
 	__syncthreads();
 
+#if  !USE_ELEMENT_SINGLE
 #if  !USE_ELEMENT_CROSS
 	int nElementPerThread = (size+blockDim.x * gridDim.x-1)/(blockDim.x * gridDim.x);
 	for( int j=0; j<nElementPerThread; j++ ){
@@ -103,7 +116,14 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 			break;
 #else
 		for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
-#endif
+#endif // USE_ELEMENT_CROSS
+
+#else
+		int i = indexBase;
+		if( i >= size )
+			return;
+#endif // USE_ELEMENT_SINGLE
+
 		Vector4   vertexIn, vertexOut;
 		int      matrixIndex;
 
@@ -120,7 +140,9 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 
 		// 写入操作结果：新坐标
 		pVertexOut[i] = vertexOut;
+#if  !USE_ELEMENT_SINGLE
 	}
+#endif
 }
 
 #endif//USE_SHARED
