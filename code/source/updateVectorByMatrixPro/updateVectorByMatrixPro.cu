@@ -44,17 +44,20 @@ int _tmain(int argc, _TCHAR* argv[])
 		while ( timer.getTime() < 10000  )
 		{
 			globalMemoryUpdate( &_joints );
+			
+			int nBlocksPerGrid = 64; // 块的数目
+			int nThreadsPerBlock = 256; // 单块包含线程的数目
 
 			// 执行运算：坐标矩阵变换
 #if SEPERATE_STRUCT
 
 #if USE_SHARED
 			int sizeMatrixShared = sizeof(float4) * _joints.nSize * 3 ;
-			updateVectorByMatrix<<<64, 256, sizeMatrixShared>>>
+			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock, sizeMatrixShared>>>
 				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
 				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2], _joints.nSize );
 #else
-			updateVectorByMatrix<<<64, 256>>>
+			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
 				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
 				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2] );
 #endif
@@ -63,10 +66,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 #if USE_SHARED
 			int sizeMatrixShared = sizeof(float4) * _joints.nSize * 3 ;
-			updateVectorByMatrix<<<64, 256, sizeMatrixShared>>>
+			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock, sizeMatrixShared>>>
 				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice, _joints.nSize );
 #else
-			updateVectorByMatrix<<<64, 256>>>
+			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
 				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
 #endif
 
