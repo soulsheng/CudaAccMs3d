@@ -12,7 +12,7 @@
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
-int iClass=6; // 问题规模最大值，16M/1G显存、32M/2G显存
+int iClass=6; // 问题规模最大值，16M/512M显存、32M/1G显存
 
 // 数据定义
 Vertexes  _vertexesStatic;//静态顶点坐标
@@ -71,10 +71,12 @@ int _tmain(int argc, _TCHAR* argv[])
 #if USE_SHARED
 			int sizeMatrixShared = sizeof(float4) * _joints.nSize * 3 ;
 			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock, sizeMatrixShared>>>
-				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice, _joints.nSize );
+				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice, _joints.nSize ,
+				_joints.pMatrixDevicePrevious);
 #else
 			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice);
+				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice ,
+				_joints.pMatrixDevicePrevious);
 #endif
 
 #endif
@@ -90,10 +92,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		bool bResult = false;
 
 		// 获取CPU运算结果
-		updateVectorByMatrixGold(_vertexesStatic.pVertex, _vertexesStatic.nSize, &_joints, _vertexesDynamic.pVertex);
+		updateVectorByMatrixGold(_vertexesStatic.pVertex, _vertexesDynamic.nSize, &_joints, _vertexesDynamic.pVertex);
 
 		// 获取GPU运算结果
-		Vector4 *pVertex = new Vector4[_vertexesStatic.nSize];
+		Vector4 *pVertex = new Vector4[_vertexesDynamic.nSize];
 		cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(Vector4) * _vertexesDynamic.nSize, cudaMemcpyDeviceToHost );
 		
 		// 比较结果
@@ -117,7 +119,9 @@ int _tmain(int argc, _TCHAR* argv[])
 void initialize(int problem_size, int joint_size)
 {
 	_joints.initialize( joint_size );
+#if USE_MEMORY_BUY_TIME
 	_vertexesStatic.initialize( problem_size, joint_size );
+#endif
 	_vertexesDynamic.initialize( problem_size, joint_size );
 }
 
@@ -125,6 +129,8 @@ void initialize(int problem_size, int joint_size)
 void unInitialize()
 {
 	_joints.unInitialize();
+#if USE_MEMORY_BUY_TIME
 	_vertexesStatic.unInitialize();
+#endif
 	_vertexesDynamic.unInitialize();
 }

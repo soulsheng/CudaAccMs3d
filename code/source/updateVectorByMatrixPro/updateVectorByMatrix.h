@@ -15,10 +15,17 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 	for(int i=0;i<size;i++){
 		Vector4   vertexIn, vertexOut;
 		Vector4   matrix[3];
+#if !USE_MEMORY_BUY_TIME
+		Vector4   matrixPrevious[3];
+#endif
 		int      matrixIndex;
 
 		// 读取操作数：初始的顶点坐标
+#if !USE_MEMORY_BUY_TIME
+		vertexIn = pVertexOut[i];
+#else
 		vertexIn = pVertexIn[i];
+#endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
@@ -30,7 +37,21 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 		matrix[0] = pJoints->pMatrix[matrixIndex][0];
 		matrix[1] = pJoints->pMatrix[matrixIndex][1];
 		matrix[2] = pJoints->pMatrix[matrixIndex][2];
+
+	#if !USE_MEMORY_BUY_TIME
+			matrixPrevious[0] = pJoints->pMatrixPrevious[matrixIndex][0];
+			matrixPrevious[1] = pJoints->pMatrixPrevious[matrixIndex][1];
+			matrixPrevious[2] = pJoints->pMatrixPrevious[matrixIndex][2];
+	#endif // USE_MEMORY_BUY_TIME
+
 #endif
+
+#if !USE_MEMORY_BUY_TIME
+			// 执行操作：对坐标执行矩阵逆变换，得到初始坐标
+			vertexOut.x = vertexIn.x * matrixPrevious[0].x + vertexIn.y * matrixPrevious[0].y + vertexIn.z * matrixPrevious[0].z + matrixPrevious[0].w ; 
+			vertexOut.y = vertexIn.x * matrixPrevious[1].x + vertexIn.y * matrixPrevious[1].y + vertexIn.z * matrixPrevious[1].z + matrixPrevious[1].w  ; 
+			vertexOut.z = vertexIn.x * matrixPrevious[2].x + vertexIn.y * matrixPrevious[2].y + vertexIn.z * matrixPrevious[2].z + matrixPrevious[2].w ; 
+#endif // USE_MEMORY_BUY_TIME
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z + matrix[0].w ; 
