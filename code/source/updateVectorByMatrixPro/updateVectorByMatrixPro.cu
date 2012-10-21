@@ -68,16 +68,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 #else
 
-#if USE_SHARED
-			int sizeMatrixShared = sizeof(float4) * _joints.nSize * 3 ;
-			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock, sizeMatrixShared>>>
+			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
 				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice, _joints.nSize ,
 				_joints.pMatrixDevicePrevious);
-#else
-			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice ,
-				_joints.pMatrixDevicePrevious);
-#endif
 
 #endif
 
