@@ -55,16 +55,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			// 执行运算：坐标矩阵变换
 #if SEPERATE_STRUCT
 
-#if USE_SHARED
-			int sizeMatrixShared = sizeof(float4) * _joints.nSize * 3 ;
-			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock, sizeMatrixShared>>>
-				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
-				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2], _joints.nSize );
-#else
 			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-				(_vertexesStatic.pVertexDevice, _vertexesStatic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
-				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2] );
-#endif
+				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
+				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2], _joints.nSize ,
+				_joints.pMatrixDevicePrevious[0], _joints.pMatrixDevicePrevious[1], _joints.pMatrixDevicePrevious[2]);
 
 #else
 

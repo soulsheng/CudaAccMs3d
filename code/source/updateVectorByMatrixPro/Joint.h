@@ -7,7 +7,7 @@
 
 #define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
 #define		USE_SHARED			1// 共享开关：0不共享，1共享
-#define		SEPERATE_STRUCT	0// 结构体拆分开关：0不拆分，1拆分
+#define		SEPERATE_STRUCT	1// 结构体拆分开关：0不拆分，1拆分
 #define		USE_MEMORY_BUY_TIME		0	// 以空间换时间， 1表示换，0表示不换
 
 #define    JOINT_SIZE    100
@@ -50,6 +50,17 @@ struct Joints{
 			}
 			cudaMalloc( &pMatrixDevice[i], sizeof(Vector4) * nSize ) ;
 		}
+
+		for(int i=0;i<3;i++){
+			pMatrixPrevious[i] = new Vector4[nSize];
+			for(int j=0;j<nSize;j++){
+				pMatrixPrevious[i][j].x = rand() * 1.0f;
+				pMatrixPrevious[i][j].y = rand() * 1.0f;
+				pMatrixPrevious[i][j].z = rand() * 1.0f;
+				pMatrixPrevious[i][j].w = rand() * 1.0f;
+			}
+			cudaMalloc( &pMatrixDevicePrevious[i], sizeof(Vector4) * nSize ) ;
+		}
 	}
 
 	// 释放空间
@@ -59,9 +70,14 @@ struct Joints{
 			if (pMatrix[i]) delete[] pMatrix[i];
 			if (pMatrixDevice[i]) cudaFree(pMatrixDevice[i]) ;
 		}
+		for(int i=0;i<3;i++){
+			if (pMatrixPrevious[i]) delete[] pMatrixPrevious[i];
+			if (pMatrixDevicePrevious[i]) cudaFree(pMatrixDevicePrevious[i]) ;
+		}
 	}
 
 	Matrix  pMatrix, pMatrixDevice;
+	Matrix  pMatrixPrevious, pMatrixDevicePrevious; // 关节矩阵 上一帧
 	int   nSize;// 关节的数目
 
 };// 关节的集合

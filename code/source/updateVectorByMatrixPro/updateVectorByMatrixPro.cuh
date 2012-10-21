@@ -15,6 +15,7 @@ void globalMemoryUpdate( Joints* pJoints )
 {
 #if SEPERATE_STRUCT
 	for(int i=0;i<3;i++){
+		cudaMemcpy( pJoints->pMatrixDevicePrevious[i], pJoints->pMatrixPrevious[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
 		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
 	}
 #else
@@ -90,7 +91,8 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 #else//USE_SHARED
 
 #if SEPERATE_STRUCT
-__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2, int sizeJoints)
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2, int sizeJoints,
+															Vector4* pMatrixPrevious0, Vector4* pMatrixPrevious1, Vector4* pMatrixPrevious2)
 #else
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut, int sizeJoints, Matrix* pMatrixPrevious)
 #endif
@@ -104,6 +106,7 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 #endif
 	if( threadIdx.x < sizeJoints )
 	{
+#if !SEPERATE_STRUCT
 		for( int i=0;i<3;i++)
 		{
 			matrix[i][threadIdx.x] = pMatrix[threadIdx.x][i];
@@ -111,6 +114,14 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 			matrixPrevious[i][threadIdx.x] = pMatrixPrevious[threadIdx.x][i];
 #endif
 		}
+#else
+		matrix[0][threadIdx.x] = pMatrix0[threadIdx.x];
+		matrix[1][threadIdx.x] = pMatrix1[threadIdx.x];
+		matrix[2][threadIdx.x] = pMatrix2[threadIdx.x];
+		matrixPrevious[0][threadIdx.x] = pMatrixPrevious0[threadIdx.x];
+		matrixPrevious[1][threadIdx.x] = pMatrixPrevious1[threadIdx.x];
+		matrixPrevious[2][threadIdx.x] = pMatrixPrevious2[threadIdx.x];
+#endif//!SEPERATE_STRUCT
 	}
 	__syncthreads();
 
@@ -149,6 +160,8 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		vertexOut.x = vertexIn.x * matrixPrevious[0][matrixIndex].x + vertexIn.y * matrixPrevious[0][matrixIndex].y + vertexIn.z * matrixPrevious[0][matrixIndex].z + matrixPrevious[0][matrixIndex].w ; 
 		vertexOut.y = vertexIn.x * matrixPrevious[1][matrixIndex].x + vertexIn.y * matrixPrevious[1][matrixIndex].y + vertexIn.z * matrixPrevious[1][matrixIndex].z + matrixPrevious[1][matrixIndex].w  ; 
 		vertexOut.z = vertexIn.x * matrixPrevious[2][matrixIndex].x + vertexIn.y * matrixPrevious[2][matrixIndex].y + vertexIn.z * matrixPrevious[2][matrixIndex].z + matrixPrevious[2][matrixIndex].w ; 
+		
+		vertexIn = vertexOut;
 #endif // USE_MEMORY_BUY_TIME
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标

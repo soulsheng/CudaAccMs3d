@@ -33,6 +33,13 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 		matrix[0] = pJoints->pMatrix[0][matrixIndex];
 		matrix[1] = pJoints->pMatrix[1][matrixIndex];
 		matrix[2] = pJoints->pMatrix[2][matrixIndex];
+
+	#if !USE_MEMORY_BUY_TIME
+			matrixPrevious[0] = pJoints->pMatrixPrevious[0][matrixIndex];
+			matrixPrevious[1] = pJoints->pMatrixPrevious[1][matrixIndex];
+			matrixPrevious[2] = pJoints->pMatrixPrevious[2][matrixIndex];
+	#endif // USE_MEMORY_BUY_TIME
+
 #else
 		matrix[0] = pJoints->pMatrix[matrixIndex][0];
 		matrix[1] = pJoints->pMatrix[matrixIndex][1];
@@ -51,6 +58,8 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 			vertexOut.x = vertexIn.x * matrixPrevious[0].x + vertexIn.y * matrixPrevious[0].y + vertexIn.z * matrixPrevious[0].z + matrixPrevious[0].w ; 
 			vertexOut.y = vertexIn.x * matrixPrevious[1].x + vertexIn.y * matrixPrevious[1].y + vertexIn.z * matrixPrevious[1].z + matrixPrevious[1].w  ; 
 			vertexOut.z = vertexIn.x * matrixPrevious[2].x + vertexIn.y * matrixPrevious[2].y + vertexIn.z * matrixPrevious[2].z + matrixPrevious[2].w ; 
+
+			vertexIn = vertexOut;
 #endif // USE_MEMORY_BUY_TIME
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
