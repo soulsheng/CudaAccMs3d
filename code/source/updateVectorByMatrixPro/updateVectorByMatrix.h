@@ -79,9 +79,9 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 void updateVectorByMatrixGoldFully(Vector4* pVertexIn, Vector4* pVertexOut, int size, float*pMatrix, float*pMatrixPrevious){
 	for(int i=0;i<size;i++){
 		Vector4   vertexIn, vertexOut;
-		float   matrix[12];
+		float   matrix[JOINT_WIDTH];
 #if !USE_MEMORY_BUY_TIME
-		float   matrixPrevious[12];
+		float   matrixPrevious[JOINT_WIDTH];
 #endif
 
 		int      matrixIndex;
@@ -92,7 +92,7 @@ void updateVectorByMatrixGoldFully(Vector4* pVertexIn, Vector4* pVertexOut, int 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
 		
-		for (int j=0;j<12;j++)
+		for (int j=0;j<JOINT_WIDTH;j++)
 		{
 			matrix[j] = pMatrix[j*JOINT_SIZE+matrixIndex];
 #if !USE_MEMORY_BUY_TIME

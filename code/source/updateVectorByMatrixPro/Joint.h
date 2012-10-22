@@ -13,6 +13,7 @@
 #define		SEPERATE_STRUCT_FULLY		1 // 结构体彻底拆分开关：0不拆分，1拆分
 
 #define    JOINT_SIZE    100
+#define    JOINT_WIDTH    12
 
 #if ALIGNED_STRUCT
 typedef float4	Vector4;
@@ -87,7 +88,7 @@ struct Joints{
 
 #else // SEPERATE_STRUCT_FULLY
 
-typedef float*  Matrix[12];// 矩阵
+typedef float*  Matrix[JOINT_WIDTH];// 矩阵
 
 
 struct Joints{
@@ -95,25 +96,25 @@ struct Joints{
 	// 获取关节矩阵
 	void initialize( int size, float* pBufferMatrix ){
 		nSize = size;
-		pMatrix = new float[nSize*12];
-		memcpy( pMatrix, pBufferMatrix, nSize*12*sizeof(float) );
+		pMatrix = new float[nSize*JOINT_WIDTH];
+		memcpy( pMatrix, pBufferMatrix, nSize*JOINT_WIDTH*sizeof(float) );
 		
 	}
 
 	// 获取关节矩阵 模拟
 	void initialize( int size ){
 		nSize = size;
-		pMatrix = new float[nSize*12];
-		for(int i=0;i<nSize*12;i++){
+		pMatrix = new float[nSize*JOINT_WIDTH];
+		for(int i=0;i<nSize*JOINT_WIDTH;i++){
 			pMatrix[i] = rand() * 1.0f;
 		}
-		cudaMalloc( &pMatrixDevice, sizeof(float) * nSize * 12) ;
+		cudaMalloc( &pMatrixDevice, sizeof(float) * nSize * JOINT_WIDTH) ;
 
-		pMatrixPrevious = new float[nSize*12];
-		for(int i=0;i<nSize*12;i++){
+		pMatrixPrevious = new float[nSize*JOINT_WIDTH];
+		for(int i=0;i<nSize*JOINT_WIDTH;i++){
 			pMatrixPrevious[i] = rand() * 1.0f;
 		}
-		cudaMalloc( &pMatrixDevicePrevious, sizeof(float) * nSize * 12) ;
+		cudaMalloc( &pMatrixDevicePrevious, sizeof(float) * nSize * JOINT_WIDTH) ;
 	}
 
 	// 释放空间

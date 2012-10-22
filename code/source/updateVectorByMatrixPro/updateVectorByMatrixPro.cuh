@@ -20,8 +20,8 @@ void globalMemoryUpdate( Joints* pJoints )
 		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
 	}
 	#else
-		cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*12 * pJoints->nSize, cudaMemcpyHostToDevice );
-		cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*12 * pJoints->nSize, cudaMemcpyHostToDevice );
+		cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
+		cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
 	#endif
 #else
 	cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(Matrix) * pJoints->nSize, cudaMemcpyHostToDevice );
@@ -128,8 +128,8 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
 		
-		float   matrix[12];
-		for (int j=0;j<12;j++)
+		float   matrix[JOINT_WIDTH];
+		for (int j=0;j<JOINT_WIDTH;j++)
 		{
 			matrix[j]= pMatrix[j*JOINT_SIZE + matrixIndex];
 		}
@@ -249,14 +249,14 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 
 	// 一次性读取矩阵，整个block块共享
-	__shared__		float matrix[12][JOINT_SIZE];
+	__shared__		float matrix[JOINT_WIDTH][JOINT_SIZE];
 #if !USE_MEMORY_BUY_TIME
-	__shared__		float matrixPrevious[12][JOINT_SIZE];
+	__shared__		float matrixPrevious[JOINT_WIDTH][JOINT_SIZE];
 #endif
 
 	if( threadIdx.x < sizeJoints )
 	{
-		for (int j=0;j<12;j++)
+		for (int j=0;j<JOINT_WIDTH;j++)
 		{
 			matrix[j][threadIdx.x] = pMatrix[j*JOINT_SIZE + threadIdx.x];
 #if !USE_MEMORY_BUY_TIME
