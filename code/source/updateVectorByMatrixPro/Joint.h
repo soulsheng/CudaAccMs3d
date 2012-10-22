@@ -13,7 +13,7 @@
 #define		SEPERATE_STRUCT_FULLY		1 // 结构体彻底拆分开关：0不拆分，1拆分
 
 #define    JOINT_SIZE    100
-#define    JOINT_WIDTH    12
+#define    JOINT_WIDTH    12//16
 
 #if ALIGNED_STRUCT
 typedef float4	Vector4;
