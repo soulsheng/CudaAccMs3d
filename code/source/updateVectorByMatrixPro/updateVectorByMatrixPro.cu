@@ -56,7 +56,7 @@ int _tmain(int argc, _TCHAR* argv[])
 #if SEPERATE_STRUCT
 
 #if SEPERATE_STRUCT_FULLY
-			updateVectorByMatrixFully<<<nBlocksPerGrid, nThreadsPerBlock>>>( _vertexesDynamic.pVertexDevice, _vertexesDynamic.nSize,
+			updateVectorByMatrixFully<<<nBlocksPerGrid, nThreadsPerBlock>>>( _vertexesStatic.pVertexDevice,_vertexesDynamic.pVertexDevice, _vertexesDynamic.nSize,
 				_joints.nSize, _joints.pMatrixDevice, _joints.pMatrixDevicePrevious);
 #else // SEPERATE_STRUCT_FULLY
 			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
@@ -85,7 +85,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		// 获取CPU运算结果
 #if SEPERATE_STRUCT_FULLY
-		updateVectorByMatrixGoldFully(_vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
+		updateVectorByMatrixGoldFully(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
 #else
 		updateVectorByMatrixGold(_vertexesStatic.pVertex, _vertexesDynamic.nSize, &_joints, _vertexesDynamic.pVertex);
 #endif
