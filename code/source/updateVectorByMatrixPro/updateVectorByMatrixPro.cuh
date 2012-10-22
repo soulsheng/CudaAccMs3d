@@ -14,10 +14,15 @@
 void globalMemoryUpdate( Joints* pJoints )
 {
 #if SEPERATE_STRUCT
+#if !SEPERATE_STRUCT_FULLY
 	for(int i=0;i<3;i++){
 		cudaMemcpy( pJoints->pMatrixDevicePrevious[i], pJoints->pMatrixPrevious[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
 		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
 	}
+	#else
+		cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*12 * pJoints->nSize, cudaMemcpyHostToDevice );
+		cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*12 * pJoints->nSize, cudaMemcpyHostToDevice );
+	#endif
 #else
 	cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(Matrix) * pJoints->nSize, cudaMemcpyHostToDevice );
 	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(Matrix) * pJoints->nSize, cudaMemcpyHostToDevice );
@@ -178,3 +183,47 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 }
 
 #endif//USE_SHARED
+
+__global__ void updateVectorByMatrixFully( Vector4* pVertexOut, int size, int sizeJoints, float* pMatrix, float* pMatrixPrevious)
+{
+	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
+
+	// 一次性读取矩阵，整个block块共享
+	__shared__		float matrix[12][JOINT_SIZE];
+	__shared__		float matrixPrevious[12][JOINT_SIZE];
+
+	if( threadIdx.x < sizeJoints )
+	{
+		for (int j=0;j<12;j++)
+		{
+			matrix[j][threadIdx.x] = pMatrix[j*JOINT_SIZE + threadIdx.x];
+			matrixPrevious[j][threadIdx.x] = pMatrixPrevious[j*JOINT_SIZE + threadIdx.x];
+		}
+	}
+	__syncthreads();
+
+	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+
+		// 读取操作数：初始的顶点坐标
+		Vector4   vertexIn = pVertexOut[i];
+
+		// 读取操作数：顶点对应的矩阵
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
+		
+		// 执行操作：对坐标执行矩阵逆变换，得到初始坐标
+		Vector4   vertexOut;
+		vertexOut.x = vertexIn.x * matrixPrevious[0][matrixIndex] + vertexIn.y * matrixPrevious[1][matrixIndex] + vertexIn.z * matrixPrevious[2][matrixIndex] + matrixPrevious[3][matrixIndex] ; 
+		vertexOut.y = vertexIn.x * matrixPrevious[1*4+0][matrixIndex] + vertexIn.y * matrixPrevious[1*4+1][matrixIndex] + vertexIn.z * matrixPrevious[1*4+3][matrixIndex] + matrixPrevious[1*4+3][matrixIndex]  ; 
+		vertexOut.z = vertexIn.x * matrixPrevious[2*4+0][matrixIndex] + vertexIn.y * matrixPrevious[2*4+1][matrixIndex] + vertexIn.z * matrixPrevious[2*4+3][matrixIndex] + matrixPrevious[2*4+3][matrixIndex]  ;
+
+		vertexIn = vertexOut;
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		vertexOut.x = vertexIn.x * matrix[0][matrixIndex] + vertexIn.y * matrix[1][matrixIndex] + vertexIn.z * matrix[2][matrixIndex] + matrix[3][matrixIndex] ; 
+		vertexOut.y = vertexIn.x * matrix[1*4+0][matrixIndex] + vertexIn.y * matrix[1*4+1][matrixIndex] + vertexIn.z * matrix[1*4+3][matrixIndex] + matrix[1*4+3][matrixIndex]  ; 
+		vertexOut.z = vertexIn.x * matrix[2*4+0][matrixIndex] + vertexIn.y * matrix[2*4+1][matrixIndex] + vertexIn.z * matrix[2*4+3][matrixIndex] + matrix[2*4+3][matrixIndex]  ;
+
+		// 写入操作结果：新坐标
+		pVertexOut[i] = vertexOut;
+	}
+}

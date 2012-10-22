@@ -10,6 +10,8 @@
 #define		SEPERATE_STRUCT	1// 结构体拆分开关：0不拆分，1拆分
 #define		USE_MEMORY_BUY_TIME		0	// 以空间换时间， 1表示换，0表示不换
 
+#define		SEPERATE_STRUCT_FULLY		1// 结构体彻底拆分开关：0不拆分，1拆分
+
 #define    JOINT_SIZE    100
 
 #if ALIGNED_STRUCT
@@ -20,6 +22,7 @@ struct Vector4 { float x,y,z,w; };
 
 #if SEPERATE_STRUCT
 
+#if !SEPERATE_STRUCT_FULLY
 typedef Vector4*  Matrix[3];// 矩阵
 
 
@@ -82,7 +85,56 @@ struct Joints{
 
 };// 关节的集合
 
-#else
+#else // SEPERATE_STRUCT_FULLY
+
+typedef float*  Matrix[12];// 矩阵
+
+
+struct Joints{
+
+	// 获取关节矩阵
+	void initialize( int size, float* pBufferMatrix ){
+		nSize = size;
+		pMatrix = new float[nSize*12];
+		memcpy( pMatrix, pBufferMatrix, nSize*12*sizeof(float) );
+		
+	}
+
+	// 获取关节矩阵 模拟
+	void initialize( int size ){
+		nSize = size;
+		pMatrix = new float[nSize*12];
+		for(int i=0;i<nSize*12;i++){
+			pMatrix[i] = rand() * 1.0f;
+		}
+		cudaMalloc( &pMatrixDevice, sizeof(float) * nSize * 12) ;
+
+		pMatrixPrevious = new float[nSize*12];
+		for(int i=0;i<nSize*12;i++){
+			pMatrixPrevious[i] = rand() * 1.0f;
+		}
+		cudaMalloc( &pMatrixDevicePrevious, sizeof(float) * nSize * 12) ;
+	}
+
+	// 释放空间
+	void unInitialize()
+	{
+		if (pMatrix) delete[] pMatrix;	
+		if (pMatrixDevice) cudaFree(pMatrixDevice) ;
+		
+		if (pMatrixPrevious) delete[] pMatrixPrevious;
+		if (pMatrixDevicePrevious) cudaFree(pMatrixDevicePrevious) ;
+	}
+
+	float		*pMatrix, *pMatrixDevice;
+	float		*pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
+	int   nSize;// 关节的数目
+
+};// 关节的集合
+
+#endif // SEPERATE_STRUCT_FULLY
+
+#else // SEPERATE_STRUCT
 
 //关节矩阵---------------------------------------------------------
 typedef Vector4  Matrix[3];// 矩阵

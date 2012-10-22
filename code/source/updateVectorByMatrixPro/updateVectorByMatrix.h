@@ -10,6 +10,7 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
+#if !SEPERATE_STRUCT_FULLY
 void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vector4* pVertexOut){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
@@ -72,6 +73,49 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 	}
 
 }
+
+#else //SEPERATE_STRUCT_FULLY
+
+void updateVectorByMatrixGoldFully(Vector4* pVertexOut, int size, float*pMatrix, float*pMatrixPrevious){
+	for(int i=0;i<size;i++){
+		Vector4   vertexIn, vertexOut;
+		float   matrix[12];
+		float   matrixPrevious[12];
+
+		int      matrixIndex;
+
+		// 读取操作数：初始的顶点坐标
+		vertexIn = pVertexOut[i];
+
+		// 读取操作数：顶点对应的矩阵
+		matrixIndex = int(vertexIn.w + 0.5);// float to int
+		
+		for (int j=0;j<12;j++)
+		{
+			matrix[j] = pMatrix[j*12+matrixIndex];
+			matrixPrevious[j] = pMatrixPrevious[j*12+matrixIndex];
+		}
+
+		// 执行操作：对坐标执行矩阵逆变换，得到初始坐标
+		vertexOut.x = vertexIn.x * matrixPrevious[0] + vertexIn.y * matrixPrevious[1] + vertexIn.z * matrixPrevious[2] + matrixPrevious[3] ; 
+		vertexOut.y = vertexIn.x * matrixPrevious[1*4+0] + vertexIn.y * matrixPrevious[1*4+1] + vertexIn.z * matrixPrevious[1*4+3] + matrixPrevious[1*4+3]  ; 
+		vertexOut.z = vertexIn.x * matrixPrevious[2*4+0] + vertexIn.y * matrixPrevious[2*4+1] + vertexIn.z * matrixPrevious[2*4+3] + matrixPrevious[2*4+3]  ;
+
+		vertexIn = vertexOut;
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		vertexOut.x = vertexIn.x * matrix[0] + vertexIn.y * matrix[1] + vertexIn.z * matrix[2] + matrix[3] ; 
+		vertexOut.y = vertexIn.x * matrix[1*4+0] + vertexIn.y * matrix[1*4+1] + vertexIn.z * matrix[1*4+3] + matrix[1*4+3]  ; 
+		vertexOut.z = vertexIn.x * matrix[2*4+0] + vertexIn.y * matrix[2*4+1] + vertexIn.z * matrix[2*4+3] + matrix[2*4+3]  ;
+
+		// 写入操作结果：新坐标
+		pVertexOut[i] = vertexOut;
+	}
+
+}
+
+#endif //SEPERATE_STRUCT_FULLY
+
 
 /* 检测坐标是否相同
 pVertex  : 待检测坐标数组
