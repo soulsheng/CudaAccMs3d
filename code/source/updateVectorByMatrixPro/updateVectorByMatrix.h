@@ -87,7 +87,11 @@ void updateVectorByMatrixGoldFully(Vector4* pVertexIn, Vector4* pVertexOut, int 
 		int      matrixIndex;
 
 		// 读取操作数：初始的顶点坐标
+#if !USE_MEMORY_BUY_TIME
+		vertexIn = pVertexOut[i];
+#else
 		vertexIn = pVertexIn[i];
+#endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int

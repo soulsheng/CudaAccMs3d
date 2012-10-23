@@ -71,7 +71,11 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		int      matrixIndex;
 
 		// 读取操作数：初始的顶点坐标
+#if !USE_MEMORY_BUY_TIME
+		vertexIn = pVertexOut[i];
+#else
 		vertexIn = pVertexIn[i];
+#endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
@@ -79,6 +83,13 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		matrix[0] = pMatrix0[matrixIndex];
 		matrix[1] = pMatrix1[matrixIndex];
 		matrix[2] = pMatrix2[matrixIndex];
+
+#if !USE_MEMORY_BUY_TIME
+		matrixPrevious[0] = pMatrixPrevious0[matrixIndex];
+		matrixPrevious[1] = pMatrixPrevious1[matrixIndex];
+		matrixPrevious[2] = pMatrixPrevious2[matrixIndex];
+#endif
+
 #else
 		matrix[0] = pMatrix[matrixIndex][0];
 		matrix[1] = pMatrix[matrixIndex][1];
@@ -123,7 +134,11 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 		int      matrixIndex;
 
 		// 读取操作数：初始的顶点坐标
+#if !USE_MEMORY_BUY_TIME
+		vertexIn = pVertexOut[i];
+#else
 		vertexIn = pVertexIn[i];
+#endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
@@ -135,10 +150,15 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 		}
 
 #if !USE_MEMORY_BUY_TIME
+		float   matrixPrevious[JOINT_WIDTH];
+		for (int j=0;j<JOINT_WIDTH;j++)
+		{
+			matrixPrevious[j]= pMatrixPrevious[j*JOINT_SIZE + matrixIndex];
+		}
 		// 执行操作：对坐标执行矩阵逆变换，得到初始坐标
-		vertexOut.x = vertexIn.x * matrixPrevious[0][matrixIndex] + vertexIn.y * matrixPrevious[1][matrixIndex] + vertexIn.z * matrixPrevious[2][matrixIndex] + matrixPrevious[3][matrixIndex] ; 
-		vertexOut.y = vertexIn.x * matrixPrevious[1*4+0][matrixIndex] + vertexIn.y * matrixPrevious[1*4+1][matrixIndex] + vertexIn.z * matrixPrevious[1*4+2][matrixIndex] + matrixPrevious[1*4+3][matrixIndex]  ; 
-		vertexOut.z = vertexIn.x * matrixPrevious[2*4+0][matrixIndex] + vertexIn.y * matrixPrevious[2*4+1][matrixIndex] + vertexIn.z * matrixPrevious[2*4+2][matrixIndex] + matrixPrevious[2*4+3][matrixIndex]  ;
+		vertexOut.x = vertexIn.x * matrixPrevious[0] + vertexIn.y * matrixPrevious[1] + vertexIn.z * matrixPrevious[2] + matrixPrevious[3] ; 
+		vertexOut.y = vertexIn.x * matrixPrevious[1*4+0] + vertexIn.y * matrixPrevious[1*4+1] + vertexIn.z * matrixPrevious[1*4+2] + matrixPrevious[1*4+3]  ; 
+		vertexOut.z = vertexIn.x * matrixPrevious[2*4+0] + vertexIn.y * matrixPrevious[2*4+1] + vertexIn.z * matrixPrevious[2*4+2] + matrixPrevious[2*4+3]  ;
 
 		vertexIn = vertexOut;
 #endif
