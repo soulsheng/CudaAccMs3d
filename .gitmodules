@@ -1,0 +1,3 @@
+[submodule "threefab"]
+	path = threefab
+	url = https://github.com/soulsheng/threefab.git
