@@ -1,3 +1,6 @@
 [submodule "threefab"]
 	path = threefab
 	url = https://github.com/soulsheng/threefab.git
+[submodule "samples/webgl/Physijs"]
+	path = samples/webgl/Physijs
+	url = https://github.com/soulsheng/Physijs.git
