@@ -4,3 +4,9 @@
 [submodule "samples/webgl/Physijs"]
 	path = samples/webgl/Physijs
 	url = https://github.com/soulsheng/Physijs.git
+[submodule "samples/webcl/RiverTrail"]
+	path = samples/webcl/RiverTrail
+	url = https://github.com/soulsheng/RiverTrail.git
+[submodule "samples/webcl/SmokeVision"]
+	path = samples/webcl/SmokeVision
+	url = https://github.com/soulsheng/SmokeVision.git
