@@ -386,30 +386,36 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 		Vector4   vertexIn = pVertexOut[i];
 #else
 		Vector4   vertexIn = pVertexIn[i];
-		Vector4		vertexOut = vertexIn;
 #endif
 
 		// 读取操作数：顶点对应的矩阵
 		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
 		
+#if !USE_MEMORY_BUY_TIME
 		float   matrixCurrentRegister[JOINT_WIDTH];
 		float   matrixPreviousRegister[JOINT_WIDTH];
+#endif
 		float   matrixRegister[JOINT_WIDTH];
 		for (int j=0;j<JOINT_WIDTH;j++)
 		{
-			matrixCurrentRegister[j] = matrixCurrent[j][matrixIndex];
 #if !USE_MEMORY_BUY_TIME
+			matrixCurrentRegister[j] = matrixCurrent[j][matrixIndex];
 			matrixPreviousRegister[j] = matrixPrevious[j][matrixIndex];
+#else
+			matrixRegister[j] = matrixCurrent[j][matrixIndex];
 #endif
 		}
 		
+#if !USE_MEMORY_BUY_TIME
 		invertMatrix4( matrixPreviousRegister );
 		multMatrix4( matrixCurrentRegister, matrixPreviousRegister, matrixRegister );
+#endif
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 #if USE_FUNCTION_TRANSFORM
 		transformVec3ByMatrix4( &vertexIn, matrixRegister, pVertexOut+i);
 #else
+		Vector4		vertexOut;
 		vertexOut.x = vertexIn.x * matrix[0][matrixIndex] + vertexIn.y * matrix[1][matrixIndex] + vertexIn.z * matrix[2][matrixIndex] + matrix[3][matrixIndex] ; 
 		vertexOut.y = vertexIn.x * matrix[1*4+0][matrixIndex] + vertexIn.y * matrix[1*4+1][matrixIndex] + vertexIn.z * matrix[1*4+2][matrixIndex] + matrix[1*4+3][matrixIndex]  ; 
 		vertexOut.z = vertexIn.x * matrix[2*4+0][matrixIndex] + vertexIn.y * matrix[2*4+1][matrixIndex] + vertexIn.z * matrix[2*4+2][matrixIndex] + matrix[2*4+3][matrixIndex]  ;

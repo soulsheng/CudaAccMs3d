@@ -58,7 +58,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			
 #if !USE_MEMORY_BUY_TIME
 			// 为了确保重复试验得到相同结果，恢复缺省值
-			_vertexesDynamic.copy( _vertexesStatic );
+			//_vertexesDynamic.copy( _vertexesStatic );
 #endif
 
 			dim3 nBlocksPerGrid( SIZE_BLOCK ); // 块的数目

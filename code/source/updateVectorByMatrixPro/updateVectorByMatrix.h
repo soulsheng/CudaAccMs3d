@@ -172,9 +172,9 @@ void updateVectorByMatrixGoldFully(Vector4* pVertexIn, Vector4* pVertexOut, int 
 	for(int i=0;i<size;i++){
 
 		float   matrix[JOINT_WIDTH];
-		float   matrixCurrent[JOINT_WIDTH];
 #if !USE_MEMORY_BUY_TIME
 		float   matrixPrevious[JOINT_WIDTH];
+		float   matrixCurrent[JOINT_WIDTH];
 #endif
 
 		int      matrixIndex;
@@ -184,7 +184,6 @@ void updateVectorByMatrixGoldFully(Vector4* pVertexIn, Vector4* pVertexOut, int 
 		Vector4   vertexIn = pVertexOut[i];
 #else
 		Vector4   vertexIn = pVertexIn[i];
-		Vector4   vertexOut = vertexIn;
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
@@ -192,19 +191,24 @@ void updateVectorByMatrixGoldFully(Vector4* pVertexIn, Vector4* pVertexOut, int 
 		
 		for (int j=0;j<JOINT_WIDTH;j++)
 		{
-			matrixCurrent[j] = pMatrix[j*JOINT_SIZE+matrixIndex];
 #if !USE_MEMORY_BUY_TIME
+			matrixCurrent[j] = pMatrix[j*JOINT_SIZE+matrixIndex];
 			matrixPrevious[j] = pMatrixPrevious[j*JOINT_SIZE+matrixIndex];
+#else
+			matrix[j] = pMatrix[j*JOINT_SIZE+matrixIndex];
 #endif
 		}
 
+#if !USE_MEMORY_BUY_TIME
 		invertMatrix4Host( matrixPrevious );
 		multMatrix4Host( matrixCurrent, matrixPrevious, matrix );
+#endif
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 #if	USE_FUNCTION_TRANSFORM
 		transformVec3ByMatrix4Host( &vertexIn, matrix, pVertexOut+i);
 #else
+		Vector4   vertexOut;
 		vertexOut.x = vertexIn.x * matrix[0] + vertexIn.y * matrix[1] + vertexIn.z * matrix[2] + matrix[3] ; 
 		vertexOut.y = vertexIn.x * matrix[1*4+0] + vertexIn.y * matrix[1*4+1] + vertexIn.z * matrix[1*4+2] + matrix[1*4+3]  ; 
 		vertexOut.z = vertexIn.x * matrix[2*4+0] + vertexIn.y * matrix[2*4+1] + vertexIn.z * matrix[2*4+2] + matrix[2*4+3]  ;
