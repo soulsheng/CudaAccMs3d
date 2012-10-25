@@ -30,6 +30,21 @@ void globalMemoryUpdate( Joints* pJoints )
 }
 
 /* 坐标矩阵变换
+pVertex  : 坐标
+pMatrix : 矩阵
+*/
+__device__ void transformVec3ByMatrix4(float4* pVertexIn, float pMatrix[][JOINT_SIZE], int matrixIndex, float4* pVertexOut)
+{
+	float4 vertexIn = *pVertexIn;
+	float4 vertexOut;
+	vertexOut.x = vertexIn.x * pMatrix[0][matrixIndex] + vertexIn.y * pMatrix[1][matrixIndex] + vertexIn.z * pMatrix[2][matrixIndex] + pMatrix[3][matrixIndex] ; 
+	vertexOut.y = vertexIn.x * pMatrix[1*4+0][matrixIndex] + vertexIn.y * pMatrix[1*4+1][matrixIndex] + vertexIn.z * pMatrix[1*4+2][matrixIndex] + pMatrix[1*4+3][matrixIndex]  ; 
+	vertexOut.z = vertexIn.x * pMatrix[2*4+0][matrixIndex] + vertexIn.y * pMatrix[2*4+1][matrixIndex] + vertexIn.z * pMatrix[2*4+2][matrixIndex] + pMatrix[2*4+3][matrixIndex]  ;
+	*pVertexOut = vertexOut;
+}
+
+
+/* 坐标矩阵变换
 pVertexIn  : 静态坐标数组参数输入
 size : 坐标个数参数
 pMatrix : 矩阵数组参数
@@ -288,34 +303,41 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 
 	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 
-		Vector4   vertexIn, vertexOut;
-		int      matrixIndex;
-
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		vertexIn = pVertexOut[i];
+		Vector4   vertexIn = pVertexOut[i];
 #else
-		vertexIn = pVertexIn[i];
+		Vector4   vertexIn = pVertexIn[i];
 #endif
+		Vector4		vertexOut = vertexIn;
 
 		// 读取操作数：顶点对应的矩阵
-		matrixIndex = int(vertexIn.w + 0.5);// float to int
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
 		
 #if !USE_MEMORY_BUY_TIME
+	#if USE_FUNCTION_TRANSFORM
+			transformVec3ByMatrix4( &vertexIn, matrixPrevious, matrixIndex, &vertexOut);
+	#else
 		// 执行操作：对坐标执行矩阵逆变换，得到初始坐标
 		vertexOut.x = vertexIn.x * matrixPrevious[0][matrixIndex] + vertexIn.y * matrixPrevious[1][matrixIndex] + vertexIn.z * matrixPrevious[2][matrixIndex] + matrixPrevious[3][matrixIndex] ; 
 		vertexOut.y = vertexIn.x * matrixPrevious[1*4+0][matrixIndex] + vertexIn.y * matrixPrevious[1*4+1][matrixIndex] + vertexIn.z * matrixPrevious[1*4+2][matrixIndex] + matrixPrevious[1*4+3][matrixIndex]  ; 
 		vertexOut.z = vertexIn.x * matrixPrevious[2*4+0][matrixIndex] + vertexIn.y * matrixPrevious[2*4+1][matrixIndex] + vertexIn.z * matrixPrevious[2*4+2][matrixIndex] + matrixPrevious[2*4+3][matrixIndex]  ;
 
 		vertexIn = vertexOut;
-#endif
+	#endif// USE_FUNCTION_TRANSFORM
+#endif// USE_MEMORY_BUY_TIME
+
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
+#if USE_FUNCTION_TRANSFORM
+		transformVec3ByMatrix4( &vertexOut, matrix, matrixIndex, pVertexOut+i);
+#else
 		vertexOut.x = vertexIn.x * matrix[0][matrixIndex] + vertexIn.y * matrix[1][matrixIndex] + vertexIn.z * matrix[2][matrixIndex] + matrix[3][matrixIndex] ; 
 		vertexOut.y = vertexIn.x * matrix[1*4+0][matrixIndex] + vertexIn.y * matrix[1*4+1][matrixIndex] + vertexIn.z * matrix[1*4+2][matrixIndex] + matrix[1*4+3][matrixIndex]  ; 
 		vertexOut.z = vertexIn.x * matrix[2*4+0][matrixIndex] + vertexIn.y * matrix[2*4+1][matrixIndex] + vertexIn.z * matrix[2*4+2][matrixIndex] + matrix[2*4+3][matrixIndex]  ;
 
 		// 写入操作结果：新坐标
 		pVertexOut[i] = vertexOut;
+#endif
 	}
 }
 

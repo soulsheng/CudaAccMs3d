@@ -8,9 +8,11 @@
 #define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
 #define		USE_SHARED			1// 共享开关：0不共享，1共享
 #define		SEPERATE_STRUCT	1// 结构体拆分开关：0不拆分，1拆分
-#define		USE_MEMORY_BUY_TIME		0	// 以空间换时间， 1表示换，0表示不换（有bug）
+#define		USE_MEMORY_BUY_TIME		1	// 以空间换时间， 1表示换，0表示不换（有bug）
 
 #define		SEPERATE_STRUCT_FULLY		1 // 结构体彻底拆分开关：0不拆分，1拆分
+
+#define		USE_FUNCTION_TRANSFORM	1	// 顶点变换函数封装， 1表示函数封装，0表示不封装
 
 #define    JOINT_SIZE    100
 #define    JOINT_WIDTH    12//16
