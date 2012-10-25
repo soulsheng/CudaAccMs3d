@@ -119,7 +119,7 @@ struct Vertexes{
 	}
 
 	// 获取顶点坐标 模拟
-	void initialize(int size, int sizeJoint){
+	void initialize(int size, int sizeJoint, bool bDevice = true){
 		nSize = size;
 		pVertex = new Vector4[nSize];
 		for(int i=0;i<nSize;i++){
@@ -136,10 +136,13 @@ struct Vertexes{
 #if SORT_ARRAY_CROSS
 		sortLoop();
 #endif
-
+		if( bDevice ){
 		cudaMalloc( &pVertexDevice, sizeof(Vector4) * nSize ) ;//Vertex[nSize];
 		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vector4) * nSize, cudaMemcpyHostToDevice );
-
+		}
+		else{
+			pVertexDevice = NULL;
+		}
 	}
 
 	// 释放空间
@@ -147,6 +150,12 @@ struct Vertexes{
 	{
 		if (pVertex) delete[] pVertex;
 		if (pVertexDevice) cudaFree(pVertex) ;
+	}
+	
+	void copy( Vertexes& ref )
+	{
+		memcpy( pVertex, ref.pVertex, sizeof(Vector4) * nSize );
+		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vector4) * nSize, cudaMemcpyHostToDevice );
 	}
 
 	Vector4*  pVertex, *pVertexDevice;

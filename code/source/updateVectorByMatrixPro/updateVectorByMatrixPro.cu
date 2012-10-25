@@ -56,6 +56,11 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			globalMemoryUpdate( &_joints );
 			
+#if !USE_MEMORY_BUY_TIME
+			// 为了确保重复试验得到相同结果，恢复缺省值
+			_vertexesDynamic.copy( _vertexesStatic );
+#endif
+
 			dim3 nBlocksPerGrid( SIZE_BLOCK ); // 块的数目
 			dim3 nThreadsPerBlock( SIZE_THREAD ); // 单块包含线程的数目
 
@@ -127,6 +132,8 @@ void initialize(int problem_size, int joint_size)
 	_joints.initialize( joint_size );
 #if USE_MEMORY_BUY_TIME
 	_vertexesStatic.initialize( problem_size, joint_size );
+#else
+	_vertexesStatic.initialize( problem_size, joint_size , false);
 #endif
 	_vertexesDynamic.initialize( problem_size, joint_size );
 
@@ -144,9 +151,9 @@ void initialize(int problem_size, int joint_size)
 void unInitialize()
 {
 	_joints.unInitialize();
-#if USE_MEMORY_BUY_TIME
+
 	_vertexesStatic.unInitialize();
-#endif
+
 	_vertexesDynamic.unInitialize();
 }
 

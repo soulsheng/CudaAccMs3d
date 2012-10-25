@@ -8,7 +8,7 @@
 #define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
 #define		USE_SHARED			1// 共享开关：0不共享，1共享
 #define		SEPERATE_STRUCT	1// 结构体拆分开关：0不拆分，1拆分
-#define		USE_MEMORY_BUY_TIME		1	// 以空间换时间， 1表示换，0表示不换（有bug）
+#define		USE_MEMORY_BUY_TIME		0	// 以空间换时间， 1表示换，0表示不换（有bug）
 
 #define		SEPERATE_STRUCT_FULLY		1 // 结构体彻底拆分开关：0不拆分，1拆分
 
@@ -108,7 +108,7 @@ struct Joints{
 		nSize = size;
 		pMatrix = new float[nSize*JOINT_WIDTH];
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			pMatrix[i] = rand() * 1.0f;
+			pMatrix[i] = rand() % nSize / (nSize * 1.0f);
 		}
 		// 最后一列0,0,0,1
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
@@ -120,7 +120,7 @@ struct Joints{
 
 		pMatrixPrevious = new float[nSize*JOINT_WIDTH];
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			pMatrixPrevious[i] = rand() * 1.0f;
+			pMatrixPrevious[i] = rand() % nSize / (nSize * 1.0f);
 		}
 		// 最后一列0,0,0,1
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
