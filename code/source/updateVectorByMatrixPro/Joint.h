@@ -15,7 +15,7 @@
 #define		USE_FUNCTION_TRANSFORM	1	// 顶点变换函数封装， 1表示函数封装，0表示不封装
 
 #define    JOINT_SIZE    100
-#define    JOINT_WIDTH    12//16
+#define    JOINT_WIDTH    16//16
 
 #if ALIGNED_STRUCT
 typedef float4	Vector4;
@@ -110,12 +110,24 @@ struct Joints{
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
 			pMatrix[i] = rand() * 1.0f;
 		}
+		// 最后一列0,0,0,1
+		for(int i=0;i<nSize*JOINT_WIDTH;i++){
+			if( (i+1)%4 == 0)		pMatrix[i] = 0.0f;
+			if( (i+1)%16 == 0)		pMatrix[i] = 1.0f;
+		}
+
 		cudaMalloc( &pMatrixDevice, sizeof(float) * nSize * JOINT_WIDTH) ;
 
 		pMatrixPrevious = new float[nSize*JOINT_WIDTH];
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
 			pMatrixPrevious[i] = rand() * 1.0f;
 		}
+		// 最后一列0,0,0,1
+		for(int i=0;i<nSize*JOINT_WIDTH;i++){
+			if( (i+1)%4 == 0 )		pMatrixPrevious[i] = 0.0f;
+			if( (i+1)%16 == 0 )	pMatrixPrevious[i] = 1.0f;
+		}
+
 		cudaMalloc( &pMatrixDevicePrevious, sizeof(float) * nSize * JOINT_WIDTH) ;
 	}
 
