@@ -112,8 +112,8 @@ struct Joints{
 		}
 		// 最后一列0,0,0,1
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			if( (i+1)%4 == 0)		pMatrix[i] = 0.0f;
-			if( (i+1)%16 == 0)		pMatrix[i] = 1.0f;
+			if( (i/nSize+1)%4 == 0)			pMatrix[i] = 0.0f;
+			if( (i/nSize+1)%16 == 0)		pMatrix[i] = 1.0f;
 		}
 
 		cudaMalloc( &pMatrixDevice, sizeof(float) * nSize * JOINT_WIDTH) ;
@@ -124,8 +124,8 @@ struct Joints{
 		}
 		// 最后一列0,0,0,1
 		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			if( (i+1)%4 == 0 )		pMatrixPrevious[i] = 0.0f;
-			if( (i+1)%16 == 0 )	pMatrixPrevious[i] = 1.0f;
+			if( (i/nSize+1)%4 == 0 )		pMatrixPrevious[i] = 0.0f;
+			if( (i/nSize+1)%16 == 0 )	pMatrixPrevious[i] = 1.0f;
 		}
 
 		cudaMalloc( &pMatrixDevicePrevious, sizeof(float) * nSize * JOINT_WIDTH) ;
