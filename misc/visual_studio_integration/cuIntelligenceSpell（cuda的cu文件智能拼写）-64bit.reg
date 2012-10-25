@@ -1,0 +1,10 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Wow6432Node\Microsoft\VisualStudio\8.0\Languages\Language Services\C/C++]
+"NCB Default C/C++ Extensions"=".cpp;.cxx;.c;.cc;.h;.hh;.hxx;.hpp;.inl;.tlh;.tli;.cu;.cuh;.cl"
+
+[HKEY_CURRENT_USER\Software\Wow6432Node\Microsoft\VisualStudio\9.0\Languages\Language Services\C/C++]
+"NCB Default C/C++ Extensions"=".cpp;.cxx;.c;.cc;.h;.hh;.hxx;.hpp;.inl;.tlh;.tli;.cu;.cuh;.cl"
+
+[HKEY_CURRENT_USER\Software\Wow6432Node\Microsoft\VisualStudio\10.0\Languages\Language Services\C/C++]
+"NCB Default C/C++ Extensions"=".cpp;.cxx;.c;.cc;.h;.hh;.hxx;.hpp;.inl;.tlh;.tli;.cu;.cuh;.cl"
