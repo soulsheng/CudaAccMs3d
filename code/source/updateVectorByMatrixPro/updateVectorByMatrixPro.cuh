@@ -30,7 +30,15 @@ __device__ void transformVec3ByMatrix4(float4* pVertexIn, float pMatrix[], float
 	vertexOut.z = vertexIn.x * pMatrix[2*4+0] + vertexIn.y * pMatrix[2*4+1] + vertexIn.z * pMatrix[2*4+2] + pMatrix[2*4+3]  ;
 	*pVertexOut = vertexOut;
 }
-
+__device__ void transformVec3ByMatrix4(Vector4* pVertexIn, Vector4 pMatrix[], Vector4* pVertexOut)
+{
+	float4 vertexIn = *pVertexIn;
+	float4 vertexOut;
+	vertexOut.x = vertexIn.x * pMatrix[0].x + vertexIn.y * pMatrix[0].y + vertexIn.z * pMatrix[0].z + pMatrix[0].w ; 
+	vertexOut.y = vertexIn.x * pMatrix[1].x + vertexIn.y * pMatrix[1].y + vertexIn.z * pMatrix[1].z + pMatrix[1].w  ; 
+	vertexOut.z = vertexIn.x * pMatrix[2].x + vertexIn.y * pMatrix[2].y + vertexIn.z * pMatrix[2].z + pMatrix[2].w  ;
+	*pVertexOut = vertexOut;
+}
 
 #define SET_ROW( mat, row, v1, v2, v3, v4 )    \
 	(mat)[(row)*4+0] = (v1); \
@@ -119,8 +127,7 @@ pVertexOut : 动态坐标数组结果输出
 #if !USE_SHARED
 
 #if SEPERATE_STRUCT
-__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2, int sizeJoints,
-															Vector4* pMatrixPrevious0, Vector4* pMatrixPrevious1, Vector4* pMatrixPrevious2)
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix, Vector4* pVertexOut, Vector4* pMatrixPrevious)
 #else
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut, Matrix* pMatrixPrevious)
 #endif
@@ -144,7 +151,8 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 			return;
 #endif // USE_ELEMENT_SINGLE
 
-		float   matrix[JOINT_WIDTH];
+		Vector4   matrix[MATRIX_SIZE_LINE];
+
 #if !USE_MEMORY_BUY_TIME
 		float   matrixPrevious[JOINT_WIDTH];
 		float   matrixCurrent[JOINT_WIDTH];
@@ -160,9 +168,9 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 		// 读取操作数：顶点对应的矩阵
 		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
 #if SEPERATE_STRUCT
-		matrix[0] = pMatrix0[matrixIndex];
-		matrix[1] = pMatrix1[matrixIndex];
-		matrix[2] = pMatrix2[matrixIndex];
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrix[j] = pMatrix[matrixIndex + j*JOINT_SIZE];
+		}
 
 #if !USE_MEMORY_BUY_TIME
 		matrixPrevious[0] = pMatrixPrevious0[matrixIndex];
@@ -173,10 +181,7 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 #else
 #if	USE_MEMORY_BUY_TIME
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
-			matrix[j*4+0] = pMatrix[matrixIndex][j].x;
-			matrix[j*4+1] = pMatrix[matrixIndex][j].y;
-			matrix[j*4+2] = pMatrix[matrixIndex][j].z;
-			matrix[j*4+3] = pMatrix[matrixIndex][j].w;
+			matrix[j] = pMatrix[matrixIndex][j];
 		}
 
 #else
@@ -215,18 +220,15 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 
 	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 
-		Vector4   vertexIn, vertexOut;
-		int      matrixIndex;
-
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		vertexIn = pVertexOut[i];
+		Vector4   vertexIn = pVertexOut[i];
 #else
-		vertexIn = pVertexIn[i];
+		Vector4   vertexIn = pVertexIn[i];
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
-		matrixIndex = int(vertexIn.w + 0.5);// float to int
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
 		
 		float   matrix[JOINT_WIDTH];
 		for (int j=0;j<JOINT_WIDTH;j++)
@@ -248,12 +250,7 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 		vertexIn = vertexOut;
 #endif
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		vertexOut.x = vertexIn.x * matrix[0] + vertexIn.y * matrix[1] + vertexIn.z * matrix[2]+ matrix[3] ; 
-		vertexOut.y = vertexIn.x * matrix[1*4+0] + vertexIn.y * matrix[1*4+1] + vertexIn.z * matrix[1*4+2] + matrix[1*4+3]  ; 
-		vertexOut.z = vertexIn.x * matrix[2*4+0] + vertexIn.y * matrix[2*4+1]+ vertexIn.z * matrix[2*4+2] + matrix[2*4+3]  ;
-
-		// 写入操作结果：新坐标
-		pVertexOut[i] = vertexOut;
+		transformVec3ByMatrix4( &vertexIn, matrix, pVertexOut + i );
 	}
 }
 

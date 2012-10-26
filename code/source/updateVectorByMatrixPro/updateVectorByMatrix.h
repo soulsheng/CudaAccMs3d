@@ -31,6 +31,16 @@ void transformVec3ByMatrix4Host(float4* pVertexIn, float pMatrix[], float4* pVer
 	*pVertexOut = vertexOut;
 }
 
+void transformVec3ByMatrix4Host(Vector4* pVertexIn, Vector4 pMatrix[], Vector4* pVertexOut)
+{
+	float4 vertexIn = *pVertexIn;
+	float4 vertexOut;
+	vertexOut.x = vertexIn.x * pMatrix[0].x + vertexIn.y * pMatrix[0].y + vertexIn.z * pMatrix[0].z + pMatrix[0].w ; 
+	vertexOut.y = vertexIn.x * pMatrix[1].x + vertexIn.y * pMatrix[1].y + vertexIn.z * pMatrix[1].z + pMatrix[1].w  ; 
+	vertexOut.z = vertexIn.x * pMatrix[2].x + vertexIn.y * pMatrix[2].y + vertexIn.z * pMatrix[2].z + pMatrix[2].w  ;
+	*pVertexOut = vertexOut;
+}
+
 /* ±‰ªªæÿ’Û «ÛƒÊ
 pMatrix : æÿ’Û
 */
@@ -107,7 +117,7 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 		
-		float   matrix[JOINT_WIDTH];
+		Vector4   matrix[MATRIX_SIZE_LINE];
 #if !USE_MEMORY_BUY_TIME
 		float   matrixPrevious[JOINT_WIDTH];
 		float   matrixCurrent[JOINT_WIDTH];
@@ -126,10 +136,7 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 #if SEPERATE_STRUCT
 #if USE_MEMORY_BUY_TIME
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
-			matrix[j*4+0] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].x;
-			matrix[j*4+1] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].y;
-			matrix[j*4+2] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].z;
-			matrix[j*4+3] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].w;
+			matrix[j] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex];
 		}
 
 #else
@@ -149,10 +156,7 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 #else// SEPERATE_STRUCT
 #if USE_MEMORY_BUY_TIME
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
-			matrix[j*4+0] = pJoints->pMatrix[matrixIndex][j].x;
-			matrix[j*4+1] = pJoints->pMatrix[matrixIndex][j].y;
-			matrix[j*4+2] = pJoints->pMatrix[matrixIndex][j].z;
-			matrix[j*4+3] = pJoints->pMatrix[matrixIndex][j].w;
+			matrix[j] = pJoints->pMatrix[matrixIndex][j];
 		}
 #else
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
