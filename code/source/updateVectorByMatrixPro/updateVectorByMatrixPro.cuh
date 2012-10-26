@@ -362,20 +362,31 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 
 	// 一次性读取矩阵，整个block块共享
-	__shared__		float matrixCurrent[JOINT_WIDTH][JOINT_SIZE];
-#if !USE_MEMORY_BUY_TIME
-	__shared__		float matrixPrevious[JOINT_WIDTH][JOINT_SIZE];
-#endif
+	__shared__		float matrix[JOINT_WIDTH][JOINT_SIZE];
 
 	if( threadIdx.x < sizeJoints )
 	{
+#if !USE_MEMORY_BUY_TIME
+		float   matrixCurrent[JOINT_WIDTH];
+		float   matrixPrevious[JOINT_WIDTH];
+		float   matrixRegister[JOINT_WIDTH];
 		for (int j=0;j<JOINT_WIDTH;j++)
 		{
-			matrixCurrent[j][threadIdx.x] = pMatrix[j*JOINT_SIZE + threadIdx.x];
-#if !USE_MEMORY_BUY_TIME
-			matrixPrevious[j][threadIdx.x] = pMatrixPrevious[j*JOINT_SIZE + threadIdx.x];
-#endif
+			matrixCurrent[j] = pMatrix[j*JOINT_SIZE + threadIdx.x];
+			matrixPrevious[j] = pMatrixPrevious[j*JOINT_SIZE + threadIdx.x];
 		}
+		invertMatrix4( matrixPrevious );
+		multMatrix4( matrixCurrent, matrixPrevious, matrixRegister );
+		for (int j=0;j<JOINT_WIDTH;j++)
+		{
+			matrix[j][threadIdx.x] = matrixRegister[j];
+		}
+#else
+		for (int j=0;j<JOINT_WIDTH;j++)
+		{
+			matrix[j][threadIdx.x] = pMatrix[j*JOINT_SIZE + threadIdx.x];
+		}
+#endif
 	}
 	__syncthreads();
 
@@ -391,25 +402,11 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 		// 读取操作数：顶点对应的矩阵
 		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
 		
-#if !USE_MEMORY_BUY_TIME
-		float   matrixCurrentRegister[JOINT_WIDTH];
-		float   matrixPreviousRegister[JOINT_WIDTH];
-#endif
 		float   matrixRegister[JOINT_WIDTH];
 		for (int j=0;j<JOINT_WIDTH;j++)
 		{
-#if !USE_MEMORY_BUY_TIME
-			matrixCurrentRegister[j] = matrixCurrent[j][matrixIndex];
-			matrixPreviousRegister[j] = matrixPrevious[j][matrixIndex];
-#else
-			matrixRegister[j] = matrixCurrent[j][matrixIndex];
-#endif
+			matrixRegister[j] = matrix[j][matrixIndex];
 		}
-		
-#if !USE_MEMORY_BUY_TIME
-		invertMatrix4( matrixPreviousRegister );
-		multMatrix4( matrixCurrentRegister, matrixPreviousRegister, matrixRegister );
-#endif
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 #if USE_FUNCTION_TRANSFORM
