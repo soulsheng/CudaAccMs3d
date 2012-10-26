@@ -106,62 +106,78 @@ pVertexOut : 动态坐标数组结果输出
 void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vector4* pVertexOut){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
-		Vector4   vertexIn, vertexOut;
-		Vector4   matrix[3];
+		
+		float   matrix[JOINT_WIDTH];
 #if !USE_MEMORY_BUY_TIME
-		Vector4   matrixPrevious[3];
+		float   matrixPrevious[JOINT_WIDTH];
+		float   matrixCurrent[JOINT_WIDTH];
 #endif
-		int      matrixIndex;
+		
 
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		vertexIn = pVertexOut[i];
+		Vector4   vertexIn = pVertexOut[i];
 #else
-		vertexIn = pVertexIn[i];
+		Vector4   vertexIn = pVertexIn[i];
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
-		matrixIndex = int(vertexIn.w + 0.5);// float to int
-#if SEPERATE_STRUCT		
-		matrix[0] = pJoints->pMatrix[0][matrixIndex];
-		matrix[1] = pJoints->pMatrix[1][matrixIndex];
-		matrix[2] = pJoints->pMatrix[2][matrixIndex];
-
-	#if !USE_MEMORY_BUY_TIME
-			matrixPrevious[0] = pJoints->pMatrixPrevious[0][matrixIndex];
-			matrixPrevious[1] = pJoints->pMatrixPrevious[1][matrixIndex];
-			matrixPrevious[2] = pJoints->pMatrixPrevious[2][matrixIndex];
-	#endif // USE_MEMORY_BUY_TIME
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
+#if SEPERATE_STRUCT
+#if USE_MEMORY_BUY_TIME
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrix[j*4+0] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].x;
+			matrix[j*4+1] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].y;
+			matrix[j*4+2] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].z;
+			matrix[j*4+3] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].w;
+		}
 
 #else
-		matrix[0] = pJoints->pMatrix[matrixIndex][0];
-		matrix[1] = pJoints->pMatrix[matrixIndex][1];
-		matrix[2] = pJoints->pMatrix[matrixIndex][2];
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrixCurrent[j*4+0] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].x;
+			matrixCurrent[j*4+1] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].y;
+			matrixCurrent[j*4+2] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].z;
+			matrixCurrent[j*4+3] = pJoints->pMatrix[j*JOINT_SIZE+matrixIndex].w;
 
-	#if !USE_MEMORY_BUY_TIME
-			matrixPrevious[0] = pJoints->pMatrixPrevious[matrixIndex][0];
-			matrixPrevious[1] = pJoints->pMatrixPrevious[matrixIndex][1];
-			matrixPrevious[2] = pJoints->pMatrixPrevious[matrixIndex][2];
-	#endif // USE_MEMORY_BUY_TIME
-
-#endif
-
-#if !USE_MEMORY_BUY_TIME
-			// 执行操作：对坐标执行矩阵逆变换，得到初始坐标
-			vertexOut.x = vertexIn.x * matrixPrevious[0].x + vertexIn.y * matrixPrevious[0].y + vertexIn.z * matrixPrevious[0].z + matrixPrevious[0].w ; 
-			vertexOut.y = vertexIn.x * matrixPrevious[1].x + vertexIn.y * matrixPrevious[1].y + vertexIn.z * matrixPrevious[1].z + matrixPrevious[1].w  ; 
-			vertexOut.z = vertexIn.x * matrixPrevious[2].x + vertexIn.y * matrixPrevious[2].y + vertexIn.z * matrixPrevious[2].z + matrixPrevious[2].w ; 
-
-			vertexIn = vertexOut;
+			matrixPrevious[j*4+0] = pJoints->pMatrixPrevious[j*JOINT_SIZE+matrixIndex].x;
+			matrixPrevious[j*4+1] = pJoints->pMatrixPrevious[j*JOINT_SIZE+matrixIndex].y;
+			matrixPrevious[j*4+2] = pJoints->pMatrixPrevious[j*JOINT_SIZE+matrixIndex].z;
+			matrixPrevious[j*4+3] = pJoints->pMatrixPrevious[j*JOINT_SIZE+matrixIndex].w;
+		}
 #endif // USE_MEMORY_BUY_TIME
 
-		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z + matrix[0].w ; 
-		vertexOut.y = vertexIn.x * matrix[1].x + vertexIn.y * matrix[1].y + vertexIn.z * matrix[1].z + matrix[1].w  ; 
-		vertexOut.z = vertexIn.x * matrix[2].x + vertexIn.y * matrix[2].y + vertexIn.z * matrix[2].z + matrix[2].w ; 
+#else// SEPERATE_STRUCT
+#if USE_MEMORY_BUY_TIME
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrix[j*4+0] = pJoints->pMatrix[matrixIndex][j].x;
+			matrix[j*4+1] = pJoints->pMatrix[matrixIndex][j].y;
+			matrix[j*4+2] = pJoints->pMatrix[matrixIndex][j].z;
+			matrix[j*4+3] = pJoints->pMatrix[matrixIndex][j].w;
+		}
+#else
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrixCurrent[j*4+0] = pJoints->pMatrix[matrixIndex][j].x;
+			matrixCurrent[j*4+1] = pJoints->pMatrix[matrixIndex][j].y;
+			matrixCurrent[j*4+2] = pJoints->pMatrix[matrixIndex][j].z;
+			matrixCurrent[j*4+3] = pJoints->pMatrix[matrixIndex][j].w;
+		}
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrixPrevious[j*4+0] = pJoints->pMatrixPrevious[matrixIndex][j].x;
+			matrixPrevious[j*4+1] = pJoints->pMatrixPrevious[matrixIndex][j].y;
+			matrixPrevious[j*4+2] = pJoints->pMatrixPrevious[matrixIndex][j].z;
+			matrixPrevious[j*4+3] = pJoints->pMatrixPrevious[matrixIndex][j].w;
+		}
+#endif // USE_MEMORY_BUY_TIME
 
-		// 写入操作结果：新坐标
-		pVertexOut[i] = vertexOut;
+#endif// SEPERATE_STRUCT
+
+
+#if !USE_MEMORY_BUY_TIME
+		invertMatrix4Host( matrixPrevious );
+		multMatrix4Host( matrixCurrent, matrixPrevious, matrix );
+#endif
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		transformVec3ByMatrix4Host( &vertexIn, matrix, pVertexOut+i);
 	}
 
 }
@@ -205,17 +221,7 @@ void updateVectorByMatrixGoldFully(Vector4* pVertexIn, Vector4* pVertexOut, int 
 #endif
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-#if	USE_FUNCTION_TRANSFORM
 		transformVec3ByMatrix4Host( &vertexIn, matrix, pVertexOut+i);
-#else
-		Vector4   vertexOut;
-		vertexOut.x = vertexIn.x * matrix[0] + vertexIn.y * matrix[1] + vertexIn.z * matrix[2] + matrix[3] ; 
-		vertexOut.y = vertexIn.x * matrix[1*4+0] + vertexIn.y * matrix[1*4+1] + vertexIn.z * matrix[1*4+2] + matrix[1*4+3]  ; 
-		vertexOut.z = vertexIn.x * matrix[2*4+0] + vertexIn.y * matrix[2*4+1] + vertexIn.z * matrix[2*4+2] + matrix[2*4+3]  ;
-
-		// 写入操作结果：新坐标
-		pVertexOut[i] = vertexOut;
-#endif
 	}
 
 }
@@ -236,9 +242,9 @@ bool equalVector(Vector4* pVertex, int size, Vector4* pVertexBase)
 		Vector4   vertex, vertexBase;
 		vertex = pVertex[i];
 		vertexBase = pVertexBase[i];
-		if (fabs(vertex.x - vertexBase.x) / fabs(vertexBase.x) >1.7e-1 && fabs(vertex.x) * fabs(vertexBase.x) >1.0f || 
-			fabs(vertex.y - vertexBase.y) / fabs(vertexBase.y) >1.7e-1 && fabs(vertex.y)  * fabs(vertexBase.y) >1.0f || 
-			fabs(vertex.z - vertexBase.z) / fabs(vertexBase.z) >1.7e-1 && fabs(vertex.z)  * fabs(vertexBase.z) >1.0f ||
+		if (fabs(vertex.x - vertexBase.x) / fabs(vertexBase.x) >1.7e-1 && fabs(vertex.x) * fabs(vertexBase.x) >10.0f || 
+			fabs(vertex.y - vertexBase.y) / fabs(vertexBase.y) >1.7e-1 && fabs(vertex.y)  * fabs(vertexBase.y) >10.0f || 
+			fabs(vertex.z - vertexBase.z) / fabs(vertexBase.z) >1.7e-1 && fabs(vertex.z)  * fabs(vertexBase.z) >10.0f ||
 			fabs(vertexBase.x) >1.0e38 || fabs(vertexBase.y) >1.0e38 || fabs(vertexBase.z) >1.0e38 )
 		{
 			return false;

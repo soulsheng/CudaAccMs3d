@@ -13,20 +13,8 @@
 
 void globalMemoryUpdate( Joints* pJoints )
 {
-#if SEPERATE_STRUCT
-#if !SEPERATE_STRUCT_FULLY
-	for(int i=0;i<3;i++){
-		cudaMemcpy( pJoints->pMatrixDevicePrevious[i], pJoints->pMatrixPrevious[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
-		cudaMemcpy( pJoints->pMatrixDevice[i], pJoints->pMatrix[i], sizeof(Vector4) * pJoints->nSize, cudaMemcpyHostToDevice );
-	}
-	#else
-		cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
-		cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
-	#endif
-#else
-	cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(Matrix) * pJoints->nSize, cudaMemcpyHostToDevice );
-	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(Matrix) * pJoints->nSize, cudaMemcpyHostToDevice );
-#endif
+	cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
+	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
 }
 
 /* 坐标矩阵变换
@@ -268,39 +256,88 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 #else//USE_SHARED
 
 #if SEPERATE_STRUCT
-__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix0, Vector4* pVertexOut, Vector4* pMatrix1, Vector4* pMatrix2, int sizeJoints,
-															Vector4* pMatrixPrevious0, Vector4* pMatrixPrevious1, Vector4* pMatrixPrevious2)
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix, Vector4* pVertexOut,  Vector4* pMatrixPrevious)
 #else
-__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut, int sizeJoints, Matrix* pMatrixPrevious)
+__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut, Matrix* pMatrixPrevious)
 #endif
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 	
 	// 一次性读取矩阵，整个block块共享
-	__shared__		Vector4 matrix[3][JOINT_SIZE];
-#if !USE_MEMORY_BUY_TIME
-	__shared__		Vector4 matrixPrevious[3][JOINT_SIZE];
-#endif
-	if( threadIdx.x < sizeJoints )
+	__shared__		Vector4 matrix[MATRIX_SIZE_LINE][JOINT_SIZE];
+
+	if( threadIdx.x < JOINT_SIZE )
 	{
-#if !SEPERATE_STRUCT
-		for( int i=0;i<3;i++)
-		{
-			matrix[i][threadIdx.x] = pMatrix[threadIdx.x][i];
+		float   matrixCurrent[JOINT_WIDTH];
+		float   matrixPrevious[JOINT_WIDTH];
+		float   matrixRegister[JOINT_WIDTH];
+#if SEPERATE_STRUCT
 #if !USE_MEMORY_BUY_TIME
-			matrixPrevious[i][threadIdx.x] = pMatrixPrevious[threadIdx.x][i];
-#endif
+		for (int j=0;j<MATRIX_SIZE_LINE;j++)
+		{
+			matrixCurrent[j*4+0] = pMatrix[j*JOINT_SIZE + threadIdx.x].x;
+			matrixCurrent[j*4+1] = pMatrix[j*JOINT_SIZE + threadIdx.x].y;
+			matrixCurrent[j*4+2] = pMatrix[j*JOINT_SIZE + threadIdx.x].z;
+			matrixCurrent[j*4+3] = pMatrix[j*JOINT_SIZE + threadIdx.x].w;
+
+			matrixPrevious[j*4+0] = pMatrixPrevious[j*JOINT_SIZE + threadIdx.x].x;
+			matrixPrevious[j*4+1] = pMatrixPrevious[j*JOINT_SIZE + threadIdx.x].y;
+			matrixPrevious[j*4+2] = pMatrixPrevious[j*JOINT_SIZE + threadIdx.x].z;
+			matrixPrevious[j*4+3] = pMatrixPrevious[j*JOINT_SIZE + threadIdx.x].w;
+		}
+		
+		invertMatrix4( matrixPrevious );
+		multMatrix4( matrixCurrent, matrixPrevious, matrixRegister );
+		
+		for (int j=0;j<MATRIX_SIZE_LINE;j++)
+		{
+			matrix[j][threadIdx.x].x = matrixRegister[j*4+0];
+			matrix[j][threadIdx.x].y = matrixRegister[j*4+1];
+			matrix[j][threadIdx.x].z = matrixRegister[j*4+2];
+			matrix[j][threadIdx.x].w = matrixRegister[j*4+3];
 		}
 #else
-		matrix[0][threadIdx.x] = pMatrix0[threadIdx.x];
-		matrix[1][threadIdx.x] = pMatrix1[threadIdx.x];
-		matrix[2][threadIdx.x] = pMatrix2[threadIdx.x];
-#if !USE_MEMORY_BUY_TIME
-		matrixPrevious[0][threadIdx.x] = pMatrixPrevious0[threadIdx.x];
-		matrixPrevious[1][threadIdx.x] = pMatrixPrevious1[threadIdx.x];
-		matrixPrevious[2][threadIdx.x] = pMatrixPrevious2[threadIdx.x];
-#endif//!USE_MEMORY_BUY_TIME
-#endif//!SEPERATE_STRUCT
+		for (int j=0;j<JOINT_WIDTH;j++)
+		{
+			matrix[j][threadIdx.x] = pMatrix[j*JOINT_SIZE + threadIdx.x];
+		}
+#endif
+#else // !SEPERATE_STRUCT
+
+#if USE_MEMORY_BUY_TIME
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrix[j*4+0] = pMatrix[matrixIndex][j].x;
+			matrix[j*4+1] = pMatrix[matrixIndex][j].y;
+			matrix[j*4+2] = pMatrix[matrixIndex][j].z;
+			matrix[j*4+3] = pMatrix[matrixIndex][j].w;
+		}
+#else
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrixCurrent[j*4+0] = pMatrix[threadIdx.x][j].x;
+			matrixCurrent[j*4+1] = pMatrix[threadIdx.x][j].y;
+			matrixCurrent[j*4+2] = pMatrix[threadIdx.x][j].z;
+			matrixCurrent[j*4+3] = pMatrix[threadIdx.x][j].w;
+		}
+		for(int j=0; j<MATRIX_SIZE_LINE; j++){
+			matrixPrevious[j*4+0] = pMatrixPrevious[threadIdx.x][j].x;
+			matrixPrevious[j*4+1] = pMatrixPrevious[threadIdx.x][j].y;
+			matrixPrevious[j*4+2] = pMatrixPrevious[threadIdx.x][j].z;
+			matrixPrevious[j*4+3] = pMatrixPrevious[threadIdx.x][j].w;
+		}
+			
+		invertMatrix4( matrixPrevious );
+		multMatrix4( matrixCurrent, matrixPrevious, matrixRegister );
+		
+		for (int j=0;j<MATRIX_SIZE_LINE;j++)
+		{
+			matrix[j][threadIdx.x].x = matrixRegister[j*4+0];
+			matrix[j][threadIdx.x].y = matrixRegister[j*4+1];
+			matrix[j][threadIdx.x].z = matrixRegister[j*4+2];
+			matrix[j][threadIdx.x].w = matrixRegister[j*4+3];
+		}
+#endif // USE_MEMORY_BUY_TIME
+
+#endif // SEPERATE_STRUCT
 	}
 	__syncthreads();
 
@@ -321,35 +358,27 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 			return;
 #endif // USE_ELEMENT_SINGLE
 
-		Vector4   vertexIn, vertexOut;
-		int      matrixIndex;
-
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		vertexIn = pVertexOut[i];
+		Vector4   vertexIn = pVertexOut[i];
 #else
-		vertexIn = pVertexIn[i];
+		Vector4   vertexIn = pVertexIn[i];
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
-		matrixIndex = int(vertexIn.w + 0.5);// float to int
-
-#if !USE_MEMORY_BUY_TIME
-		// 执行操作：对坐标执行矩阵逆变换，得到初始坐标
-		vertexOut.x = vertexIn.x * matrixPrevious[0][matrixIndex].x + vertexIn.y * matrixPrevious[0][matrixIndex].y + vertexIn.z * matrixPrevious[0][matrixIndex].z + matrixPrevious[0][matrixIndex].w ; 
-		vertexOut.y = vertexIn.x * matrixPrevious[1][matrixIndex].x + vertexIn.y * matrixPrevious[1][matrixIndex].y + vertexIn.z * matrixPrevious[1][matrixIndex].z + matrixPrevious[1][matrixIndex].w  ; 
-		vertexOut.z = vertexIn.x * matrixPrevious[2][matrixIndex].x + vertexIn.y * matrixPrevious[2][matrixIndex].y + vertexIn.z * matrixPrevious[2][matrixIndex].z + matrixPrevious[2][matrixIndex].w ; 
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
 		
-		vertexIn = vertexOut;
-#endif // USE_MEMORY_BUY_TIME
+		float   matrixRegister[JOINT_WIDTH];
+		for (int j=0;j<MATRIX_SIZE_LINE;j++)
+		{
+			matrixRegister[j*4 + 0] = matrix[j][matrixIndex].x;
+			matrixRegister[j*4 + 1] = matrix[j][matrixIndex].y;
+			matrixRegister[j*4 + 2] = matrix[j][matrixIndex].z;
+			matrixRegister[j*4 + 3] = matrix[j][matrixIndex].w;
+		}
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		vertexOut.x = vertexIn.x * matrix[0][matrixIndex].x + vertexIn.y * matrix[0][matrixIndex].y + vertexIn.z * matrix[0][matrixIndex].z + matrix[0][matrixIndex].w ; 
-		vertexOut.y = vertexIn.x * matrix[1][matrixIndex].x + vertexIn.y * matrix[1][matrixIndex].y + vertexIn.z * matrix[1][matrixIndex].z + matrix[1][matrixIndex].w  ; 
-		vertexOut.z = vertexIn.x * matrix[2][matrixIndex].x + vertexIn.y * matrix[2][matrixIndex].y + vertexIn.z * matrix[2][matrixIndex].z + matrix[2][matrixIndex].w ; 
-
-		// 写入操作结果：新坐标
-		pVertexOut[i] = vertexOut;
+		transformVec3ByMatrix4( &vertexIn, matrixRegister, pVertexOut+i);
 
 #if  !USE_ELEMENT_SINGLE
 	}
@@ -409,17 +438,8 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 		}
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-#if USE_FUNCTION_TRANSFORM
 		transformVec3ByMatrix4( &vertexIn, matrixRegister, pVertexOut+i);
-#else
-		Vector4		vertexOut;
-		vertexOut.x = vertexIn.x * matrix[0][matrixIndex] + vertexIn.y * matrix[1][matrixIndex] + vertexIn.z * matrix[2][matrixIndex] + matrix[3][matrixIndex] ; 
-		vertexOut.y = vertexIn.x * matrix[1*4+0][matrixIndex] + vertexIn.y * matrix[1*4+1][matrixIndex] + vertexIn.z * matrix[1*4+2][matrixIndex] + matrix[1*4+3][matrixIndex]  ; 
-		vertexOut.z = vertexIn.x * matrix[2*4+0][matrixIndex] + vertexIn.y * matrix[2*4+1][matrixIndex] + vertexIn.z * matrix[2*4+2][matrixIndex] + matrix[2*4+3][matrixIndex]  ;
 
-		// 写入操作结果：新坐标
-		pVertexOut[i] = vertexOut;
-#endif
 	}
 }
 

@@ -56,9 +56,9 @@ int _tmain(int argc, _TCHAR* argv[])
 		{
 			globalMemoryUpdate( &_joints );
 			
-#if !USE_MEMORY_BUY_TIME
+#if !USE_MEMORY_BUY_TIME && _DEBUG
 			// 为了确保重复试验得到相同结果，恢复缺省值
-			//_vertexesDynamic.copy( _vertexesStatic );
+			_vertexesDynamic.copy( _vertexesStatic );
 #endif
 
 			dim3 nBlocksPerGrid( SIZE_BLOCK ); // 块的数目
@@ -76,15 +76,13 @@ int _tmain(int argc, _TCHAR* argv[])
 				_joints.nSize, _joints.pMatrixDevice, _joints.pMatrixDevicePrevious);
 #else // SEPERATE_STRUCT_FULLY
 			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice[0], _vertexesDynamic.pVertexDevice,
-				_joints.pMatrixDevice[1], _joints.pMatrixDevice[2], _joints.nSize ,
-				_joints.pMatrixDevicePrevious[0], _joints.pMatrixDevicePrevious[1], _joints.pMatrixDevicePrevious[2]);
+				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice , _joints.pMatrixDevicePrevious);
 #endif // SEPERATE_STRUCT_FULLY
 
 #else
 
 			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice, _joints.nSize ,
+				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice ,
 				_joints.pMatrixDevicePrevious);
 
 #endif
