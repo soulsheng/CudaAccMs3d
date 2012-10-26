@@ -6,9 +6,9 @@
 #include "cuda_runtime.h"
 
 #define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
-#define		USE_SHARED			1// 共享开关：0不共享，1共享
+#define		USE_SHARED			0// 共享开关：0不共享，1共享
 #define		SEPERATE_STRUCT	0// 结构体拆分开关：0不拆分，1拆分
-#define		USE_MEMORY_BUY_TIME		0	// 以空间换时间， 1表示换，0表示不换（有bug）
+#define		USE_MEMORY_BUY_TIME		1	// 以空间换时间， 1表示换，0表示不换（有bug）
 
 #define		SEPERATE_STRUCT_FULLY		0 // 结构体彻底拆分开关：0不拆分，1拆分
 
@@ -163,7 +163,7 @@ struct Joints{
 				pMatrix[i][j].x = rand() % nSize / (nSize * 1.0f);
 				pMatrix[i][j].y = rand() % nSize / (nSize * 1.0f);
 				pMatrix[i][j].z = rand() % nSize / (nSize * 1.0f);
-				if(i<3)	pMatrix[i][j].w = 0.0f;
+				if(j<3)	pMatrix[i][j].w = 0.0f;
 				else		pMatrix[i][j].w = 1.0f;
 			}
 		}
@@ -174,7 +174,7 @@ struct Joints{
 				pMatrixPrevious[i][j].x = rand() % nSize / (nSize * 1.0f);
 				pMatrixPrevious[i][j].y = rand() % nSize / (nSize * 1.0f);
 				pMatrixPrevious[i][j].z = rand() % nSize / (nSize * 1.0f);
-				if(i<3)	pMatrixPrevious[i][j].w = 0.0f;
+				if(j<3)	pMatrixPrevious[i][j].w = 0.0f;
 				else		pMatrixPrevious[i][j].w = 1.0f;
 			}
 		}
