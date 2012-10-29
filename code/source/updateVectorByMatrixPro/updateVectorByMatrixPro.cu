@@ -40,7 +40,12 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS);
 int _tmain(int argc, _TCHAR* argv[])
 {
 	// 命令行参数解析
-
+	/*参数设计：
+	
+	*/
+    // 配置日志文件，set logfile name and start logs
+    shrSetLogFileName ("updateVectorByMatrix.txt");
+    shrLog("%s \nStarting...\n\n", argv[0]); 
 
 	int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
 	
