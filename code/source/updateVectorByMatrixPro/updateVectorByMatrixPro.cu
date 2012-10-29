@@ -7,6 +7,7 @@
 #include "Joint.h"
 #include "Vector.h"
 #include "../common/stopwatch_win.h"
+#include "../common/shrUtils.h"
 #include "updateVectorByMatrixPro.cuh"
 #include "updateVectorByMatrix.h"
 
@@ -38,7 +39,9 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS);
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	
+	// 命令行参数解析
+
+
 	int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
 	
 	StopWatchWin timer;

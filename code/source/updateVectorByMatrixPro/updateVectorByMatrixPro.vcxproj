@@ -94,6 +94,8 @@
     <None Include="updateVectorByMatrixPro.cuh" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\cmd_arg_reader.h" />
+    <ClInclude Include="..\common\shrUtils.h" />
     <ClInclude Include="..\common\stopwatch_win.h" />
     <ClInclude Include="Joint.h" />
     <ClInclude Include="stdafx.h" />
@@ -102,6 +104,8 @@
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\cmd_arg_reader.cpp" />
+    <ClCompile Include="..\common\shrUtils.cpp" />
     <ClCompile Include="..\common\stopwatch_win.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -39,12 +39,24 @@
     <ClInclude Include="updateVectorByMatrix.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="..\common\cmd_arg_reader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\shrUtils.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="..\common\stopwatch_win.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\cmd_arg_reader.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\shrUtils.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
