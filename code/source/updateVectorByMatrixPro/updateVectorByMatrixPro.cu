@@ -36,16 +36,24 @@ int _ConvertSMVer2Cores(int major, int minor);
 // 硬件拥有最大的浮点计算能力GFLOPS
 int gpuGetMaxGflopsDeviceId(float& fGFLOPS);
 
+// 命令行参数说明
+void printHelp(void);
 
-int _tmain(int argc, _TCHAR* argv[])
+int _tmain(int argc, char** pArgv)
 {
-	// 命令行参数解析
-	/*参数设计：
-	
-	*/
-    // 配置日志文件，set logfile name and start logs
-    shrSetLogFileName ("updateVectorByMatrix.txt");
+	// 命令行参数解析，参数参考printHelp
+ 	const char** argv = (const char**)pArgv;
+   shrSetLogFileName ("updateVectorByMatrixPro.txt"); // 配置日志文件
     shrLog("%s \nStarting...\n\n", argv[0]); 
+
+
+	if(shrCheckCmdLineFlag( argc, argv, "help"))
+    {
+        printHelp();
+        return 0;
+    }
+
+    shrGetCmdLineArgumenti(argc, argv, "class", &iClass);
 
 	int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
 	
@@ -117,13 +125,13 @@ int _tmain(int argc, _TCHAR* argv[])
 		
 		// 比较结果
 		bResult = equalVector( _vertexesDynamic.pVertex , _vertexesDynamic.nSize, pVertex );
-		printf("%s\n", bResult?"Right":"Wrong");
+		shrLog("%s\n", bResult?"Right":"Wrong");
 
 		// 数据销毁：坐标、矩阵
 		unInitialize();
 
 		// 查看时间效率
-		printf("%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
+		shrLog("%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
 	}
 	
 	// 输出结果：绘制坐标，按照点、线、面的形式
@@ -261,4 +269,26 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS)
 	}
 	fGFLOPS = max_compute_perf * 1.0e-6;
 	return max_perf_device;
+}
+// 命令行参数说明
+void printHelp(void)
+{
+    shrLog("用法:  updateVectorByMatrix [选项]...\n");
+    shrLog("坐标矩阵变换\n");
+    shrLog("\n");
+    shrLog("例如：用GPU方式执行矩阵变换，数据结构采用对齐方式，一个线程处理一个顶点\n");
+    shrLog("updateVectorByMatrixPro.exe --class=6 --aligned --single --buy \n");
+
+    shrLog("\n");
+    shrLog("选项:\n");
+    shrLog("--help\t显示帮助菜单\n");
+
+	shrLog("  0,1 - 1表示是，0表示否\n");
+
+    shrLog("--aligned\t对齐\n");   
+    shrLog("--single\t同一线程处理一个数据元素\n");
+    shrLog("--buy\t以空间换时间\n");
+
+	shrLog("--class=[i]\t问题规模档次\n");
+    shrLog("  i=0,1,2,...,6 - 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
 }
