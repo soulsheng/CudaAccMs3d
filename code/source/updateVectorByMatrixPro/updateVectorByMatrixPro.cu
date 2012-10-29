@@ -44,8 +44,6 @@ int _tmain(int argc, char** pArgv)
 	// 命令行参数解析，参数参考printHelp
  	const char** argv = (const char**)pArgv;
    shrSetLogFileName ("updateVectorByMatrixPro.txt"); // 配置日志文件
-    shrLog("%s \nStarting...\n\n", argv[0]); 
-
 
 	if(shrCheckCmdLineFlag( argc, argv, "help"))
     {
@@ -125,13 +123,13 @@ int _tmain(int argc, char** pArgv)
 		
 		// 比较结果
 		bResult = equalVector( _vertexesDynamic.pVertex , _vertexesDynamic.nSize, pVertex );
-		shrLog("%s\n", bResult?"Right":"Wrong");
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
 
 		// 数据销毁：坐标、矩阵
 		unInitialize();
 
 		// 查看时间效率
-		shrLog("%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
 	}
 	
 	// 输出结果：绘制坐标，按照点、线、面的形式
