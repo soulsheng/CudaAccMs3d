@@ -4,6 +4,7 @@
 #include "Vertex.h"
 #include "Joint.h"
 #include "Vector.h"
+#include <omp.h>
 
 /* 坐标矩阵变换
 pVertexIn  : 静态坐标数组参数输入
@@ -11,7 +12,12 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
-void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut){
+void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut, bool use_openmp){
+
+	if ( !use_openmp )
+	{	
+		omp_set_num_threads( 1 );
+	}
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 		float4   vertexIn, vertexOut;
