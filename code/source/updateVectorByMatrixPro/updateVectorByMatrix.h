@@ -106,6 +106,32 @@ void multMatrix4Host(float matIn1[], float matIn2[], float matOut[])
 }
 
 
+// 按矩阵索引
+template<typename T>
+void indexByFloat44Host( T* pBuffer , T* pMat , int index )
+{
+	for(int j=0; j<MATRIX_SIZE_LINE; j++){
+		pMat[j] = pBuffer[index * MATRIX_SIZE_LINE + j];
+	}
+}
+
+// 按矩阵一行索引
+template<typename T>
+void indexByFloat4Host( T* pBuffer , T* pMat , int index )
+{
+	for(int j=0; j<MATRIX_SIZE_LINE; j++){
+		pMat[j] = pBuffer[index + MATRIX_SIZE_LINE * j];
+	}
+}
+
+// 按矩阵一个浮点索引
+void indexByFloat1Host( float* pBuffer , float* pMat , int index )
+{
+	for(int i=0; i<JOINT_WIDTH; i++){
+		pMat[ i ] = pBuffer[  i*JOINT_WIDTH + index ];
+	}
+}
+
 /* 坐标矩阵变换
 pVertexIn  : 静态坐标数组参数输入
 size : 坐标个数参数
@@ -114,16 +140,50 @@ pVertexOut : 动态坐标数组结果输出
 */
 #if !SEPERATE_STRUCT_FULLY
 template<typename T>
-void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVertexOut){
+void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVertexOut, Index_Mode_Matrix mode){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 		
+		T   matrix[MATRIX_SIZE_LINE];		
+
+		// 读取操作数：初始的顶点坐标
+		T   vertexIn = pVertexIn[i];
+
+		// 读取操作数：顶点对应的矩阵
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
+
+		switch( mode )
+		{
+		case FLOAT_44:
+			indexByFloat44Host( (T*)pJoints->pMatrix, matrix, matrixIndex );
+			break;
+
+		case FLOAT_4:
+			indexByFloat4Host( (T*)pJoints->pMatrix, matrix, matrixIndex );
+			break;
+
+		case FLOAT_1:
+			indexByFloat1Host( pJoints->pMatrix, (float*)matrix, matrixIndex );
+			break;
+		}
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		transformVec3ByMatrix4Host( &vertexIn, matrix, pVertexOut+i);
+	}// for
+
+}
+
+template<typename T>
+void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVertexOut){
+#pragma omp parallel for
+	for(int i=0;i<size;i++){
+
 		T   matrix[MATRIX_SIZE_LINE];
 #if !USE_MEMORY_BUY_TIME
 		float   matrixPrevious[JOINT_WIDTH];
 		float   matrixCurrent[JOINT_WIDTH];
 #endif
-		
+
 
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
@@ -157,7 +217,7 @@ void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVe
 #else// SEPERATE_STRUCT
 #if USE_MEMORY_BUY_TIME
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
-			matrix[j] = pJoints->pMatrix[matrixIndex * MATRIX_SIZE_LINE + j];
+			//matrix[j] = pJoints->pMatrix[matrixIndex * MATRIX_SIZE_LINE + j];
 		}
 #else
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){

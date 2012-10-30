@@ -21,6 +21,7 @@ int iClass=6; // 问题规模最大值，16M/512M显存、32M/1G显存
 
 bool ALIGNED_STRUCT = false;
 
+Index_Mode_Matrix	eMode = FLOAT_44;
 
 // 数据初始化：坐标、矩阵
 template<typename T>
@@ -57,22 +58,32 @@ int _tmain(int argc, char** pArgv)
  	const char** argv = (const char**)pArgv;
    shrSetLogFileName ("updateVectorByMatrixPro.txt"); // 配置日志文件
 
+	// 解析命令行参数，获取命令行用法提示 --help
 	if(shrCheckCmdLineFlag( argc, argv, "help"))
     {
         printHelp();
         return 0;
     }
-
-    shrGetCmdLineArgumenti(argc, argv, "class", &iClass);
 	
+	// 解析命令行参数，获取问题规模 --class=3
+	if(shrCheckCmdLineFlag( argc, argv, "class"))
+    {
+		shrGetCmdLineArgumenti(argc, argv, "class", &iClass);
+	}
+	
+	// 解析命令行参数，获取对齐标记 --aligned
 	if(shrCheckCmdLineFlag( argc, argv, "aligned"))
 	{
 		ALIGNED_STRUCT = true;
 	}
 
-	
-	// 问题规模档次，7档，64K至256M，4倍递增
-	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
+	// 解析命令行参数，获取矩阵结构体存储模式 --mode=2
+    if(shrCheckCmdLineFlag( argc, argv, "mode"))
+    {
+		int mode;
+		shrGetCmdLineArgumenti(argc, argv, "mode", &mode);
+		eMode = (Index_Mode_Matrix)mode;
+	}
 		
 	if (ALIGNED_STRUCT)
 	{
@@ -104,7 +115,7 @@ int _tmain(int argc, char** pArgv)
 template<typename T>
 void initialize(int problem_size, int joint_size, Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic )
 {
-	joints.initialize( joint_size );
+	joints.initialize( joint_size , eMode);
 #if USE_MEMORY_BUY_TIME
 	vertexesStatic.initialize( problem_size, joint_size );
 #else
@@ -274,23 +285,10 @@ void runCuda(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertex
 #endif
 
 	// 执行运算：坐标矩阵变换
-#if SEPERATE_STRUCT
-
-#if SEPERATE_STRUCT_FULLY
-	updateVectorByMatrixFully<<<nBlocksPerGrid, nThreadsPerBlock>>>( _vertexesStatic.pVertexDevice,_vertexesDynamic.pVertexDevice, _vertexesDynamic.nSize,
-		_joints.nSize, _joints.pMatrixDevice, _joints.pMatrixDevicePrevious);
-#else // SEPERATE_STRUCT_FULLY
-	updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-		(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice , _joints.pMatrixDevicePrevious);
-#endif // SEPERATE_STRUCT_FULLY
-
-#else
-
-		updateVectorByMatrix<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
+	updateVectorByMatrix<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
 			( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
-			joints.pMatrixDevicePrevious);
+			joints.pMatrixDevicePrevious, eMode);
 
-#endif
 }
 
 // 验证结果是否正确
@@ -304,7 +302,7 @@ bool confirmResult(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&
 #if SEPERATE_STRUCT_FULLY
 	updateVectorByMatrixGoldFully(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
 #else
-	updateVectorByMatrixGold<T>( vertexesStatic.pVertex, vertexesDynamic.nSize, &joints, vertexesDynamic.pVertex);
+	updateVectorByMatrixGold<T>( vertexesStatic.pVertex, vertexesDynamic.nSize, &joints, vertexesDynamic.pVertex, eMode);
 #endif
 	// 获取GPU运算结果
 	T *pVertex = new T[vertexesDynamic.nSize];
@@ -322,6 +320,9 @@ void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertex
 {
 		StopWatchWin timer;
 		int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
+		
+		// 问题规模档次，7档，64K至256M，4倍递增
+		PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
 
 		// 数据初始化：坐标、矩阵
 		initialize<T>(PROBLEM_SIZE, JOINT_SIZE, joints, vertexesStatic, vertexesDynamic);

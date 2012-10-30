@@ -19,184 +19,136 @@
 
 struct Vector4 { float x,y,z,w; };
 
+enum Index_Mode_Matrix {
+	FLOAT_1,		// 相邻  1个float属于相邻矩阵的  1个float
+	FLOAT_4,		// 相邻  4个float属于相邻矩阵的  4个float，矩阵一行
+	FLOAT_44		//	相邻16个float属于相邻矩阵的16个float，矩阵整体
+};// 矩阵数组中相邻矩阵的存储方式
 
-#if SEPERATE_STRUCT
-
-#if !SEPERATE_STRUCT_FULLY
-//typedef Vector4*  Matrix[MATRIX_SIZE_LINE];// 矩阵
-
-
-struct Joints{
-
-	// 获取关节矩阵
-	void initialize( int size, float* pBufferMatrix ){
-		
-	}
-
-	// 获取关节矩阵 模拟
-	void initialize( int size ){
-		nSize = size;
-		pMatrix = new Vector4[nSize*MATRIX_SIZE_LINE];
-		for(int i=0;i<MATRIX_SIZE_LINE;i++){
-			for(int j=0;j<nSize;j++){
-				int index = i * nSize + j;
-				pMatrix[index].x = rand() % nSize / (nSize * 1.0f);
-				pMatrix[index].y = rand() % nSize / (nSize * 1.0f);
-				pMatrix[index].z = rand() % nSize / (nSize * 1.0f);
-				if(i<3)	pMatrix[index].w = 0.0f;
-				else		pMatrix[index].w = 1.0f;
-				}
-			}
-		cudaMalloc( &pMatrixDevice, sizeof(Vector4) * nSize*MATRIX_SIZE_LINE ) ;
-
-		pMatrixPrevious = new Vector4[nSize*MATRIX_SIZE_LINE];
-		for(int i=0;i<MATRIX_SIZE_LINE;i++){
-			for(int j=0;j<nSize;j++){
-				int index = i * nSize + j;
-				pMatrixPrevious[index].x = rand() % nSize / (nSize * 1.0f);
-				pMatrixPrevious[index].y = rand() % nSize / (nSize * 1.0f);
-				pMatrixPrevious[index].z = rand() % nSize / (nSize * 1.0f);
-				if(i<3)	pMatrixPrevious[index].w = 0.0f;
-				else		pMatrixPrevious[index].w = 1.0f;
-				}
-			}
-		cudaMalloc( &pMatrixDevicePrevious, sizeof(Vector4) * nSize*MATRIX_SIZE_LINE ) ;
-	}
-
-
-	// 释放空间
-	void unInitialize()
-	{
-			if (pMatrix) delete[] pMatrix;
-			if (pMatrixDevice) cudaFree(pMatrixDevice) ;
-			if (pMatrixPrevious) delete[] pMatrixPrevious;
-			if (pMatrixDevicePrevious) cudaFree(pMatrixDevicePrevious) ;
-	}
-
-	Vector4*  pMatrix, *pMatrixDevice;
-	Vector4*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
-	int   nSize;// 关节的数目
-
-};// 关节的集合
-
-#else // SEPERATE_STRUCT_FULLY
-
-//typedef float*  Matrix[JOINT_WIDTH];// 矩阵
-
-
-struct Joints{
-
-	// 获取关节矩阵
-	void initialize( int size, float* pBufferMatrix ){
-		nSize = size;
-		pMatrix = new float[nSize*JOINT_WIDTH];
-		memcpy( pMatrix, pBufferMatrix, nSize*JOINT_WIDTH*sizeof(float) );
-		
-	}
-
-	// 获取关节矩阵 模拟
-	void initialize( int size ){
-		nSize = size;
-		pMatrix = new float[nSize*JOINT_WIDTH];
-		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			pMatrix[i] = rand() % nSize / (nSize * 1.0f);
-		}
-		// 最后一列0,0,0,1
-		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			if( (i/nSize+1)%4 == 0)			pMatrix[i] = 0.0f;
-			if( (i/nSize+1)%16 == 0)		pMatrix[i] = 1.0f;
-		}
-
-		cudaMalloc( &pMatrixDevice, sizeof(float) * nSize * JOINT_WIDTH) ;
-
-		pMatrixPrevious = new float[nSize*JOINT_WIDTH];
-		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			pMatrixPrevious[i] = rand() % nSize / (nSize * 1.0f);
-		}
-		// 最后一列0,0,0,1
-		for(int i=0;i<nSize*JOINT_WIDTH;i++){
-			if( (i/nSize+1)%4 == 0 )		pMatrixPrevious[i] = 0.0f;
-			if( (i/nSize+1)%16 == 0 )	pMatrixPrevious[i] = 1.0f;
-		}
-
-		cudaMalloc( &pMatrixDevicePrevious, sizeof(float) * nSize * JOINT_WIDTH) ;
-	}
-
-	// 释放空间
-	void unInitialize()
-	{
-		if (pMatrix) delete[] pMatrix;	
-		if (pMatrixDevice) cudaFree(pMatrixDevice) ;
-		
-		if (pMatrixPrevious) delete[] pMatrixPrevious;
-		if (pMatrixDevicePrevious) cudaFree(pMatrixDevicePrevious) ;
-	}
-
-	float		*pMatrix, *pMatrixDevice;
-	float		*pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
-	int   nSize;// 关节的数目
-
-};// 关节的集合
-
-#endif // SEPERATE_STRUCT_FULLY
-
-#else // SEPERATE_STRUCT
 
 //关节矩阵---------------------------------------------------------
-//typedef Vector4  Matrix[MATRIX_SIZE_LINE];// 矩阵
+
 template<typename T>
 struct Joints{
-	//typedef T Matrix[MATRIX_SIZE_LINE];// 矩阵
-	// 获取关节矩阵
-	void initialize( int size, float* pBufferMatrix ){
+
+	// 初始化
+	void initialize( int size , float** pBuffer, float** pBufferDevice ){
+		
+		// 设置矩阵个数，以及总字节数
+		nSize = size;
+		int nSizeFloat = JOINT_WIDTH * nSize;
+		
+		// 分配内存显存
+		*pBuffer = new float[ nSizeFloat ];
+		cudaMalloc( pBufferDevice, nSizeFloat * sizeof(float) ) ;
+		
+		switch( eMode )
+		{
+		case FLOAT_44:
+			// 按矩阵索引
+			nSizePerElement = MATRIX_SIZE_LINE;
+			indexByFloat44( pBuffer );
+			break;
+
+		case FLOAT_4:
+			// 按矩阵一行索引
+			nSizePerElement = MATRIX_SIZE_LINE;
+			indexByFloat4( pBuffer );
+			break;
+
+		case FLOAT_1:
+			// 按矩阵一个浮点索引
+			nSizePerElement = JOINT_WIDTH;
+			indexByFloat1( pBuffer );
+			break;
+		}
 		
 	}
 
+
+	// 按矩阵索引
+	void indexByFloat44( float** pBuffer )
+	{
+		for(int i=0;i<nSize;i++){
+			for(int j=0;j<nSizePerElement;j++){
+				for(int k=0; k<4; k++ ){
+
+					int index = 4*(i*nSizePerElement + j) + k;
+
+					(* pBuffer)[ index ] = rand() % nSize / (nSize * 1.0f);
+
+					if(k==3) {
+						if(j<3)	(* pBuffer)[ index ] = 0.0f;
+						else(* pBuffer)[ index ] = 1.0f;
+					}//if k
+				}//for k
+			}//for j
+		}//for i
+	}
+
+	// 按矩阵一行索引
+	void indexByFloat4( float** pBuffer )
+	{
+		for(int i=0;i<nSizePerElement;i++){
+			for(int j=0;j<nSize;j++){
+				for(int k=0; k<4; k++ ){
+
+				int index = 4*(i * nSize + j) + k;
+
+				(* pBuffer)[index] = rand() % nSize / (nSize * 1.0f);
+				if(i<3)	(* pBuffer)[index] = 0.0f;
+				else		(* pBuffer)[index] = 1.0f;
+				
+				}//for k
+			}//for j
+		}//for i
+	}
+
+	// 按矩阵一个浮点索引
+	void indexByFloat1( float** pBuffer )
+	{
+		for(int i=0;i<nSizePerElement;i++){
+			for(int j=0;j<nSize;j++){
+
+					int index = i * nSize + j;
+
+					(* pBuffer)[index] = rand() % nSize / (nSize * 1.0f);
+					if( (i+1)%4 )		(* pBuffer)[index] = 0.0f;
+					if( (i+1)%16 )		(* pBuffer)[index] = 1.0f;
+
+			}//for j
+		}//for i
+	}
+
 	// 获取关节矩阵 模拟
-	void initialize( int size ){
-		nSize = size;
-		pMatrix = new T[nSize*MATRIX_SIZE_LINE];
-		for(int i=0;i<nSize;i++){
-			for(int j=0;j<MATRIX_SIZE_LINE;j++){
-				pMatrix[ i*MATRIX_SIZE_LINE + j ].x = rand() % nSize / (nSize * 1.0f);
-				pMatrix[ i*MATRIX_SIZE_LINE + j ].y = rand() % nSize / (nSize * 1.0f);
-				pMatrix[ i*MATRIX_SIZE_LINE + j ].z = rand() % nSize / (nSize * 1.0f);
-				if(j<3)	pMatrix[ i*MATRIX_SIZE_LINE + j ].w = 0.0f;
-				else		pMatrix[ i*MATRIX_SIZE_LINE + j ].w = 1.0f;
-			}
-		}
-
-		pMatrixPrevious = new T[nSize*MATRIX_SIZE_LINE];
-		for(int i=0;i<nSize;i++){
-			for(int j=0;j<MATRIX_SIZE_LINE;j++){
-				pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].x = rand() % nSize / (nSize * 1.0f);
-				pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].y = rand() % nSize / (nSize * 1.0f);
-				pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].z = rand() % nSize / (nSize * 1.0f);
-				if(j<3)	pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].w = 0.0f;
-				else		pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].w = 1.0f;
-			}
-		}
-
-		cudaMalloc( &pMatrixDevice, sizeof(T) * nSize * MATRIX_SIZE_LINE ) ;
-		cudaMalloc( &pMatrixDevicePrevious, sizeof(T) * nSize * MATRIX_SIZE_LINE ) ;
+	void initialize( int size , Index_Mode_Matrix mode = FLOAT_44 )
+	{
+		eMode = mode;
+		initialize( size, &pMatrix, &pMatrixDevice );
+		initialize( size, &pMatrixPrevious, &pMatrixDevicePrevious );
 	}
 
 	// 释放空间
-	void unInitialize()
+	void unInitialize( )
 	{
-		if (pMatrix) delete[] pMatrix;
-		if (pMatrixPrevious) delete[] pMatrixPrevious;
-		if (pMatrixDevice) cudaFree(pMatrixDevice) ;
-		if (pMatrixDevicePrevious) cudaFree(pMatrixDevicePrevious) ;
+		unInitialize( pMatrix, pMatrixDevice );
+		unInitialize( pMatrixPrevious, pMatrixDevicePrevious );
 	}
 
-	T*  pMatrix, *pMatrixDevice;
-	T*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
-	int   nSize;// 关节的数目
+	// 释放空间
+	void unInitialize( float* pBuffer, float* pBufferDevice )
+	{
+		if (pBuffer) delete[] pBuffer;
+		if (pBufferDevice) cudaFree(pBufferDevice) ;
+	}
 
+	float*  pMatrix, *pMatrixDevice;
+	float*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
+	int   nSize;// 关节的数目
+	int   nSizePerElement;// 每个关节包含子数据结构的数目
+	Index_Mode_Matrix	eMode; // 索引矩阵数组的方式
 };// 关节的集合
 
-#endif
 
 #endif//JOINT_H__
 
