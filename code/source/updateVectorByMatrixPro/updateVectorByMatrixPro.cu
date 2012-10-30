@@ -43,6 +43,10 @@ void printHelp(void);
 template<typename T>
 void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  );
 
+// 调用cuda
+template<typename T>
+void runCuda(  );
+
 // 验证结果是否正确
 template<typename T>
 bool confirmResult(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  );
@@ -66,9 +70,6 @@ int _tmain(int argc, char** pArgv)
 		ALIGNED_STRUCT = true;
 	}
 
-	int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
-	
-	StopWatchWin timer;
 	
 	// 问题规模档次，7档，64K至256M，4倍递增
 	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
@@ -80,27 +81,7 @@ int _tmain(int argc, char** pArgv)
 		Vertexes<float4>  _vertexesDynamic;//动态顶点坐标
 		Joints<float4>		_joints;//关节矩阵
 
-		// 数据初始化：坐标、矩阵
-		initialize<float4>(PROBLEM_SIZE, JOINT_SIZE, _joints, _vertexesStatic, _vertexesDynamic);
-		timer.start();
-
-		while ( timer.getTime() < 10000  )
-		{
-			// 执行实验过程
-			runTest<float4>( _joints, _vertexesStatic, _vertexesDynamic );
-
-			cudaDeviceSynchronize();
-			nRepeatPerSecond ++;
-		}
-		timer.stop();
-		timer.reset();
-		
-		// 查看结果是否正确
-		bool bResult = confirmResult<float4>( _joints, _vertexesStatic, _vertexesDynamic );
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
-		
-		// 数据销毁：坐标、矩阵
-		unInitialize<float4>( _joints, _vertexesStatic, _vertexesDynamic );
+		runTest<float4>( _joints, _vertexesStatic, _vertexesDynamic );
 	}
 	else
 	{
@@ -109,32 +90,8 @@ int _tmain(int argc, char** pArgv)
 		Vertexes<Vector4>  _vertexesDynamic;//动态顶点坐标
 		Joints<Vector4>		_joints;//关节矩阵
 
-		// 数据初始化：坐标、矩阵
-		initialize<Vector4>(PROBLEM_SIZE, JOINT_SIZE, _joints, _vertexesStatic, _vertexesDynamic);
-		timer.start();
-
-		while ( timer.getTime() < 10000  )
-		{
-			// 执行实验过程
-			runTest<Vector4>( _joints, _vertexesStatic, _vertexesDynamic );
-
-			cudaDeviceSynchronize();
-			nRepeatPerSecond ++;
-		}
-		timer.stop();
-		timer.reset();
-		
-		// 查看结果是否正确
-		bool bResult = confirmResult<Vector4>( _joints, _vertexesStatic, _vertexesDynamic );
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
-		
-		// 数据销毁：坐标、矩阵
-		unInitialize<Vector4>( _joints, _vertexesStatic, _vertexesDynamic  );
+		runTest<Vector4>( _joints, _vertexesStatic, _vertexesDynamic );		
 	}
-
-	
-	// 查看时间效率
-	shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
 
 	
 	// 输出结果：绘制坐标，按照点、线、面的形式
@@ -298,9 +255,9 @@ void printHelp(void)
     shrLog("  i=0,1,2,...,6 - 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
 }
 
-// 执行实验过程
+// 调用cuda
 template<typename T>
-void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  )
+void runCuda(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  )
 {
 	globalMemoryUpdate<T>( &joints );
 
@@ -357,4 +314,38 @@ bool confirmResult(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&
 	bResult = equalVector( vertexesDynamic.pVertex , vertexesDynamic.nSize, pVertex );
 
 	return bResult;
+}
+
+// 执行实验过程
+template<typename T>
+void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  )
+{
+		StopWatchWin timer;
+		int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
+
+		// 数据初始化：坐标、矩阵
+		initialize<T>(PROBLEM_SIZE, JOINT_SIZE, joints, vertexesStatic, vertexesDynamic);
+		timer.start();
+
+		while ( timer.getTime() < 10000  )
+		{
+			// 执行实验过程
+			runCuda<T>( joints, vertexesStatic, vertexesDynamic );
+
+			cudaDeviceSynchronize();
+			nRepeatPerSecond ++;
+		}
+		timer.stop();
+		timer.reset();
+		
+		// 查看结果是否正确
+		bool bResult = confirmResult<T>( joints, vertexesStatic, vertexesDynamic );
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
+		
+		// 数据销毁：坐标、矩阵
+		unInitialize<T>( joints, vertexesStatic, vertexesDynamic  );
+
+		// 查看时间效率
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
+
 }
