@@ -30,11 +30,11 @@ void transformVec3ByMatrix4Host(float4* pVertexIn, float pMatrix[], float4* pVer
 	vertexOut.z = vertexIn.x * pMatrix[2*4+0] + vertexIn.y * pMatrix[2*4+1] + vertexIn.z * pMatrix[2*4+2] + pMatrix[2*4+3]  ;
 	*pVertexOut = vertexOut;
 }
-
-void transformVec3ByMatrix4Host(Vector4* pVertexIn, Vector4 pMatrix[], Vector4* pVertexOut)
+template<typename T>
+void transformVec3ByMatrix4Host(T* pVertexIn, T pMatrix[], T* pVertexOut)
 {
-	float4 vertexIn = *pVertexIn;
-	float4 vertexOut;
+	T vertexIn = *pVertexIn;
+	T vertexOut;
 	vertexOut.x = vertexIn.x * pMatrix[0].x + vertexIn.y * pMatrix[0].y + vertexIn.z * pMatrix[0].z + pMatrix[0].w ; 
 	vertexOut.y = vertexIn.x * pMatrix[1].x + vertexIn.y * pMatrix[1].y + vertexIn.z * pMatrix[1].z + pMatrix[1].w  ; 
 	vertexOut.z = vertexIn.x * pMatrix[2].x + vertexIn.y * pMatrix[2].y + vertexIn.z * pMatrix[2].z + pMatrix[2].w  ;
@@ -113,11 +113,12 @@ pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
 #if !SEPERATE_STRUCT_FULLY
-void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vector4* pVertexOut){
+template<typename T>
+void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVertexOut){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 		
-		Vector4   matrix[MATRIX_SIZE_LINE];
+		T   matrix[MATRIX_SIZE_LINE];
 #if !USE_MEMORY_BUY_TIME
 		float   matrixPrevious[JOINT_WIDTH];
 		float   matrixCurrent[JOINT_WIDTH];
@@ -126,9 +127,9 @@ void updateVectorByMatrixGold(Vector4* pVertexIn, int size, Joints* pJoints, Vec
 
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		Vector4   vertexIn = pVertexOut[i];
+		T   vertexIn = pVertexOut[i];
 #else
-		Vector4   vertexIn = pVertexIn[i];
+		T   vertexIn = pVertexIn[i];
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
@@ -239,11 +240,12 @@ size : 坐标个数
 pVertexBase : 参考坐标数组
 返回值： 1表示坐标相同，0表示坐标不同
 */
-bool equalVector(Vector4* pVertex, int size, Vector4* pVertexBase)
+template<typename T>
+bool equalVector(T* pVertex, int size, T* pVertexBase)
 {
 	for(int i=0;i<size;i++)
 	{
-		Vector4   vertex, vertexBase;
+		T   vertex, vertexBase;
 		vertex = pVertex[i];
 		vertexBase = pVertexBase[i];
 		if (fabs(vertex.x - vertexBase.x) / fabs(vertexBase.x) >1.7e-1 && fabs(vertex.x) * fabs(vertexBase.x) >10.0f || 

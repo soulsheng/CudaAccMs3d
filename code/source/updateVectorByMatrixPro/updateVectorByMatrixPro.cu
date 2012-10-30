@@ -19,16 +19,21 @@ float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
 int iClass=6; // 问题规模最大值，16M/512M显存、32M/1G显存
 
+bool ALIGNED_STRUCT = false;
+
 // 数据定义
 Vertexes  _vertexesStatic;//静态顶点坐标
 Vertexes  _vertexesDynamic;//动态顶点坐标
-Joints		_joints;//关节矩阵
+Joints<float4>		_joints1;//关节矩阵
+Joints<Vector4>		_joints2;//关节矩阵
 
 // 数据初始化：坐标、矩阵
-void initialize(int problem_size, int joint_size);
+template<typename T>
+void initialize(int problem_size, int joint_size, Joints<T>& joints);
 
 // 数据销毁：坐标、矩阵
-void unInitialize();
+template<typename T>
+void unInitialize( Joints<T>& joints );
 
 // 查询每个SM包含GPU核心SP的个数
 int _ConvertSMVer2Cores(int major, int minor);
@@ -38,6 +43,14 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS);
 
 // 命令行参数说明
 void printHelp(void);
+
+// 执行实验过程
+template<typename T>
+void runTest();
+
+// 验证结果是否正确
+template<typename T>
+bool confirmResult();
 
 int _tmain(int argc, char** pArgv)
 {
@@ -52,85 +65,68 @@ int _tmain(int argc, char** pArgv)
     }
 
     shrGetCmdLineArgumenti(argc, argv, "class", &iClass);
+	
+	if(shrCheckCmdLineFlag( argc, argv, "aligned"))
+	{
+		ALIGNED_STRUCT = true;
+	}
 
 	int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
 	
 	StopWatchWin timer;
 	
+	// 问题规模档次，7档，64K至256M，4倍递增
+	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
+		
+	if (ALIGNED_STRUCT)
 	{
-		// 问题规模档次，7档，64K至256M，4倍递增
-		PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
-		
 		// 数据初始化：坐标、矩阵
-		initialize(PROBLEM_SIZE, JOINT_SIZE);
-		
+		initialize<float4>(PROBLEM_SIZE, JOINT_SIZE,_joints1);
 		timer.start();
 
 		while ( timer.getTime() < 10000  )
 		{
-			globalMemoryUpdate( &_joints );
-			
-#if !USE_MEMORY_BUY_TIME && _DEBUG
-			// 为了确保重复试验得到相同结果，恢复缺省值
-			_vertexesDynamic.copy( _vertexesStatic );
-#endif
-
-			dim3 nBlocksPerGrid( SIZE_BLOCK ); // 块的数目
-			dim3 nThreadsPerBlock( SIZE_THREAD ); // 单块包含线程的数目
-
-#if USE_ELEMENT_SINGLE
-			nBlocksPerGrid.y = (PROBLEM_SIZE+nThreadsPerBlock.x - 1)/(nThreadsPerBlock.x * nBlocksPerGrid.x);
-#endif
-
-			// 执行运算：坐标矩阵变换
-#if SEPERATE_STRUCT
-
-#if SEPERATE_STRUCT_FULLY
-			updateVectorByMatrixFully<<<nBlocksPerGrid, nThreadsPerBlock>>>( _vertexesStatic.pVertexDevice,_vertexesDynamic.pVertexDevice, _vertexesDynamic.nSize,
-				_joints.nSize, _joints.pMatrixDevice, _joints.pMatrixDevicePrevious);
-#else // SEPERATE_STRUCT_FULLY
-			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice , _joints.pMatrixDevicePrevious);
-#endif // SEPERATE_STRUCT_FULLY
-
-#else
-
-			updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
-				(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice ,
-				_joints.pMatrixDevicePrevious);
-
-#endif
+			// 执行实验过程
+			runTest<float4>();
 
 			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
 		}
-
 		timer.stop();
 		timer.reset();
-
-		// 验证GPU运算的正确性，是否和CPU运算结果一致
-		bool bResult = false;
-
-		// 获取CPU运算结果
-#if SEPERATE_STRUCT_FULLY
-		updateVectorByMatrixGoldFully(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
-#else
-		updateVectorByMatrixGold(_vertexesStatic.pVertex, _vertexesDynamic.nSize, &_joints, _vertexesDynamic.pVertex);
-#endif
-		// 获取GPU运算结果
-		Vector4 *pVertex = new Vector4[_vertexesDynamic.nSize];
-		cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(Vector4) * _vertexesDynamic.nSize, cudaMemcpyDeviceToHost );
-		
-		// 比较结果
-		bResult = equalVector( _vertexesDynamic.pVertex , _vertexesDynamic.nSize, pVertex );
+		unInitialize<float4>(_joints1);
+		bool bResult = confirmResult<float4>();
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
-
-		// 数据销毁：坐标、矩阵
-		unInitialize();
-
-		// 查看时间效率
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
 	}
+	else
+	{
+		// 数据初始化：坐标、矩阵
+		initialize<Vector4>(PROBLEM_SIZE, JOINT_SIZE,_joints2);
+		timer.start();
+
+		while ( timer.getTime() < 10000  )
+		{
+			// 执行实验过程
+			runTest<Vector4>();
+
+			cudaDeviceSynchronize();
+			nRepeatPerSecond ++;
+		}
+		timer.stop();
+		timer.reset();
+		
+		// 数据销毁：坐标、矩阵
+		unInitialize<Vector4>(_joints2);
+		
+		// 查看结果是否正确
+		bool bResult = confirmResult<Vector4>();
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
+	}
+
+	
+	// 查看时间效率
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
+
 	
 	// 输出结果：绘制坐标，按照点、线、面的形式
 	// ...省略
@@ -139,9 +135,10 @@ int _tmain(int argc, char** pArgv)
 }
 
 // 数据初始化：坐标、矩阵
-void initialize(int problem_size, int joint_size)
+template<typename T>
+void initialize(int problem_size, int joint_size, Joints<T>& joints)
 {
-	_joints.initialize( joint_size );
+	joints.initialize( joint_size );
 #if USE_MEMORY_BUY_TIME
 	_vertexesStatic.initialize( problem_size, joint_size );
 #else
@@ -160,9 +157,10 @@ void initialize(int problem_size, int joint_size)
 }
 
 // 数据销毁：坐标、矩阵
-void unInitialize()
+template<typename T>
+void unInitialize(Joints<T>& joints)
 {
-	_joints.unInitialize();
+	joints.unInitialize();
 
 	_vertexesStatic.unInitialize();
 
@@ -289,4 +287,65 @@ void printHelp(void)
 
 	shrLog("--class=[i]\t问题规模档次\n");
     shrLog("  i=0,1,2,...,6 - 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
+}
+
+// 执行实验过程
+template<typename T>
+void runTest()
+{
+	globalMemoryUpdate<T>( &_joints1 );
+
+#if !USE_MEMORY_BUY_TIME && _DEBUG
+	// 为了确保重复试验得到相同结果，恢复缺省值
+	_vertexesDynamic.copy( _vertexesStatic );
+#endif
+
+	dim3 nBlocksPerGrid( SIZE_BLOCK ); // 块的数目
+	dim3 nThreadsPerBlock( SIZE_THREAD ); // 单块包含线程的数目
+
+#if USE_ELEMENT_SINGLE
+	nBlocksPerGrid.y = (PROBLEM_SIZE+nThreadsPerBlock.x - 1)/(nThreadsPerBlock.x * nBlocksPerGrid.x);
+#endif
+
+	// 执行运算：坐标矩阵变换
+#if SEPERATE_STRUCT
+
+#if SEPERATE_STRUCT_FULLY
+	updateVectorByMatrixFully<<<nBlocksPerGrid, nThreadsPerBlock>>>( _vertexesStatic.pVertexDevice,_vertexesDynamic.pVertexDevice, _vertexesDynamic.nSize,
+		_joints.nSize, _joints.pMatrixDevice, _joints.pMatrixDevicePrevious);
+#else // SEPERATE_STRUCT_FULLY
+	updateVectorByMatrix<<<nBlocksPerGrid, nThreadsPerBlock>>>
+		(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice , _joints.pMatrixDevicePrevious);
+#endif // SEPERATE_STRUCT_FULLY
+
+#else
+
+		updateVectorByMatrix<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
+			(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice ,
+			_joints.pMatrixDevicePrevious);
+
+#endif
+}
+
+// 验证结果是否正确
+template<typename T>
+bool confirmResult()
+{
+	// 验证GPU运算的正确性，是否和CPU运算结果一致
+	bool bResult = false;
+
+	// 获取CPU运算结果
+#if SEPERATE_STRUCT_FULLY
+	updateVectorByMatrixGoldFully(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
+#else
+	updateVectorByMatrixGold<T>(_vertexesStatic.pVertex, _vertexesDynamic.nSize, &_joints, _vertexesDynamic.pVertex);
+#endif
+	// 获取GPU运算结果
+	T *pVertex = new T[_vertexesDynamic.nSize];
+	cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(T) * _vertexesDynamic.nSize, cudaMemcpyDeviceToHost );
+
+	// 比较结果
+	bResult = equalVector( _vertexesDynamic.pVertex , _vertexesDynamic.nSize, pVertex );
+
+	return bResult;
 }

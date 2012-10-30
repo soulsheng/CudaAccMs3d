@@ -11,7 +11,8 @@
 #define		USE_ELEMENT_SINGLE	0	// 同一线程处理一个数据元素， 1表示一个元素，0表示多个元素且不交替
 
 
-void globalMemoryUpdate( Joints* pJoints )
+template<typename T>
+void globalMemoryUpdate( Joints<T>* pJoints )
 {
 	cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
 	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
@@ -21,19 +22,21 @@ void globalMemoryUpdate( Joints* pJoints )
 pVertex  : 坐标
 pMatrix : 矩阵
 */
-__device__ void transformVec3ByMatrix4(float4* pVertexIn, float pMatrix[], float4* pVertexOut)
+template<typename T>
+__device__ void transformVec3ByMatrix4(T* pVertexIn, float pMatrix[], T* pVertexOut)
 {
-	float4 vertexIn = *pVertexIn;
-	float4 vertexOut;
+	T vertexIn = *pVertexIn;
+	T vertexOut;
 	vertexOut.x = vertexIn.x * pMatrix[0] + vertexIn.y * pMatrix[1] + vertexIn.z * pMatrix[2] + pMatrix[3] ; 
 	vertexOut.y = vertexIn.x * pMatrix[1*4+0] + vertexIn.y * pMatrix[1*4+1] + vertexIn.z * pMatrix[1*4+2] + pMatrix[1*4+3]  ; 
 	vertexOut.z = vertexIn.x * pMatrix[2*4+0] + vertexIn.y * pMatrix[2*4+1] + vertexIn.z * pMatrix[2*4+2] + pMatrix[2*4+3]  ;
 	*pVertexOut = vertexOut;
 }
-__device__ void transformVec3ByMatrix4(Vector4* pVertexIn, Vector4 pMatrix[], Vector4* pVertexOut)
+template<typename T>
+__device__ void transformVec3ByMatrix4(T* pVertexIn, T pMatrix[], T* pVertexOut)
 {
-	float4 vertexIn = *pVertexIn;
-	float4 vertexOut;
+	T vertexIn = *pVertexIn;
+	T vertexOut;
 	vertexOut.x = vertexIn.x * pMatrix[0].x + vertexIn.y * pMatrix[0].y + vertexIn.z * pMatrix[0].z + pMatrix[0].w ; 
 	vertexOut.y = vertexIn.x * pMatrix[1].x + vertexIn.y * pMatrix[1].y + vertexIn.z * pMatrix[1].z + pMatrix[1].w  ; 
 	vertexOut.z = vertexIn.x * pMatrix[2].x + vertexIn.y * pMatrix[2].y + vertexIn.z * pMatrix[2].z + pMatrix[2].w  ;
@@ -125,11 +128,11 @@ pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
 #if !USE_SHARED
-
+template<typename T>
 #if SEPERATE_STRUCT
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix, Vector4* pVertexOut, Vector4* pMatrixPrevious)
 #else
-__global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatrix, Vector4* pVertexOut, Matrix* pMatrixPrevious)
+__global__ void updateVectorByMatrix(T* pVertexIn, int size, Matrix* pMatrix, T* pVertexOut, Matrix* pMatrixPrevious)
 #endif
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
@@ -151,7 +154,7 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 			return;
 #endif // USE_ELEMENT_SINGLE
 
-		Vector4   matrix[MATRIX_SIZE_LINE];
+		T   matrix[MATRIX_SIZE_LINE];
 
 #if !USE_MEMORY_BUY_TIME
 		float   matrixPrevious[JOINT_WIDTH];
@@ -160,9 +163,9 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		Vector4   vertexIn = pVertexOut[i];
+		T   vertexIn = pVertexOut[i];
 #else
-		Vector4   vertexIn = pVertexIn[i];
+		T   vertexIn = pVertexIn[i];
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
@@ -214,7 +217,8 @@ __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Matrix* pMatr
 }
 
 
-__global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexOut, int size, int sizeJoints, float* pMatrix, float* pMatrixPrevious)
+template<typename T>
+__global__ void updateVectorByMatrixFully( T* pVertexIn, T* pVertexOut, int size, int sizeJoints, float* pMatrix, float* pMatrixPrevious)
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 
@@ -222,9 +226,9 @@ __global__ void updateVectorByMatrixFully( Vector4* pVertexIn, Vector4* pVertexO
 
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		Vector4   vertexIn = pVertexOut[i];
+		T   vertexIn = pVertexOut[i];
 #else
-		Vector4   vertexIn = pVertexIn[i];
+		T   vertexIn = pVertexIn[i];
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵

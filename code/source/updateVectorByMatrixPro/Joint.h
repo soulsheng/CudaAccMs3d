@@ -5,7 +5,7 @@
 #include <string.h>
 #include "cuda_runtime.h"
 
-#define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
+//#define		ALIGNED_STRUCT		1// 对齐开关：0不对齐，1对齐
 #define		USE_SHARED			0// 共享开关：0不共享，1共享
 #define		SEPERATE_STRUCT	0// 结构体拆分开关：0不拆分，1拆分
 #define		USE_MEMORY_BUY_TIME		1	// 以空间换时间， 1表示换，0表示不换（有bug）
@@ -16,11 +16,9 @@
 #define    MATRIX_SIZE_LINE    4//3
 #define    JOINT_WIDTH    ((MATRIX_SIZE_LINE)*4)//12
 
-#if ALIGNED_STRUCT
-typedef float4	Vector4;
-#else
+
 struct Vector4 { float x,y,z,w; };
-#endif
+
 
 #if SEPERATE_STRUCT
 
@@ -145,10 +143,10 @@ struct Joints{
 #else // SEPERATE_STRUCT
 
 //关节矩阵---------------------------------------------------------
-typedef Vector4  Matrix[MATRIX_SIZE_LINE];// 矩阵
-
-struct Joints{
-
+//typedef Vector4  Matrix[MATRIX_SIZE_LINE];// 矩阵
+template<class T>
+class Joints{
+	typedef T Matrix[MATRIX_SIZE_LINE];// 矩阵
 	// 获取关节矩阵
 	void initialize( int size, float* pBufferMatrix ){
 		
