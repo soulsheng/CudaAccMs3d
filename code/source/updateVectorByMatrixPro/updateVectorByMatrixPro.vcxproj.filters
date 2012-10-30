@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{399913a2-0065-4693-afc1-6c86a96bc78d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />
@@ -21,44 +24,38 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="stdafx.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Joint.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Vertex.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\stopwatch_win.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="updateVectorByMatrix.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="..\common\cmd_arg_reader.h">
-      <Filter>头文件</Filter>
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\stopwatch_win.h">
+      <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\common\shrUtils.h">
-      <Filter>头文件</Filter>
+      <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="..\common\stopwatch_win.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="..\common\cmd_arg_reader.cpp">
-      <Filter>源文件</Filter>
+      <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\common\shrUtils.cpp">
-      <Filter>源文件</Filter>
+      <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\stopwatch_win.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="updateVectorByMatrixPro.cu">
