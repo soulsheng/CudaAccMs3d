@@ -144,9 +144,9 @@ struct Joints{
 
 //关节矩阵---------------------------------------------------------
 //typedef Vector4  Matrix[MATRIX_SIZE_LINE];// 矩阵
-template<class T>
-class Joints{
-	typedef T Matrix[MATRIX_SIZE_LINE];// 矩阵
+template<typename T>
+struct Joints{
+	//typedef T Matrix[MATRIX_SIZE_LINE];// 矩阵
 	// 获取关节矩阵
 	void initialize( int size, float* pBufferMatrix ){
 		
@@ -155,30 +155,30 @@ class Joints{
 	// 获取关节矩阵 模拟
 	void initialize( int size ){
 		nSize = size;
-		pMatrix = new Matrix[nSize];
+		pMatrix = new T[nSize*MATRIX_SIZE_LINE];
 		for(int i=0;i<nSize;i++){
 			for(int j=0;j<MATRIX_SIZE_LINE;j++){
-				pMatrix[i][j].x = rand() % nSize / (nSize * 1.0f);
-				pMatrix[i][j].y = rand() % nSize / (nSize * 1.0f);
-				pMatrix[i][j].z = rand() % nSize / (nSize * 1.0f);
-				if(j<3)	pMatrix[i][j].w = 0.0f;
-				else		pMatrix[i][j].w = 1.0f;
+				pMatrix[ i*MATRIX_SIZE_LINE + j ].x = rand() % nSize / (nSize * 1.0f);
+				pMatrix[ i*MATRIX_SIZE_LINE + j ].y = rand() % nSize / (nSize * 1.0f);
+				pMatrix[ i*MATRIX_SIZE_LINE + j ].z = rand() % nSize / (nSize * 1.0f);
+				if(j<3)	pMatrix[ i*MATRIX_SIZE_LINE + j ].w = 0.0f;
+				else		pMatrix[ i*MATRIX_SIZE_LINE + j ].w = 1.0f;
 			}
 		}
 
-		pMatrixPrevious = new Matrix[nSize];
+		pMatrixPrevious = new T[nSize*MATRIX_SIZE_LINE];
 		for(int i=0;i<nSize;i++){
 			for(int j=0;j<MATRIX_SIZE_LINE;j++){
-				pMatrixPrevious[i][j].x = rand() % nSize / (nSize * 1.0f);
-				pMatrixPrevious[i][j].y = rand() % nSize / (nSize * 1.0f);
-				pMatrixPrevious[i][j].z = rand() % nSize / (nSize * 1.0f);
-				if(j<3)	pMatrixPrevious[i][j].w = 0.0f;
-				else		pMatrixPrevious[i][j].w = 1.0f;
+				pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].x = rand() % nSize / (nSize * 1.0f);
+				pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].y = rand() % nSize / (nSize * 1.0f);
+				pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].z = rand() % nSize / (nSize * 1.0f);
+				if(j<3)	pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].w = 0.0f;
+				else		pMatrixPrevious[ i*MATRIX_SIZE_LINE + j ].w = 1.0f;
 			}
 		}
 
-		cudaMalloc( &pMatrixDevice, sizeof(Matrix) * nSize ) ;
-		cudaMalloc( &pMatrixDevicePrevious, sizeof(Matrix) * nSize ) ;
+		cudaMalloc( &pMatrixDevice, sizeof(T) * nSize * MATRIX_SIZE_LINE ) ;
+		cudaMalloc( &pMatrixDevicePrevious, sizeof(T) * nSize * MATRIX_SIZE_LINE ) ;
 	}
 
 	// 释放空间
@@ -190,8 +190,8 @@ class Joints{
 		if (pMatrixDevicePrevious) cudaFree(pMatrixDevicePrevious) ;
 	}
 
-	Matrix*  pMatrix, *pMatrixDevice;
-	Matrix*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
+	T*  pMatrix, *pMatrixDevice;
+	T*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
 	int   nSize;// 关节的数目
 
 };// 关节的集合

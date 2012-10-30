@@ -157,7 +157,7 @@ void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVe
 #else// SEPERATE_STRUCT
 #if USE_MEMORY_BUY_TIME
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
-			matrix[j] = pJoints->pMatrix[matrixIndex][j];
+			matrix[j] = pJoints->pMatrix[matrixIndex * MATRIX_SIZE_LINE + j];
 		}
 #else
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){

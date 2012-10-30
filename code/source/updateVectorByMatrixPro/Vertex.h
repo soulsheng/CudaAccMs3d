@@ -11,12 +11,13 @@
 
 //顶点坐标---------------------------------------------------------
 //typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
+template<typename T>
 struct Vertexes{
 
 	// 获取顶点坐标，内存到显存
 	void initialize(int size, float* pBufferCoord, int* pBufferIndex){
 		nSize = size;
-		pVertex = new Vector4[nSize];
+		pVertex = new T[nSize];
 		for(int i=0;i<nSize;i++){
 			pVertex[i].x = pBufferCoord[i*3];
 			pVertex[i].y = pBufferCoord[i*3+1];
@@ -24,8 +25,8 @@ struct Vertexes{
 			pVertex[i].w = pBufferIndex[i] * 1.0f;
 		}
 
-		cudaMalloc( &pVertexDevice, sizeof(Vector4) * nSize ) ;//Vertex[nSize];
-		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vector4) * nSize, cudaMemcpyHostToDevice );
+		cudaMalloc( &pVertexDevice, sizeof(T) * nSize ) ;//Vertex[nSize];
+		cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
 
 	}
 	void sort()
@@ -43,12 +44,12 @@ struct Vertexes{
 			pIndexMatrix[i] = itr->second;
 		}
 
-		Vector4* pVertexTemp = new Vector4[nSize];
+		Vector4* pVertexTemp = new T[nSize];
 		for( i=0;i<nSize;i++){
 			pVertexTemp[i] = pVertex[ pIndexMatrix[i] ];
 		}
 
-		memcpy( pVertex, pVertexTemp, sizeof(float4) * nSize );
+		memcpy( pVertex, pVertexTemp, sizeof(T) * nSize );
 		delete[] pVertexTemp;
 		delete[] pIndexMatrix;
 	}
@@ -101,11 +102,11 @@ struct Vertexes{
 		}
 
 		// 按照循环索引，调整存储
-		Vector4* pVertexTemp = new Vector4[nSize];
+		Vector4* pVertexTemp = new T[nSize];
 		for( i=0;i<nSize;i++){
 			pVertexTemp[i] = pVertex[ pIndexMatrix[i] ];
 		}
-		memcpy( pVertex, pVertexTemp, sizeof(float4) * nSize );
+		memcpy( pVertex, pVertexTemp, sizeof(T) * nSize );
 		
 		// 释放临时内存空间
 		delete[] pVertexTemp;
@@ -121,7 +122,7 @@ struct Vertexes{
 	// 获取顶点坐标 模拟
 	void initialize(int size, int sizeJoint, bool bDevice = true){
 		nSize = size;
-		pVertex = new Vector4[nSize];
+		pVertex = new T[nSize];
 		for(int i=0;i<nSize;i++){
 			pVertex[i].x = rand() * 1.0f;
 			pVertex[i].y = rand() * 1.0f;
@@ -137,8 +138,8 @@ struct Vertexes{
 		sortLoop();
 #endif
 		if( bDevice ){
-		cudaMalloc( &pVertexDevice, sizeof(Vector4) * nSize ) ;//Vertex[nSize];
-		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vector4) * nSize, cudaMemcpyHostToDevice );
+		cudaMalloc( &pVertexDevice, sizeof(T) * nSize ) ;//Vertex[nSize];
+		cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
 		}
 		else{
 			pVertexDevice = NULL;
@@ -154,11 +155,11 @@ struct Vertexes{
 	
 	void copy( Vertexes& ref )
 	{
-		memcpy( pVertex, ref.pVertex, sizeof(Vector4) * nSize );
-		cudaMemcpy( pVertexDevice, pVertex, sizeof(Vector4) * nSize, cudaMemcpyHostToDevice );
+		memcpy( pVertex, ref.pVertex, sizeof(T) * nSize );
+		cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
 	}
 
-	Vector4*  pVertex, *pVertexDevice;
+	T*  pVertex, *pVertexDevice;
 	int   nSize;// 顶点的数目
 	int   nSizeJoint;// 关节的数目
 

@@ -21,19 +21,14 @@ int iClass=6; // 问题规模最大值，16M/512M显存、32M/1G显存
 
 bool ALIGNED_STRUCT = false;
 
-// 数据定义
-Vertexes  _vertexesStatic;//静态顶点坐标
-Vertexes  _vertexesDynamic;//动态顶点坐标
-Joints<float4>		_joints1;//关节矩阵
-Joints<Vector4>		_joints2;//关节矩阵
 
 // 数据初始化：坐标、矩阵
 template<typename T>
-void initialize(int problem_size, int joint_size, Joints<T>& joints);
+void initialize(int problem_size, int joint_size, Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic );
 
 // 数据销毁：坐标、矩阵
 template<typename T>
-void unInitialize( Joints<T>& joints );
+void unInitialize( Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  );
 
 // 查询每个SM包含GPU核心SP的个数
 int _ConvertSMVer2Cores(int major, int minor);
@@ -46,11 +41,11 @@ void printHelp(void);
 
 // 执行实验过程
 template<typename T>
-void runTest();
+void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  );
 
 // 验证结果是否正确
 template<typename T>
-bool confirmResult();
+bool confirmResult(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  );
 
 int _tmain(int argc, char** pArgv)
 {
@@ -80,34 +75,48 @@ int _tmain(int argc, char** pArgv)
 		
 	if (ALIGNED_STRUCT)
 	{
+		// 数据定义
+		Vertexes<float4>  _vertexesStatic;//静态顶点坐标
+		Vertexes<float4>  _vertexesDynamic;//动态顶点坐标
+		Joints<float4>		_joints;//关节矩阵
+
 		// 数据初始化：坐标、矩阵
-		initialize<float4>(PROBLEM_SIZE, JOINT_SIZE,_joints1);
+		initialize<float4>(PROBLEM_SIZE, JOINT_SIZE, _joints, _vertexesStatic, _vertexesDynamic);
 		timer.start();
 
 		while ( timer.getTime() < 10000  )
 		{
 			// 执行实验过程
-			runTest<float4>();
+			runTest<float4>( _joints, _vertexesStatic, _vertexesDynamic );
 
 			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
 		}
 		timer.stop();
 		timer.reset();
-		unInitialize<float4>(_joints1);
-		bool bResult = confirmResult<float4>();
+		
+		// 查看结果是否正确
+		bool bResult = confirmResult<float4>( _joints, _vertexesStatic, _vertexesDynamic );
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
+		
+		// 数据销毁：坐标、矩阵
+		unInitialize<float4>( _joints, _vertexesStatic, _vertexesDynamic );
 	}
 	else
 	{
+		// 数据定义		
+		Vertexes<Vector4>  _vertexesStatic;//静态顶点坐标
+		Vertexes<Vector4>  _vertexesDynamic;//动态顶点坐标
+		Joints<Vector4>		_joints;//关节矩阵
+
 		// 数据初始化：坐标、矩阵
-		initialize<Vector4>(PROBLEM_SIZE, JOINT_SIZE,_joints2);
+		initialize<Vector4>(PROBLEM_SIZE, JOINT_SIZE, _joints, _vertexesStatic, _vertexesDynamic);
 		timer.start();
 
 		while ( timer.getTime() < 10000  )
 		{
 			// 执行实验过程
-			runTest<Vector4>();
+			runTest<Vector4>( _joints, _vertexesStatic, _vertexesDynamic );
 
 			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
@@ -115,12 +124,12 @@ int _tmain(int argc, char** pArgv)
 		timer.stop();
 		timer.reset();
 		
-		// 数据销毁：坐标、矩阵
-		unInitialize<Vector4>(_joints2);
-		
 		// 查看结果是否正确
-		bool bResult = confirmResult<Vector4>();
+		bool bResult = confirmResult<Vector4>( _joints, _vertexesStatic, _vertexesDynamic );
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
+		
+		// 数据销毁：坐标、矩阵
+		unInitialize<Vector4>( _joints, _vertexesStatic, _vertexesDynamic  );
 	}
 
 	
@@ -136,15 +145,15 @@ int _tmain(int argc, char** pArgv)
 
 // 数据初始化：坐标、矩阵
 template<typename T>
-void initialize(int problem_size, int joint_size, Joints<T>& joints)
+void initialize(int problem_size, int joint_size, Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic )
 {
 	joints.initialize( joint_size );
 #if USE_MEMORY_BUY_TIME
-	_vertexesStatic.initialize( problem_size, joint_size );
+	vertexesStatic.initialize( problem_size, joint_size );
 #else
-	_vertexesStatic.initialize( problem_size, joint_size , false);
+	vertexesStatic.initialize( problem_size, joint_size , false);
 #endif
-	_vertexesDynamic.initialize( problem_size, joint_size );
+	vertexesDynamic.initialize( problem_size, joint_size );
 
 	// cuda初始化，若不初始化将采用默认值
 	int i; // 有多个GPU时选择一个
@@ -158,13 +167,13 @@ void initialize(int problem_size, int joint_size, Joints<T>& joints)
 
 // 数据销毁：坐标、矩阵
 template<typename T>
-void unInitialize(Joints<T>& joints)
+void unInitialize( Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic )
 {
 	joints.unInitialize();
 
-	_vertexesStatic.unInitialize();
+	vertexesStatic.unInitialize();
 
-	_vertexesDynamic.unInitialize();
+	vertexesDynamic.unInitialize();
 }
 
 #ifndef MIN
@@ -291,9 +300,9 @@ void printHelp(void)
 
 // 执行实验过程
 template<typename T>
-void runTest()
+void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  )
 {
-	globalMemoryUpdate<T>( &_joints1 );
+	globalMemoryUpdate<T>( &joints );
 
 #if !USE_MEMORY_BUY_TIME && _DEBUG
 	// 为了确保重复试验得到相同结果，恢复缺省值
@@ -321,15 +330,15 @@ void runTest()
 #else
 
 		updateVectorByMatrix<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
-			(_vertexesStatic.pVertexDevice, _vertexesDynamic.nSize, _joints.pMatrixDevice, _vertexesDynamic.pVertexDevice ,
-			_joints.pMatrixDevicePrevious);
+			( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
+			joints.pMatrixDevicePrevious);
 
 #endif
 }
 
 // 验证结果是否正确
 template<typename T>
-bool confirmResult()
+bool confirmResult(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  )
 {
 	// 验证GPU运算的正确性，是否和CPU运算结果一致
 	bool bResult = false;
@@ -338,14 +347,14 @@ bool confirmResult()
 #if SEPERATE_STRUCT_FULLY
 	updateVectorByMatrixGoldFully(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
 #else
-	updateVectorByMatrixGold<T>(_vertexesStatic.pVertex, _vertexesDynamic.nSize, &_joints, _vertexesDynamic.pVertex);
+	updateVectorByMatrixGold<T>( vertexesStatic.pVertex, vertexesDynamic.nSize, &joints, vertexesDynamic.pVertex);
 #endif
 	// 获取GPU运算结果
-	T *pVertex = new T[_vertexesDynamic.nSize];
-	cudaMemcpy( pVertex, _vertexesDynamic.pVertexDevice, sizeof(T) * _vertexesDynamic.nSize, cudaMemcpyDeviceToHost );
+	T *pVertex = new T[vertexesDynamic.nSize];
+	cudaMemcpy( pVertex, vertexesDynamic.pVertexDevice, sizeof(T) * vertexesDynamic.nSize, cudaMemcpyDeviceToHost );
 
 	// 比较结果
-	bResult = equalVector( _vertexesDynamic.pVertex , _vertexesDynamic.nSize, pVertex );
+	bResult = equalVector( vertexesDynamic.pVertex , vertexesDynamic.nSize, pVertex );
 
 	return bResult;
 }

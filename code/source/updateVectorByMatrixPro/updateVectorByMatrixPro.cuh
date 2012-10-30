@@ -132,7 +132,7 @@ template<typename T>
 #if SEPERATE_STRUCT
 __global__ void updateVectorByMatrix(Vector4* pVertexIn, int size, Vector4* pMatrix, Vector4* pVertexOut, Vector4* pMatrixPrevious)
 #else
-__global__ void updateVectorByMatrix(T* pVertexIn, int size, Matrix* pMatrix, T* pVertexOut, Matrix* pMatrixPrevious)
+__global__ void updateVectorByMatrix(T* pVertexIn, int size, T* pMatrix, T* pVertexOut, T* pMatrixPrevious)
 #endif
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
@@ -184,7 +184,7 @@ __global__ void updateVectorByMatrix(T* pVertexIn, int size, Matrix* pMatrix, T*
 #else
 #if	USE_MEMORY_BUY_TIME
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
-			matrix[j] = pMatrix[matrixIndex][j];
+			matrix[j] = pMatrix[matrixIndex*MATRIX_SIZE_LINE + j];
 		}
 
 #else
