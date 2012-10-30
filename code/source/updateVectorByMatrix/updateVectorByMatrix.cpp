@@ -79,7 +79,7 @@ int _tmain(int argc, char** pArgv)
 		unInitialize();
 
 		// 查看时间效率
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.1f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
 	}
 	
 	// 输出结果：绘制坐标，按照点、线、面的形式
