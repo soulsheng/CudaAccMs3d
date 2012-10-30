@@ -93,12 +93,14 @@ struct Joints{
 			for(int j=0;j<nSize;j++){
 				for(int k=0; k<4; k++ ){
 
-				int index = 4*(i * nSize + j) + k;
+					int index = 4*(i * nSize + j) + k;
 
-				(* pBuffer)[index] = rand() % nSize / (nSize * 1.0f);
-				if(i<3)	(* pBuffer)[index] = 0.0f;
-				else		(* pBuffer)[index] = 1.0f;
-				
+					(* pBuffer)[index] = rand() % nSize / (nSize * 1.0f);
+
+					if(k==3) {
+						if(i<3)	(* pBuffer)[index] = 0.0f;
+						else		(* pBuffer)[index] = 1.0f;
+					}//if k
 				}//for k
 			}//for j
 		}//for i

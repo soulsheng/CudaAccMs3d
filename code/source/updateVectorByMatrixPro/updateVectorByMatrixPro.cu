@@ -21,7 +21,7 @@ int iClass=6; // 问题规模最大值，16M/512M显存、32M/1G显存
 
 bool ALIGNED_STRUCT = false;
 
-Index_Mode_Matrix	eMode = FLOAT_44;
+Index_Mode_Matrix	eMode = FLOAT_4;
 
 // 数据初始化：坐标、矩阵
 template<typename T>

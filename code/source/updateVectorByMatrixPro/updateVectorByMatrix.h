@@ -120,7 +120,7 @@ template<typename T>
 void indexByFloat4Host( T* pBuffer , T* pMat , int index )
 {
 	for(int j=0; j<MATRIX_SIZE_LINE; j++){
-		pMat[j] = pBuffer[index + MATRIX_SIZE_LINE * j];
+		pMat[j] = pBuffer[index + JOINT_SIZE * j];
 	}
 }
 

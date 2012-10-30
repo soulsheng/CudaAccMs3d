@@ -135,7 +135,7 @@ template<typename T>
 __device__ void indexByFloat4( T* pBuffer , T* pMat , int index )
 	{
 		for(int j=0; j<MATRIX_SIZE_LINE; j++){
-			pMat[j] = pBuffer[index + MATRIX_SIZE_LINE * j];
+			pMat[j] = pBuffer[index + JOINT_SIZE * j];
 		}
 	}
 
