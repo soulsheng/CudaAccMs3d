@@ -24,6 +24,7 @@ int bAligned = 0;	// 结构体是否对齐
 Matrix_Separate_Mode	eSeparate = NO_SEPARATE;	// 结构体拆分模式，不拆分、半拆分、全拆分
 
 int bQuiet = 0;		// 静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒
+Matrix_Sort_Mode eSort=NO_SORT;			// 顶点以矩阵id为索引的排序方式，不排序、顺序排序、交叉排序
 
 // 数据初始化：坐标、矩阵
 template<typename T>
@@ -68,30 +69,38 @@ int _tmain(int argc, char** pArgv)
         return 0;
     }
 		
-	// 解析命令行参数，获取问题规模 --class=3
+	// 解析命令行参数，获取问题规模 --quiet=0
 	if(shrCheckCmdLineFlag( argc, argv, "quiet"))
     {
 		shrGetCmdLineArgumenti(argc, argv, "quiet", &bQuiet);
 	}
 
-	// 解析命令行参数，获取问题规模 --class=3
+	// 解析命令行参数，获取问题规模 --class=6
 	if(shrCheckCmdLineFlag( argc, argv, "problem"))
     {
 		shrGetCmdLineArgumenti(argc, argv, "problem", &iProblem);
 	}
 	
-	// 解析命令行参数，获取对齐标记 --aligned
+	// 解析命令行参数，获取对齐标记 --aligned=0
 	if(shrCheckCmdLineFlag( argc, argv, "aligned"))
 	{
 		shrGetCmdLineArgumenti(argc, argv, "aligned", &bAligned);
 	}
 
-	// 解析命令行参数，获取矩阵结构体存储模式 --mode=2
+	// 解析命令行参数，矩阵结构体拆分模式 --separate=0
     if(shrCheckCmdLineFlag( argc, argv, "separate"))
     {
 		int mode;
 		shrGetCmdLineArgumenti(argc, argv, "separate", &mode);
 		eSeparate = (Matrix_Separate_Mode)mode;
+	}
+	
+	// 解析命令行参数，矩阵结构体拆分模式 --sort=0
+    if(shrCheckCmdLineFlag( argc, argv, "sort"))
+    {
+		int mode;
+		shrGetCmdLineArgumenti(argc, argv, "sort", &mode);
+		eSort = (Matrix_Sort_Mode)mode;
 	}
 
 	if( !bQuiet ) {
@@ -99,6 +108,7 @@ int _tmain(int argc, char** pArgv)
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "class=%d\n", iProblem);
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "aligned=%d\n", bAligned);
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "separate=%d\n", eSeparate);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "sort=%d\n", eSort);
 		
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "Options end(配置结束):\n\n");
 	}
@@ -135,11 +145,11 @@ void initialize(int problem_size, int joint_size, Joints<T>& joints, Vertexes<T>
 {
 	joints.initialize( joint_size , eSeparate);
 #if USE_MEMORY_BUY_TIME
-	vertexesStatic.initialize( problem_size, joint_size );
+	vertexesStatic.initialize( problem_size, joint_size, eSort );
 #else
-	vertexesStatic.initialize( problem_size, joint_size , false);
+	vertexesStatic.initialize( problem_size, joint_size, eSort , false);
 #endif
-	vertexesDynamic.initialize( problem_size, joint_size );
+	vertexesDynamic.initialize( problem_size, joint_size, eSort );
 
 	// cuda初始化，若不初始化将采用默认值
 	int i; // 有多个GPU时选择一个
@@ -289,6 +299,9 @@ void printHelp(void)
 
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "--separate=[i]\t结构体拆分模式\n");
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 不拆分，半拆分，全拆分\n");
+	
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "--sort=[i]\t顶点以矩阵id为索引的排序方式\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 不排序，顺序排序，交叉排序\n");
 
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "--multiple=[i]\t单个线程解决多个问题元素\n");
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 单个，多个连续，多个交替\n");

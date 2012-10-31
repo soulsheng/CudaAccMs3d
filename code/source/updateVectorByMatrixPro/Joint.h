@@ -42,7 +42,7 @@ struct Joints{
 		*pBuffer = new float[ nSizeFloat ];
 		cudaMalloc( pBufferDevice, nSizeFloat * sizeof(float) ) ;
 		
-		switch( eMode )
+		switch( eSeparate )
 		{
 		case NO_SEPARATE:
 			// 不拆分，按矩阵索引
@@ -125,7 +125,7 @@ struct Joints{
 	// 获取关节矩阵 模拟
 	void initialize( int size , Matrix_Separate_Mode mode )
 	{
-		eMode = mode;
+		eSeparate = mode;
 		initialize( size, &pMatrix, &pMatrixDevice );
 		initialize( size, &pMatrixPrevious, &pMatrixDevicePrevious );
 	}
@@ -148,7 +148,7 @@ struct Joints{
 	float*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
 	int   nSize;// 关节的数目
 	int   nSizePerElement;// 每个关节包含子数据结构的数目
-	Matrix_Separate_Mode	eMode; // 索引矩阵数组的方式
+	Matrix_Separate_Mode	eSeparate; // 索引矩阵数组的方式
 };// 关节的集合
 
 

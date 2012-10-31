@@ -6,8 +6,11 @@
 #include <map>
 #include <vector>
 
-#define		SORT_ARRAY				0// 顶点按矩阵索引顺序排序：0不排序，1排序    排序如：0...0, 1...1, ... 100...100
-#define		SORT_ARRAY_CROSS		0// 顶点按矩阵索引交替排序：0不排序，1排序    排序如：0,1~100, 0,1~100...
+enum Matrix_Sort_Mode {
+	NO_SORT,			//	   不排序，相邻顶点关联随机矩阵
+	SERIAL_SORT,	//	顺序排序，相邻顶点关联相同矩阵，构造广播条件
+	CROSS_SORT	//	交叉排序，相邻顶点关联相邻矩阵，构造合并条件
+};// 顶点以矩阵id为索引的排序方式
 
 //顶点坐标---------------------------------------------------------
 //typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
@@ -44,7 +47,7 @@ struct Vertexes{
 			pIndexMatrix[i] = itr->second;
 		}
 
-		Vector4* pVertexTemp = new T[nSize];
+		T* pVertexTemp = new T[nSize];
 		for( i=0;i<nSize;i++){
 			pVertexTemp[i] = pVertex[ pIndexMatrix[i] ];
 		}
@@ -102,7 +105,7 @@ struct Vertexes{
 		}
 
 		// 按照循环索引，调整存储
-		Vector4* pVertexTemp = new T[nSize];
+		T* pVertexTemp = new T[nSize];
 		for( i=0;i<nSize;i++){
 			pVertexTemp[i] = pVertex[ pIndexMatrix[i] ];
 		}
@@ -120,8 +123,11 @@ struct Vertexes{
 	}
 
 	// 获取顶点坐标 模拟
-	void initialize(int size, int sizeJoint, bool bDevice = true){
+	void initialize(int size, int sizeJoint, Matrix_Sort_Mode mode, bool bDevice = true){
 		nSize = size;
+		nSizeJoint = sizeJoint;
+		eSort = mode;
+
 		pVertex = new T[nSize];
 		for(int i=0;i<nSize;i++){
 			pVertex[i].x = rand() * 1.0f;
@@ -129,14 +135,21 @@ struct Vertexes{
 			pVertex[i].z = rand() * 1.0f;
 			pVertex[i].w = rand() % sizeJoint  * 1.0f;
 		}
-#if SORT_ARRAY
-		sort();
-#endif
+
+		switch( eSort )
+		{
+		case NO_SORT:
+			break;
 		
-		nSizeJoint = sizeJoint;
-#if SORT_ARRAY_CROSS
-		sortLoop();
-#endif
+		case SERIAL_SORT:
+			sort();
+			break;		
+		
+		case CROSS_SORT:
+			sortLoop();
+			break;		
+		}
+
 		if( bDevice ){
 		cudaMalloc( &pVertexDevice, sizeof(T) * nSize ) ;//Vertex[nSize];
 		cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
@@ -162,7 +175,7 @@ struct Vertexes{
 	T*  pVertex, *pVertexDevice;
 	int   nSize;// 顶点的数目
 	int   nSizeJoint;// 关节的数目
-
+	Matrix_Sort_Mode		eSort;
 };// 顶点的集合
 
 #endif//VERTEX_H__
