@@ -2,6 +2,8 @@ set exe=updateVectorByMatrixPro
 
 cd Release
 
-start %exe% --help
+if exist %exe%.txt del %exe%.txt
 
-pause
+start /wait %exe% --help
+
+notepad %exe%

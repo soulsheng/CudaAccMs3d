@@ -17,11 +17,13 @@ int		SIZE_BLOCK=32; // 默认设置，动态设置为SM的两倍，确保每个SM有2个block
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
-int iClass=6; // 问题规模最大值，16M/512M显存、32M/1G显存
 
-bool ALIGNED_STRUCT = true;
+// 命令行参数
+int iProblem=6;			// 问题规模最大值，16M/512M显存、32M/1G显存
+int bAligned = 0;	// 结构体是否对齐
+Matrix_Separate_Mode	eSeparate = NO_SEPARATE;	// 结构体拆分模式，不拆分、半拆分、全拆分
 
-Matrix_Separate_Mode	eMode = COMPLETE_SEPARATE;
+int bQuiet = 0;		// 静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒
 
 // 数据初始化：坐标、矩阵
 template<typename T>
@@ -62,35 +64,46 @@ int _tmain(int argc, char** pArgv)
 	if(shrCheckCmdLineFlag( argc, argv, "help"))
     {
         printHelp();
+		system( "pause" );
         return 0;
     }
-	
+		
 	// 解析命令行参数，获取问题规模 --class=3
-	if(shrCheckCmdLineFlag( argc, argv, "class"))
+	if(shrCheckCmdLineFlag( argc, argv, "quiet"))
     {
-		shrGetCmdLineArgumenti(argc, argv, "class", &iClass);
+		shrGetCmdLineArgumenti(argc, argv, "quiet", &bQuiet);
+	}
+
+	// 解析命令行参数，获取问题规模 --class=3
+	if(shrCheckCmdLineFlag( argc, argv, "problem"))
+    {
+		shrGetCmdLineArgumenti(argc, argv, "problem", &iProblem);
 	}
 	
 	// 解析命令行参数，获取对齐标记 --aligned
 	if(shrCheckCmdLineFlag( argc, argv, "aligned"))
 	{
-		ALIGNED_STRUCT = true;
+		shrGetCmdLineArgumenti(argc, argv, "aligned", &bAligned);
 	}
-	shrLogEx( LOGBOTH|APPENDMODE, 0, "\nOptions begin(配置开始):\n");
-	shrLogEx( LOGBOTH|APPENDMODE, 0, "aligned=%d\n", ALIGNED_STRUCT);
 
 	// 解析命令行参数，获取矩阵结构体存储模式 --mode=2
-    if(shrCheckCmdLineFlag( argc, argv, "mode"))
+    if(shrCheckCmdLineFlag( argc, argv, "separate"))
     {
 		int mode;
-		shrGetCmdLineArgumenti(argc, argv, "mode", &mode);
-		eMode = (Matrix_Separate_Mode)mode;
+		shrGetCmdLineArgumenti(argc, argv, "separate", &mode);
+		eSeparate = (Matrix_Separate_Mode)mode;
 	}
-	shrLogEx( LOGBOTH|APPENDMODE, 0, "mode=%d\n", eMode);
-		
-	shrLogEx( LOGBOTH|APPENDMODE, 0, "Options end(配置结束):\n\n");
 
-	if (ALIGNED_STRUCT)
+	if( !bQuiet ) {
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "\nOptions begin(配置开始):\n");
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "class=%d\n", iProblem);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "aligned=%d\n", bAligned);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "separate=%d\n", eSeparate);
+		
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "Options end(配置结束):\n\n");
+	}
+
+	if (bAligned)
 	{
 		// 数据定义
 		Vertexes<float4>  _vertexesStatic;//静态顶点坐标
@@ -120,7 +133,7 @@ int _tmain(int argc, char** pArgv)
 template<typename T>
 void initialize(int problem_size, int joint_size, Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic )
 {
-	joints.initialize( joint_size , eMode);
+	joints.initialize( joint_size , eSeparate);
 #if USE_MEMORY_BUY_TIME
 	vertexesStatic.initialize( problem_size, joint_size );
 #else
@@ -132,8 +145,10 @@ void initialize(int problem_size, int joint_size, Joints<T>& joints, Vertexes<T>
 	int i; // 有多个GPU时选择一个
 	float fGFLOPS = 0.0f;
 	i = gpuGetMaxGflopsDeviceId( fGFLOPS );
-    printf("计算能力估算公式=sp核数 * shader频率 \n\
+    if( !bQuiet ) {
+		printf("计算能力估算公式=sp核数 * shader频率 \n\
 			计算能力粗略估算: %0.2f GFLOPS\n", fGFLOPS);
+	}
     cudaSetDevice(i);
 
 }
@@ -239,8 +254,10 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS)
 				max_compute_perf  = compute_perf;
 				max_perf_device   = current_device;
 			}
-			printf("sp核数：%d=%d(SM个数)*%d(每个SM包含SP个数), shader频率: %d \n", deviceProp.multiProcessorCount * sm_per_multiproc, 
+			if( !bQuiet ) {
+				printf("sp核数：%d=%d(SM个数)*%d(每个SM包含SP个数), shader频率: %d \n", deviceProp.multiProcessorCount * sm_per_multiproc, 
 				deviceProp.multiProcessorCount, sm_per_multiproc, deviceProp.clockRate);
+			}
 			SIZE_BLOCK = deviceProp.multiProcessorCount * 2; // 修改块数默认设置，动态设置为SM的两倍，确保每个SM有2个block
 		}
 		++current_device;
@@ -251,27 +268,30 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS)
 // 命令行参数说明
 void printHelp(void)
 {
-    shrLog("用法:  updateVectorByMatrix [选项]...\n");
-    shrLog("坐标矩阵变换\n");
-    shrLog("\n");
-    shrLog("例如：用GPU方式执行矩阵变换，数据结构采用对齐方式，一个线程处理一个顶点\n");
-    shrLog("updateVectorByMatrixPro.exe --class=6 --aligned --single --buy \n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "用法:  updateVectorByMatrix [选项]...\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "坐标矩阵变换\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "例如：用GPU方式执行矩阵变换，数据结构采用对齐方式，一个线程处理一个顶点\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "updateVectorByMatrixPro.exe --aligned=1 --multiple=0 \n");
 
-    shrLog("\n");
-    shrLog("选项:\n");
-    shrLog("--help\t显示帮助菜单\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "选项:\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "--help\t显示帮助菜单\n");
 
-	shrLog("  0,1 - 1表示是，0表示否\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "--quiet=[i]\t静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒\n");   
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1 \n 不静默，静默\n");
 
-    shrLog("--aligned\t对齐\n");   
-    shrLog("--single\t同一线程处理一个数据元素\n");
-    shrLog("--buy\t以空间换时间\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "--problem=[i]\t问题规模档次\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2,...,6 \n 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
 
-	shrLog("--class=[i]\t问题规模档次\n");
-	shrLog("  i=0,1,2,...,6 - 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
+    shrLogEx( LOGBOTH|APPENDMODE, 0, "--aligned=[i]\t对齐\n");   
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1 \n 不对齐，对齐\n");
 
-	shrLog("--mode=[i]\t问题规模档次\n");
-	shrLog("  i=0,1,2 - 0不拆分，1半拆分，2全拆分\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "--separate=[i]\t结构体拆分模式\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 不拆分，半拆分，全拆分\n");
+
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "--multiple=[i]\t单个线程解决多个问题元素\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 单个，多个连续，多个交替\n");
 
 }
 
@@ -296,7 +316,7 @@ void runCuda(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertex
 	// 执行运算：坐标矩阵变换
 	updateVectorByMatrix<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
 			( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
-			joints.pMatrixDevicePrevious, eMode);
+			joints.pMatrixDevicePrevious, eSeparate);
 
 }
 
@@ -311,7 +331,7 @@ bool confirmResult(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&
 #if SEPERATE_STRUCT_FULLY
 	updateVectorByMatrixGoldFully(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
 #else
-	updateVectorByMatrixGold<T>( vertexesStatic.pVertex, vertexesDynamic.nSize, &joints, vertexesDynamic.pVertex, eMode);
+	updateVectorByMatrixGold<T>( vertexesStatic.pVertex, vertexesDynamic.nSize, &joints, vertexesDynamic.pVertex, eSeparate);
 #endif
 	// 获取GPU运算结果
 	T *pVertex = new T[vertexesDynamic.nSize];
@@ -331,7 +351,7 @@ void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertex
 		int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
 		
 		// 问题规模档次，7档，64K至256M，4倍递增
-		PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
+		PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iProblem] ;
 
 		// 数据初始化：坐标、矩阵
 		initialize<T>(PROBLEM_SIZE, JOINT_SIZE, joints, vertexesStatic, vertexesDynamic);
@@ -350,12 +370,19 @@ void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertex
 		
 		// 查看结果是否正确
 		bool bResult = confirmResult<T>( joints, vertexesStatic, vertexesDynamic );
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
+		if( !bQuiet ) {
+			shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
+		}
 		
 		// 数据销毁：坐标、矩阵
 		unInitialize<T>( joints, vertexesStatic, vertexesDynamic  );
 
 		// 查看时间效率
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
-
+		if( !bQuiet ) {
+			shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iProblem+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
+		}
+		else
+		{
+			shrLogEx( LOGBOTH|APPENDMODE, 0, "%.2f\n", 10000.0f/nRepeatPerSecond);		
+		}
 }
