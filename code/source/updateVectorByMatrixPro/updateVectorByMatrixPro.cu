@@ -55,63 +55,18 @@ void runCuda(  );
 template<typename T>
 bool confirmResult(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  );
 
+// 解析命令行参数
+bool parseCommand(int argc, const char** argv);
+
 int _tmain(int argc, char** pArgv)
 {
 	// 命令行参数解析，参数参考printHelp
  	const char** argv = (const char**)pArgv;
    shrSetLogFileName ("updateVectorByMatrixPro.txt"); // 配置日志文件
 
-	// 解析命令行参数，获取命令行用法提示 --help
-	if(shrCheckCmdLineFlag( argc, argv, "help"))
-    {
-        printHelp();
-		system( "pause" );
-        return 0;
-    }
-		
-	// 解析命令行参数，获取问题规模 --quiet=0
-	if(shrCheckCmdLineFlag( argc, argv, "quiet"))
-    {
-		shrGetCmdLineArgumenti(argc, argv, "quiet", &bQuiet);
-	}
-
-	// 解析命令行参数，获取问题规模 --class=6
-	if(shrCheckCmdLineFlag( argc, argv, "problem"))
-    {
-		shrGetCmdLineArgumenti(argc, argv, "problem", &iProblem);
-	}
-	
-	// 解析命令行参数，获取对齐标记 --aligned=0
-	if(shrCheckCmdLineFlag( argc, argv, "aligned"))
-	{
-		shrGetCmdLineArgumenti(argc, argv, "aligned", &bAligned);
-	}
-
-	// 解析命令行参数，矩阵结构体拆分模式 --separate=0
-    if(shrCheckCmdLineFlag( argc, argv, "separate"))
-    {
-		int mode;
-		shrGetCmdLineArgumenti(argc, argv, "separate", &mode);
-		eSeparate = (Matrix_Separate_Mode)mode;
-	}
-	
-	// 解析命令行参数，矩阵结构体拆分模式 --sort=0
-    if(shrCheckCmdLineFlag( argc, argv, "sort"))
-    {
-		int mode;
-		shrGetCmdLineArgumenti(argc, argv, "sort", &mode);
-		eSort = (Matrix_Sort_Mode)mode;
-	}
-
-	if( !bQuiet ) {
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "\nOptions begin(配置开始):\n");
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "class=%d\n", iProblem);
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "aligned=%d\n", bAligned);
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "separate=%d\n", eSeparate);
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "sort=%d\n", eSort);
-		
-		shrLogEx( LOGBOTH|APPENDMODE, 0, "Options end(配置结束):\n\n");
-	}
+	// 解析命令行参数
+	if( !parseCommand( argc, argv ) )
+		return 0;
 
 	if (bAligned)
 	{
@@ -292,7 +247,7 @@ void printHelp(void)
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1 \n 不静默，静默\n");
 
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "--problem=[i]\t问题规模档次\n");
-	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2,...,6 \n 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2,...,6 \n 代表问题规模的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
 
     shrLogEx( LOGBOTH|APPENDMODE, 0, "--aligned=[i]\t对齐\n");   
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1 \n 不对齐，对齐\n");
@@ -398,4 +353,61 @@ void runTest(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertex
 		{
 			shrLogEx( LOGBOTH|APPENDMODE, 0, "%.2f\n", 10000.0f/nRepeatPerSecond);		
 		}
+}
+
+// 解析命令行参数
+bool parseCommand(int argc, const char** argv)
+{
+	if(shrCheckCmdLineFlag( argc, argv, "help"))
+    {
+        printHelp();
+		system( "pause" );
+        return false;
+    }
+		
+	// 解析命令行参数，获取问题规模 --quiet=0
+	if(shrCheckCmdLineFlag( argc, argv, "quiet"))
+    {
+		shrGetCmdLineArgumenti(argc, argv, "quiet", &bQuiet);
+	}
+
+	// 解析命令行参数，获取问题规模 --class=6
+	if(shrCheckCmdLineFlag( argc, argv, "problem"))
+    {
+		shrGetCmdLineArgumenti(argc, argv, "problem", &iProblem);
+	}
+	
+	// 解析命令行参数，获取对齐标记 --aligned=0
+	if(shrCheckCmdLineFlag( argc, argv, "aligned"))
+	{
+		shrGetCmdLineArgumenti(argc, argv, "aligned", &bAligned);
+	}
+
+	// 解析命令行参数，矩阵结构体拆分模式 --separate=0
+    if(shrCheckCmdLineFlag( argc, argv, "separate"))
+    {
+		int mode;
+		shrGetCmdLineArgumenti(argc, argv, "separate", &mode);
+		eSeparate = (Matrix_Separate_Mode)mode;
+	}
+	
+	// 解析命令行参数，矩阵结构体拆分模式 --sort=0
+    if(shrCheckCmdLineFlag( argc, argv, "sort"))
+    {
+		int mode;
+		shrGetCmdLineArgumenti(argc, argv, "sort", &mode);
+		eSort = (Matrix_Sort_Mode)mode;
+	}
+
+	if( !bQuiet ) {
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "\nOptions begin(配置开始):\n");
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "problem=%d(问题规模的7个档次)\n", iProblem+1);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "aligned=%d(不对齐，对齐)\n", bAligned);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "separate=%d(不拆分，半拆分，全拆分)\n", eSeparate);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "sort=%d(不排序，顺序排序，交叉排序)\n", eSort);
+		
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "Options end(配置结束):\n\n");
+	}
+
+	return true;
 }
