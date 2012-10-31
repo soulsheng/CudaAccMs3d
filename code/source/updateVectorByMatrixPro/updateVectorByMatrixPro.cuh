@@ -142,8 +142,8 @@ __device__ void indexByFloat4( T* pBuffer , T* pMat , int index )
 	// 按矩阵一个浮点索引
 __device__ void indexByFloat1( float* pBuffer , float* pMat , int index )
 	{
-		for(int i=0; i<JOINT_WIDTH; i++){
-			pMat[ i ] = pBuffer[  i*JOINT_WIDTH + index ];
+		for(int j=0; j<JOINT_WIDTH; j++){
+			pMat[j] = pBuffer[index + JOINT_SIZE * j];
 		}
 	}
 
@@ -156,7 +156,7 @@ pVertexOut : 动态坐标数组结果输出
 #if !USE_SHARED
 
 template<typename T>
-__global__ void updateVectorByMatrix(T* pVertexIn, int size, float* pMatrix, T* pVertexOut, float* pMatrixPrevious, Index_Mode_Matrix	mode)
+__global__ void updateVectorByMatrix(T* pVertexIn, int size, float* pMatrix, T* pVertexOut, float* pMatrixPrevious, Matrix_Separate_Mode	mode)
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 
@@ -172,15 +172,15 @@ __global__ void updateVectorByMatrix(T* pVertexIn, int size, float* pMatrix, T* 
 
 		switch( mode )
 		{
-		case FLOAT_44:
+		case NO_SEPARATE:
 			indexByFloat44( (T*)pMatrix, matrix, matrixIndex );
 			break;
 		
-		case FLOAT_4:
+		case HALF_SEPARATE:
 			indexByFloat4( (T*)pMatrix, matrix, matrixIndex );
 			break;
 		
-		case FLOAT_1:
+		case COMPLETE_SEPARATE:
 			indexByFloat1( pMatrix, (float*)matrix, matrixIndex );
 			break;
 		}

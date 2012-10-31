@@ -19,9 +19,9 @@ float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
 int iClass=6; // 问题规模最大值，16M/512M显存、32M/1G显存
 
-bool ALIGNED_STRUCT = false;
+bool ALIGNED_STRUCT = true;
 
-Index_Mode_Matrix	eMode = FLOAT_4;
+Matrix_Separate_Mode	eMode = COMPLETE_SEPARATE;
 
 // 数据初始化：坐标、矩阵
 template<typename T>
@@ -76,15 +76,20 @@ int _tmain(int argc, char** pArgv)
 	{
 		ALIGNED_STRUCT = true;
 	}
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "\nOptions begin(配置开始):\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "aligned=%d\n", ALIGNED_STRUCT);
 
 	// 解析命令行参数，获取矩阵结构体存储模式 --mode=2
     if(shrCheckCmdLineFlag( argc, argv, "mode"))
     {
 		int mode;
 		shrGetCmdLineArgumenti(argc, argv, "mode", &mode);
-		eMode = (Index_Mode_Matrix)mode;
+		eMode = (Matrix_Separate_Mode)mode;
 	}
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "mode=%d\n", eMode);
 		
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "Options end(配置结束):\n\n");
+
 	if (ALIGNED_STRUCT)
 	{
 		// 数据定义
@@ -263,7 +268,11 @@ void printHelp(void)
     shrLog("--buy\t以空间换时间\n");
 
 	shrLog("--class=[i]\t问题规模档次\n");
-    shrLog("  i=0,1,2,...,6 - 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
+	shrLog("  i=0,1,2,...,6 - 代表问题元素的7个档次，0.25, 0.5, 1, 2, 4, 8, 16, 32，每一档翻一倍，单位是百万\n");
+
+	shrLog("--mode=[i]\t问题规模档次\n");
+	shrLog("  i=0,1,2 - 0不拆分，1半拆分，2全拆分\n");
+
 }
 
 // 调用cuda

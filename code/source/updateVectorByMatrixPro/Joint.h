@@ -19,10 +19,10 @@
 
 struct Vector4 { float x,y,z,w; };
 
-enum Index_Mode_Matrix {
-	FLOAT_1,		// 相邻  1个float属于相邻矩阵的  1个float
-	FLOAT_4,		// 相邻  4个float属于相邻矩阵的  4个float，矩阵一行
-	FLOAT_44		//	相邻16个float属于相邻矩阵的16个float，矩阵整体
+enum Matrix_Separate_Mode {
+	NO_SEPARATE,		//	不拆分，相邻  1个float属于相邻矩阵的  1个float
+	HALF_SEPARATE,		//	半拆分，相邻  4个float属于相邻矩阵的  4个float，矩阵一行
+	COMPLETE_SEPARATE	//	全拆分，相邻16个float属于相邻矩阵的16个float，矩阵整体
 };// 矩阵数组中相邻矩阵的存储方式
 
 
@@ -44,20 +44,20 @@ struct Joints{
 		
 		switch( eMode )
 		{
-		case FLOAT_44:
-			// 按矩阵索引
+		case NO_SEPARATE:
+			// 不拆分，按矩阵索引
 			nSizePerElement = MATRIX_SIZE_LINE;
 			indexByFloat44( pBuffer );
 			break;
 
-		case FLOAT_4:
-			// 按矩阵一行索引
+		case HALF_SEPARATE:
+			// 半拆分，按矩阵一行索引
 			nSizePerElement = MATRIX_SIZE_LINE;
 			indexByFloat4( pBuffer );
 			break;
 
-		case FLOAT_1:
-			// 按矩阵一个浮点索引
+		case COMPLETE_SEPARATE:
+			// 全拆分，按矩阵一个浮点索引
 			nSizePerElement = JOINT_WIDTH;
 			indexByFloat1( pBuffer );
 			break;
@@ -123,7 +123,7 @@ struct Joints{
 	}
 
 	// 获取关节矩阵 模拟
-	void initialize( int size , Index_Mode_Matrix mode = FLOAT_44 )
+	void initialize( int size , Matrix_Separate_Mode mode )
 	{
 		eMode = mode;
 		initialize( size, &pMatrix, &pMatrixDevice );
@@ -148,7 +148,7 @@ struct Joints{
 	float*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
 	int   nSize;// 关节的数目
 	int   nSizePerElement;// 每个关节包含子数据结构的数目
-	Index_Mode_Matrix	eMode; // 索引矩阵数组的方式
+	Matrix_Separate_Mode	eMode; // 索引矩阵数组的方式
 };// 关节的集合
 
 
