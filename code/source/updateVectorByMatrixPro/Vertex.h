@@ -46,6 +46,7 @@ struct Vertexes{
 		for(std::multimap<int, int>::iterator itr = indexMatrix.begin(); itr!=indexMatrix.end(); itr++, i++){
 			pIndexMatrix[i] = itr->second;
 		}
+		indexMatrix.clear();
 
 		T* pVertexTemp = new T[nSize];
 		for( i=0;i<nSize;i++){
