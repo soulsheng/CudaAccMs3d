@@ -101,11 +101,14 @@ void initialize(int problem_size, int joint_size, Joints<T>& joints, Vertexes<T>
 {
 	joints.initialize( joint_size , eSeparate);
 #if USE_MEMORY_BUY_TIME
-	vertexesStatic.initialize( problem_size, joint_size, eSort );
+	vertexesStatic.initialize( problem_size, joint_size );
+	vertexesStatic.setDefault( eSort );
 #else
-	vertexesStatic.initialize( problem_size, joint_size, eSort , false);
+	vertexesStatic.initialize( problem_size, joint_size, false);
+	vertexesStatic.setDefault( eSort, false );
 #endif
-	vertexesDynamic.initialize( problem_size, joint_size, eSort );
+	vertexesDynamic.initialize( problem_size, joint_size );
+	vertexesDynamic.copy( vertexesStatic );
 
 	// cuda初始化，若不初始化将采用默认值
 	int i; // 有多个GPU时选择一个

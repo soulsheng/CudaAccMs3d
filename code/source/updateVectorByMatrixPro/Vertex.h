@@ -123,41 +123,50 @@ struct Vertexes{
 		}
 	}
 
-	// 获取顶点坐标 模拟
-	void initialize(int size, int sizeJoint, Matrix_Sort_Mode mode, bool bDevice = true){
+	//  分配内存
+	void initialize(int size, int sizeJoint, bool bDevice = true){
 		nSize = size;
 		nSizeJoint = sizeJoint;
-		eSort = mode;
 
 		pVertex = new T[nSize];
+		
+		if( bDevice ){
+		cudaMalloc( &pVertexDevice, sizeof(T) * nSize ) ;//Vertex[nSize];
+		}
+		else{
+			pVertexDevice = NULL;
+		}
+	}
+
+	//  设置初始值
+	void setDefault(Matrix_Sort_Mode mode, bool bDevice = true)
+	{
+		eSort = mode;
 		for(int i=0;i<nSize;i++){
 			pVertex[i].x = rand() * 1.0f;
 			pVertex[i].y = rand() * 1.0f;
 			pVertex[i].z = rand() * 1.0f;
-			pVertex[i].w = rand() % sizeJoint  * 1.0f;
+			pVertex[i].w = rand() % nSizeJoint  * 1.0f;
 		}
 
 		switch( eSort )
 		{
 		case NO_SORT:
 			break;
-		
+
 		case SERIAL_SORT:
 			sort();
 			break;		
-		
+
 		case CROSS_SORT:
 			sortLoop();
 			break;		
 		}
 
 		if( bDevice ){
-		cudaMalloc( &pVertexDevice, sizeof(T) * nSize ) ;//Vertex[nSize];
-		cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
 		}
-		else{
-			pVertexDevice = NULL;
-		}
+		
 	}
 
 	// 释放空间
@@ -169,8 +178,10 @@ struct Vertexes{
 	
 	void copy( Vertexes& ref )
 	{
-		memcpy( pVertex, ref.pVertex, sizeof(T) * nSize );
-		cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
+		if( pVertex!=NULL && ref.pVertex!=NULL )
+			memcpy( pVertex, ref.pVertex, sizeof(T) * nSize );
+		if( pVertexDevice!=NULL )
+			cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
 	}
 
 	T*  pVertex, *pVertexDevice;
