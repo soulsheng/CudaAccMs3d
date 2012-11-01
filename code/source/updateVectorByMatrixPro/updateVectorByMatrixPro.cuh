@@ -10,12 +10,42 @@
 #define		USE_ELEMENT_CROSS	1	// 同一线程处理多个数据元素， 1表示多元素交替，0表示不交替即顺序
 #define		USE_ELEMENT_SINGLE	0	// 同一线程处理一个数据元素， 1表示一个元素，0表示多个元素且不交替
 
+__constant__		Vector4		const_pMatrix_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
+__constant__		Vector4		const_pMatrixPrevious_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
+__constant__		float4		const_pMatrix_f4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
+__constant__		float4		const_pMatrixPrevious_f4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
+__constant__		float			const_pMatrix_f1[ JOINT_SIZE * JOINT_WIDTH ];
+__constant__		float			const_pMatrixPrevious_f1[ JOINT_SIZE * JOINT_WIDTH ];
 
 template<typename T>
-void globalMemoryUpdate( Joints<T>* pJoints )
+void globalMemoryUpdate( Joints<T>* pJoints, Matrix_Separate_Mode		modeSeparete, Matrix_Memory_Mode modeMemory, int bAligned )
 {
-	cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
-	cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
+	if( modeMemory == CONSTANT_MEMORY )
+	{
+		if( modeSeparete != COMPLETE_SEPARATE )
+		{
+			if( bAligned )
+			{
+				cudaMemcpyToSymbol( (char*)const_pMatrixPrevious_f4, (float*)pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize );
+				cudaMemcpyToSymbol( (char*)const_pMatrix_f4, (float*)pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize );
+			}
+			else// !bAligned
+			{
+				cudaMemcpyToSymbol( (char*)const_pMatrixPrevious_v4, (float*)pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize );
+				cudaMemcpyToSymbol( (char*)const_pMatrix_v4, (float*)pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize );
+			}
+		}
+		else// COMPLETE_SEPARATE
+		{
+				cudaMemcpyToSymbol( (char*)const_pMatrixPrevious_f1, (float*)pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize );
+				cudaMemcpyToSymbol( (char*)const_pMatrix_f1, (float*)pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize );
+		}
+	}
+	else// !CONSTANT_MEMORY
+	{
+		cudaMemcpy( pJoints->pMatrixDevicePrevious, pJoints->pMatrixPrevious, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
+		cudaMemcpy( pJoints->pMatrixDevice, pJoints->pMatrix, sizeof(float)*JOINT_WIDTH * pJoints->nSize, cudaMemcpyHostToDevice );
+	}
 }
 
 /* 坐标矩阵变换
@@ -34,6 +64,17 @@ __device__ void transformVec3ByMatrix4(T* pVertexIn, float pMatrix[], T* pVertex
 }
 template<typename T>
 __device__ void transformVec3ByMatrix4(T* pVertexIn, T pMatrix[], T* pVertexOut)
+{
+	T vertexIn = *pVertexIn;
+	T vertexOut;
+	vertexOut.x = vertexIn.x * pMatrix[0].x + vertexIn.y * pMatrix[0].y + vertexIn.z * pMatrix[0].z + pMatrix[0].w ; 
+	vertexOut.y = vertexIn.x * pMatrix[1].x + vertexIn.y * pMatrix[1].y + vertexIn.z * pMatrix[1].z + pMatrix[1].w  ; 
+	vertexOut.z = vertexIn.x * pMatrix[2].x + vertexIn.y * pMatrix[2].y + vertexIn.z * pMatrix[2].z + pMatrix[2].w  ;
+	*pVertexOut = vertexOut;
+}
+
+template<typename T>
+__device__ void transformVec3ByMatrix4_f4(T* pVertexIn, float4 pMatrix[], T* pVertexOut)
 {
 	T vertexIn = *pVertexIn;
 	T vertexOut;
@@ -156,7 +197,7 @@ pVertexOut : 动态坐标数组结果输出
 #if !USE_SHARED
 
 template<typename T>
-__global__ void updateVectorByMatrix(T* pVertexIn, int size, float* pMatrix, T* pVertexOut, float* pMatrixPrevious, Matrix_Separate_Mode	mode)
+__global__ void updateVectorByMatrix(T* pVertexIn, int size, float* pMatrix, T* pVertexOut, float* pMatrixPrevious, Matrix_Separate_Mode	modeSeparete)
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 
@@ -170,7 +211,7 @@ __global__ void updateVectorByMatrix(T* pVertexIn, int size, float* pMatrix, T* 
 		// 读取操作数：顶点对应的矩阵
 		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
 
-		switch( mode )
+		switch( modeSeparete )
 		{
 		case NO_SEPARATE:
 			indexByFloat44( (T*)pMatrix, matrix, matrixIndex );
@@ -187,6 +228,65 @@ __global__ void updateVectorByMatrix(T* pVertexIn, int size, float* pMatrix, T* 
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		transformVec3ByMatrix4( &vertexIn, matrix, pVertexOut+i);
+
+	}//for
+}
+
+
+	// 按矩阵索引
+__device__ void indexMatrixConst( float4* pMat , int index, Matrix_Separate_Mode	modeSeparete, int bAligned )
+	{
+		// 完成拆分，COMPLETE_SEPARATE
+		if( modeSeparete==COMPLETE_SEPARATE )
+		{
+			float* tmpMat = (float*)pMat;
+			for(int j=0; j<JOINT_WIDTH; j++)
+				tmpMat[j] = const_pMatrix_f1[index + JOINT_SIZE * j];
+		}
+		else
+		{// 不拆分或者半拆分，NO_SEPARATE or HALF_SEPARATE
+
+			for(int j=0; j<MATRIX_SIZE_LINE; j++)
+			{
+				int indexLast;
+
+				if( modeSeparete==NO_SEPARATE )
+					indexLast = index * MATRIX_SIZE_LINE + j;
+				else if( modeSeparete==HALF_SEPARATE )
+					indexLast = index + JOINT_SIZE * j;
+
+				if( bAligned )
+				{
+					pMat[j] = const_pMatrix_f4[ indexLast ];
+				}
+				else
+				{
+					Vector4  tmpVector4 = const_pMatrix_v4[indexLast];
+					pMat[j]	= make_float4( tmpVector4.x,  tmpVector4.y, tmpVector4.z, tmpVector4.w ) ;
+				}
+			}//for
+		}//if else
+	}
+
+template<typename T>
+__global__ void updateVectorByMatrixConst(T* pVertexIn, int size, T* pVertexOut, Matrix_Separate_Mode	modeSeparete, int bAligned )
+{
+	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
+
+		for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+
+		float4   matrix[MATRIX_SIZE_LINE];
+
+		// 读取操作数：初始的顶点坐标
+		T   vertexIn = pVertexIn[i];
+
+		// 读取操作数：顶点对应的矩阵
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
+
+		indexMatrixConst( matrix, matrixIndex, modeSeparete, bAligned );
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		transformVec3ByMatrix4_f4( &vertexIn, matrix, pVertexOut+i);
 
 	}//for
 }

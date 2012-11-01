@@ -26,6 +26,12 @@ enum Matrix_Separate_Mode {
 };// 矩阵数组中相邻矩阵的存储方式
 
 
+enum Matrix_Memory_Mode {
+	GLOBAL_MEMORY,			//	全局显存
+	CONSTANT_MEMORY,		//	常量显存
+	SHARED_MEMORY			//	共享显存
+};// 矩阵数组的存储位置
+
 //关节矩阵---------------------------------------------------------
 
 template<typename T>
@@ -115,8 +121,8 @@ struct Joints{
 					int index = i * nSize + j;
 
 					(* pBuffer)[index] = rand() % nSize / (nSize * 1.0f);
-					if( (i+1)%4 )		(* pBuffer)[index] = 0.0f;
-					if( (i+1)%16 )		(* pBuffer)[index] = 1.0f;
+					if( (i+1)%4==0 )		(* pBuffer)[index] = 0.0f;
+					if( (i+1)%16==0 )		(* pBuffer)[index] = 1.0f;
 
 			}//for j
 		}//for i

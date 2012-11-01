@@ -20,11 +20,12 @@ int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即
 
 // 命令行参数
 int iProblem=6;			// 问题规模最大值，16M/512M显存、32M/1G显存
-int bAligned = 0;	// 结构体是否对齐
-Matrix_Separate_Mode	eSeparate = NO_SEPARATE;	// 结构体拆分模式，不拆分、半拆分、全拆分
+int bAligned = 1;	// 结构体是否对齐
+Matrix_Separate_Mode	eSeparate = COMPLETE_SEPARATE;	// 结构体拆分模式，不拆分、半拆分、全拆分
 
 int bQuiet = 0;		// 静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒
 Matrix_Sort_Mode eSort=NO_SORT;			// 顶点以矩阵id为索引的排序方式，不排序、顺序排序、交叉排序
+Matrix_Memory_Mode	eMemory=CONSTANT_MEMORY;	// 矩阵存储位置，全局显存、常量显存、共享显存
 
 // 数据初始化：坐标、矩阵
 template<typename T>
@@ -257,6 +258,9 @@ void printHelp(void)
 	
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "--sort=[i]\t顶点以矩阵id为索引的排序方式\n");
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 不排序，顺序排序，交叉排序\n");
+	
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "--memory=[i]\t矩阵存储位置\n");
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 全局显存、常量显存、共享显存\n");
 
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "--multiple=[i]\t单个线程解决多个问题元素\n");
 	shrLogEx( LOGBOTH|APPENDMODE, 0, "  i=0,1,2 \n 单个，多个连续，多个交替\n");
@@ -267,7 +271,7 @@ void printHelp(void)
 template<typename T>
 void runCuda(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertexesDynamic  )
 {
-	globalMemoryUpdate<T>( &joints );
+	globalMemoryUpdate<T>( &joints, eSeparate, eMemory, bAligned );
 
 #if !USE_MEMORY_BUY_TIME && _DEBUG
 	// 为了确保重复试验得到相同结果，恢复缺省值
@@ -282,9 +286,17 @@ void runCuda(  Joints<T>& joints, Vertexes<T>&vertexesStatic, Vertexes<T>&vertex
 #endif
 
 	// 执行运算：坐标矩阵变换
-	updateVectorByMatrix<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
+	if( eMemory == CONSTANT_MEMORY )
+	{
+		updateVectorByMatrixConst<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
+			( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, vertexesDynamic.pVertexDevice , eSeparate, bAligned );
+	}
+	else
+	{
+		updateVectorByMatrix<T><<<nBlocksPerGrid, nThreadsPerBlock>>>
 			( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
 			joints.pMatrixDevicePrevious, eSeparate);
+	}
 
 }
 
@@ -398,6 +410,14 @@ bool parseCommand(int argc, const char** argv)
 		shrGetCmdLineArgumenti(argc, argv, "sort", &mode);
 		eSort = (Matrix_Sort_Mode)mode;
 	}
+	
+	// 矩阵存储位置 --memory=0
+    if(shrCheckCmdLineFlag( argc, argv, "memory"))
+    {
+		int mode;
+		shrGetCmdLineArgumenti(argc, argv, "memory", &mode);
+		eMemory = (Matrix_Memory_Mode)mode;
+	}
 
 	if( !bQuiet ) {
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "\nOptions begin(配置开始):\n");
@@ -405,6 +425,7 @@ bool parseCommand(int argc, const char** argv)
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "aligned=%d(不对齐，对齐)\n", bAligned);
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "separate=%d(不拆分，半拆分，全拆分)\n", eSeparate);
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "sort=%d(不排序，顺序排序，交叉排序)\n", eSort);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "memory=%d(全局显存、常量显存、共享显存)\n", eMemory);
 		
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "Options end(配置结束):\n\n");
 	}
