@@ -57,9 +57,9 @@ __device__ void transformVec3ByMatrix4(F4* pVertexIn, float1 pMatrix[], F4* pVer
 {
 	F4 vertexIn = *pVertexIn;
 	F4 vertexOut;
-	vertexOut.x = vertexIn.x * pMatrix[0] + vertexIn.y * pMatrix[1] + vertexIn.z * pMatrix[2] + pMatrix[3] ; 
-	vertexOut.y = vertexIn.x * pMatrix[1*4+0] + vertexIn.y * pMatrix[1*4+1] + vertexIn.z * pMatrix[1*4+2] + pMatrix[1*4+3]  ; 
-	vertexOut.z = vertexIn.x * pMatrix[2*4+0] + vertexIn.y * pMatrix[2*4+1] + vertexIn.z * pMatrix[2*4+2] + pMatrix[2*4+3]  ;
+	vertexOut.x = vertexIn.x * pMatrix[0].x + vertexIn.y * pMatrix[1].x + vertexIn.z * pMatrix[2].x + pMatrix[3].x ; 
+	vertexOut.y = vertexIn.x * pMatrix[1*4+0].x + vertexIn.y * pMatrix[1*4+1].x + vertexIn.z * pMatrix[1*4+2].x + pMatrix[1*4+3].x  ; 
+	vertexOut.z = vertexIn.x * pMatrix[2*4+0].x + vertexIn.y * pMatrix[2*4+1].x + vertexIn.z * pMatrix[2*4+2].x + pMatrix[2*4+3].x  ;
 	*pVertexOut = vertexOut;
 }
 template<typename F4>
@@ -233,6 +233,107 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* p
 	}//for
 }
 
+
+template<typename F4>
+__global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix, F4* pVertexOut, F4* pMatrixPrevious, Matrix_Separate_Mode	modeSeparete)
+{
+	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
+
+	// 一次性读取矩阵，整个block块共享
+	__shared__	float1 matrixShared[JOINT_WIDTH*JOINT_SIZE];
+
+	if( threadIdx.x < JOINT_SIZE )
+	{
+		F4 tempVector4;
+		int index;
+		switch( modeSeparete )
+		{
+		case NO_SEPARATE:
+			{
+				for(int i=0; i<MATRIX_SIZE_LINE; i++){
+					index = threadIdx.x * MATRIX_SIZE_LINE + i;
+					tempVector4 = pMatrix[index];
+					
+					matrixShared[4*index+0].x = tempVector4.x;
+					matrixShared[4*index+1].x = tempVector4.y;
+					matrixShared[4*index+2].x = tempVector4.z;
+					matrixShared[4*index+3].x = tempVector4.w;
+				}
+			}
+			break;
+
+		case HALF_SEPARATE:
+			{
+				for(int i=0; i<MATRIX_SIZE_LINE; i++){
+					index = threadIdx.x + JOINT_SIZE * i;
+					tempVector4 = pMatrix[index];
+
+					matrixShared[4*index+0].x = tempVector4.x;
+					matrixShared[4*index+1].x = tempVector4.y;
+					matrixShared[4*index+2].x = tempVector4.z;
+					matrixShared[4*index+3].x = tempVector4.w;
+				}
+			}
+			break;
+
+		case COMPLETE_SEPARATE:
+			{
+				for(int i=0; i<JOINT_WIDTH; i++){
+					index = threadIdx.x + JOINT_SIZE * i;
+					float1* pMatrix_f1 = (float1*)pMatrix;
+					matrixShared[index] = pMatrix_f1[index];
+				}
+			}
+			break;
+		}//switch
+	}//if
+	__syncthreads();
+
+	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
+
+		//F4   matrix[MATRIX_SIZE_LINE];
+		float1 matrix[JOINT_WIDTH];
+
+		// 读取操作数：初始的顶点坐标
+		F4   vertexIn = pVertexIn[i];
+
+		// 读取操作数：顶点对应的矩阵
+		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
+
+		switch( modeSeparete )
+		{
+		case NO_SEPARATE:
+			{
+				for(int i=0; i<JOINT_WIDTH; i++){
+					matrix[i] = matrixShared[matrixIndex * JOINT_WIDTH + i];
+				}
+			}
+			break;
+
+		case HALF_SEPARATE:
+			{
+				for(int i=0; i<MATRIX_SIZE_LINE; i++){
+					for(int j=0; j<4; j++){
+						matrix[i*4+j] = matrixShared[ (matrixIndex + JOINT_SIZE * i)*4 +j ];
+					}
+				}
+			}
+			break;
+
+		case COMPLETE_SEPARATE:
+			{
+				for(int i=0; i<JOINT_WIDTH; i++){
+					matrix[i] = matrixShared[matrixIndex + JOINT_SIZE * i];
+				}
+			}
+			break;
+		}
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		transformVec3ByMatrix4( &vertexIn, matrix, pVertexOut+i);
+
+	}//for
+}
 
 	// 按矩阵索引
 __device__ void indexMatrixConst( float4* pMat , int index, Matrix_Separate_Mode	modeSeparete, int bAligned )
