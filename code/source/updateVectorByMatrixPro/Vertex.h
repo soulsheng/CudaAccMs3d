@@ -6,6 +6,9 @@
 #include <map>
 #include <vector>
 
+struct Vector4 { float x,y,z,w; };
+struct Vector1 { float x; };
+
 enum Matrix_Sort_Mode {
 	NO_SORT,			//	   不排序，相邻顶点关联随机矩阵
 	SERIAL_SORT,	//	顺序排序，相邻顶点关联相同矩阵，构造广播条件

@@ -125,7 +125,8 @@ void indexByFloat4Host( F4* pBuffer , F4* pMat , int index )
 }
 
 // 按矩阵一个浮点索引
-void indexByFloat1Host( float* pBuffer , float* pMat , int index )
+template<typename F1>
+void indexByFloat1Host( F1* pBuffer , F1* pMat , int index )
 {
 	for(int j=0; j<JOINT_WIDTH; j++){
 		pMat[j] = pBuffer[index + JOINT_SIZE * j];
@@ -139,8 +140,8 @@ pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
 #if !SEPERATE_STRUCT_FULLY
-template<typename F4>
-void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F4>* pJoints, F4* pVertexOut, Matrix_Separate_Mode mode){
+template<typename F4, typename F1>
+void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F1>* pJoints, F4* pVertexOut, Matrix_Separate_Mode mode){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 		
@@ -163,7 +164,7 @@ void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F4>* pJoints, F4* 
 			break;
 
 		case COMPLETE_SEPARATE:
-			indexByFloat1Host( pJoints->pMatrix, (float*)matrix, matrixIndex );
+			indexByFloat1Host( pJoints->pMatrix, (F1*)matrix, matrixIndex );
 			break;
 		}
 
@@ -173,8 +174,8 @@ void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F4>* pJoints, F4* 
 
 }
 
-template<typename F4>
-void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F4>* pJoints, F4* pVertexOut){
+template<typename F4, typename F1>
+void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F1>* pJoints, F4* pVertexOut){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 

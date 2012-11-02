@@ -28,12 +28,12 @@ Matrix_Sort_Mode eSort=NO_SORT;			// ¶¥µãÒÔ¾ØÕóidÎªË÷ÒıµÄÅÅĞò·½Ê½£¬²»ÅÅĞò¡¢Ë³ĞòÅ
 Matrix_Memory_Mode	eMemory=CONSTANT_MEMORY;	// ¾ØÕó´æ´¢Î»ÖÃ£¬È«¾ÖÏÔ´æ¡¢³£Á¿ÏÔ´æ¡¢¹²ÏíÏÔ´æ
 
 // Êı¾İ³õÊ¼»¯£º×ø±ê¡¢¾ØÕó
-template<typename F4>
-void initialize(int problem_size, int joint_size, Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic );
+template<typename F4, typename F1>
+void initialize(int problem_size, int joint_size, Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic );
 
 // Êı¾İÏú»Ù£º×ø±ê¡¢¾ØÕó
-template<typename F4>
-void unInitialize( Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  );
+template<typename F4, typename F1>
+void unInitialize( Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  );
 
 // ²éÑ¯Ã¿¸öSM°üº¬GPUºËĞÄSPµÄ¸öÊı
 int _ConvertSMVer2Cores(int major, int minor);
@@ -45,16 +45,16 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS);
 void printHelp(void);
 
 // Ö´ĞĞÊµÑé¹ı³Ì
-template<typename F4>
-void runTest(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  );
+template<typename F4, typename F1>
+void runTest(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  );
 
 // µ÷ÓÃcuda
-template<typename F4>
+template<typename F4, typename F1>
 void runCuda(  );
 
 // ÑéÖ¤½á¹ûÊÇ·ñÕıÈ·
-template<typename F4>
-bool confirmResult(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  );
+template<typename F4, typename F1>
+bool confirmResult(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  );
 
 // ½âÎöÃüÁîĞĞ²ÎÊı
 bool parseCommand(int argc, const char** argv);
@@ -74,18 +74,18 @@ int _tmain(int argc, char** pArgv)
 		// Êı¾İ¶¨Òå
 		Vertexes<float4>  _vertexesStatic;//¾²Ì¬¶¥µã×ø±ê
 		Vertexes<float4>  _vertexesDynamic;//¶¯Ì¬¶¥µã×ø±ê
-		Joints<float4>		_joints;//¹Ø½Ú¾ØÕó
+		Joints<float1>		_joints;//¹Ø½Ú¾ØÕó
 
-		runTest<float4>( _joints, _vertexesStatic, _vertexesDynamic );
+		runTest<float4, float1>( _joints, _vertexesStatic, _vertexesDynamic );
 	}
 	else
 	{
 		// Êı¾İ¶¨Òå		
 		Vertexes<Vector4>  _vertexesStatic;//¾²Ì¬¶¥µã×ø±ê
 		Vertexes<Vector4>  _vertexesDynamic;//¶¯Ì¬¶¥µã×ø±ê
-		Joints<Vector4>		_joints;//¹Ø½Ú¾ØÕó
+		Joints<Vector1>		_joints;//¹Ø½Ú¾ØÕó
 
-		runTest<Vector4>( _joints, _vertexesStatic, _vertexesDynamic );		
+		runTest<Vector4, Vector1>( _joints, _vertexesStatic, _vertexesDynamic );		
 	}
 
 	
@@ -96,8 +96,8 @@ int _tmain(int argc, char** pArgv)
 }
 
 // Êı¾İ³õÊ¼»¯£º×ø±ê¡¢¾ØÕó
-template<typename F4>
-void initialize(int problem_size, int joint_size, Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic )
+template<typename F4, typename F1>
+void initialize(int problem_size, int joint_size, Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic )
 {
 	joints.initialize( joint_size , eSeparate);
 #if USE_MEMORY_BUY_TIME
@@ -123,8 +123,8 @@ void initialize(int problem_size, int joint_size, Joints<F4>& joints, Vertexes<F
 }
 
 // Êı¾İÏú»Ù£º×ø±ê¡¢¾ØÕó
-template<typename F4>
-void unInitialize( Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic )
+template<typename F4, typename F1>
+void unInitialize( Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic )
 {
 	joints.unInitialize();
 
@@ -271,10 +271,10 @@ void printHelp(void)
 }
 
 // µ÷ÓÃcuda
-template<typename F4>
-void runCuda(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  )
+template<typename F4, typename F1>
+void runCuda(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  )
 {
-	globalMemoryUpdate<F4>( &joints, eSeparate, eMemory, bAligned );
+	globalMemoryUpdate<F1>( &joints, eSeparate, eMemory, bAligned );
 
 #if !USE_MEMORY_BUY_TIME && _DEBUG
 	// ÎªÁËÈ·±£ÖØ¸´ÊÔÑéµÃµ½ÏàÍ¬½á¹û£¬»Ö¸´È±Ê¡Öµ
@@ -296,7 +296,7 @@ void runCuda(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 	}
 	else
 	{
-		updateVectorByMatrix<F4><<<nBlocksPerGrid, nThreadsPerBlock>>>
+		updateVectorByMatrix<F4, F1><<<nBlocksPerGrid, nThreadsPerBlock>>>
 			( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
 			joints.pMatrixDevicePrevious, eSeparate);
 	}
@@ -304,8 +304,8 @@ void runCuda(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 }
 
 // ÑéÖ¤½á¹ûÊÇ·ñÕıÈ·
-template<typename F4>
-bool confirmResult(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  )
+template<typename F4, typename F1>
+bool confirmResult(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  )
 {
 	// ÑéÖ¤GPUÔËËãµÄÕıÈ·ĞÔ£¬ÊÇ·ñºÍCPUÔËËã½á¹ûÒ»ÖÂ
 	bool bResult = false;
@@ -327,8 +327,8 @@ bool confirmResult(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F
 }
 
 // Ö´ĞĞÊµÑé¹ı³Ì
-template<typename F4>
-void runTest(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  )
+template<typename F4, typename F1>
+void runTest(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  )
 {
 		StopWatchWin timer;
 		int nRepeatPerSecond = 0;// Ã¿ÃëÖØ¸´´ÎÊı£¬±íÊ¾Ê±¼äĞ§ÂÊ
@@ -337,13 +337,13 @@ void runTest(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 		PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iProblem] ;
 
 		// Êı¾İ³õÊ¼»¯£º×ø±ê¡¢¾ØÕó
-		initialize<F4>(PROBLEM_SIZE, JOINT_SIZE, joints, vertexesStatic, vertexesDynamic);
+		initialize<F4, F1>(PROBLEM_SIZE, JOINT_SIZE, joints, vertexesStatic, vertexesDynamic);
 		timer.start();
 
 		while ( timer.getTime() < 10000  )
 		{
 			// Ö´ĞĞÊµÑé¹ı³Ì
-			runCuda<F4>( joints, vertexesStatic, vertexesDynamic );
+			runCuda<F4, F1>( joints, vertexesStatic, vertexesDynamic );
 
 			cudaDeviceSynchronize();
 			nRepeatPerSecond ++;
@@ -352,13 +352,13 @@ void runTest(  Joints<F4>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 		timer.reset();
 		
 		// ²é¿´½á¹ûÊÇ·ñÕıÈ·
-		bool bResult = confirmResult<F4>( joints, vertexesStatic, vertexesDynamic );
+		bool bResult = confirmResult<F4, F1>( joints, vertexesStatic, vertexesDynamic );
 		if( !bQuiet ) {
 			shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", bResult?"Right":"Wrong");
 		}
 		
 		// Êı¾İÏú»Ù£º×ø±ê¡¢¾ØÕó
-		unInitialize<F4>( joints, vertexesStatic, vertexesDynamic  );
+		unInitialize<F4, F1>( joints, vertexesStatic, vertexesDynamic  );
 
 		// ²é¿´Ê±¼äĞ§ÂÊ
 		if( !bQuiet ) {

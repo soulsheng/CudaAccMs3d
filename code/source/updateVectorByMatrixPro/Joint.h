@@ -17,7 +17,6 @@
 #define    JOINT_WIDTH    ((MATRIX_SIZE_LINE)*4)//12
 
 
-struct Vector4 { float x,y,z,w; };
 
 enum Matrix_Separate_Mode {
 	NO_SEPARATE,		//	不拆分，相邻  1个float属于相邻矩阵的  1个float
@@ -34,19 +33,19 @@ enum Matrix_Memory_Mode {
 
 //关节矩阵---------------------------------------------------------
 
-template<typename F4>
+template<typename F1>
 struct Joints{
 
 	// 初始化
-	void initialize( int size , float** pBuffer, float** pBufferDevice ){
+	void initialize( int size , F1** pBuffer, F1** pBufferDevice ){
 		
 		// 设置矩阵个数，以及总字节数
 		nSize = size;
 		int nSizeFloat = JOINT_WIDTH * nSize;
 		
 		// 分配内存显存
-		*pBuffer = new float[ nSizeFloat ];
-		cudaMalloc( pBufferDevice, nSizeFloat * sizeof(float) ) ;
+		*pBuffer = new F1[ nSizeFloat ];
+		cudaMalloc( pBufferDevice, nSizeFloat * sizeof(F1) ) ;
 		
 		switch( eSeparate )
 		{
@@ -73,7 +72,7 @@ struct Joints{
 
 
 	// 按矩阵索引
-	void indexByFloat44( float** pBuffer )
+	void indexByFloat44( F1** pBuffer )
 	{
 		for(int i=0;i<nSize;i++){
 			for(int j=0;j<nSizePerElement;j++){
@@ -81,11 +80,11 @@ struct Joints{
 
 					int index = 4*(i*nSizePerElement + j) + k;
 
-					(* pBuffer)[ index ] = rand() % nSize / (nSize * 1.0f);
+					(* pBuffer)[ index ].x = rand() % nSize / (nSize * 1.0f);
 
 					if(k==3) {
-						if(j<3)	(* pBuffer)[ index ] = 0.0f;
-						else(* pBuffer)[ index ] = 1.0f;
+						if(j<3)	(* pBuffer)[ index ].x = 0.0f;
+						else(* pBuffer)[ index ].x = 1.0f;
 					}//if k
 				}//for k
 			}//for j
@@ -93,7 +92,7 @@ struct Joints{
 	}
 
 	// 按矩阵一行索引
-	void indexByFloat4( float** pBuffer )
+	void indexByFloat4( F1** pBuffer )
 	{
 		for(int i=0;i<nSizePerElement;i++){
 			for(int j=0;j<nSize;j++){
@@ -101,11 +100,11 @@ struct Joints{
 
 					int index = 4*(i * nSize + j) + k;
 
-					(* pBuffer)[index] = rand() % nSize / (nSize * 1.0f);
+					(* pBuffer)[index].x = rand() % nSize / (nSize * 1.0f);
 
 					if(k==3) {
-						if(i<3)	(* pBuffer)[index] = 0.0f;
-						else		(* pBuffer)[index] = 1.0f;
+						if(i<3)	(* pBuffer)[index].x = 0.0f;
+						else		(* pBuffer)[index].x = 1.0f;
 					}//if k
 				}//for k
 			}//for j
@@ -113,16 +112,16 @@ struct Joints{
 	}
 
 	// 按矩阵一个浮点索引
-	void indexByFloat1( float** pBuffer )
+	void indexByFloat1( F1** pBuffer )
 	{
 		for(int i=0;i<nSizePerElement;i++){
 			for(int j=0;j<nSize;j++){
 
 					int index = i * nSize + j;
 
-					(* pBuffer)[index] = rand() % nSize / (nSize * 1.0f);
-					if( (i+1)%4==0 )		(* pBuffer)[index] = 0.0f;
-					if( (i+1)%16==0 )		(* pBuffer)[index] = 1.0f;
+					(* pBuffer)[index].x = rand() % nSize / (nSize * 1.0f);
+					if( (i+1)%4==0 )		(* pBuffer)[index].x = 0.0f;
+					if( (i+1)%16==0 )		(* pBuffer)[index].x = 1.0f;
 
 			}//for j
 		}//for i
@@ -144,14 +143,14 @@ struct Joints{
 	}
 
 	// 释放空间
-	void unInitialize( float* pBuffer, float* pBufferDevice )
+	void unInitialize( F1* pBuffer, F1* pBufferDevice )
 	{
 		if (pBuffer) delete[] pBuffer;
 		if (pBufferDevice) cudaFree(pBufferDevice) ;
 	}
 
-	float*  pMatrix, *pMatrixDevice;
-	float*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
+	F1*  pMatrix, *pMatrixDevice;
+	F1*  pMatrixPrevious, *pMatrixDevicePrevious; // 关节矩阵 上一帧
 	int   nSize;// 关节的数目
 	int   nSizePerElement;// 每个关节包含子数据结构的数目
 	Matrix_Separate_Mode	eSeparate; // 索引矩阵数组的方式

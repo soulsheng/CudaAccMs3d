@@ -17,8 +17,8 @@ __constant__		float4		const_pMatrixPrevious_f4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
 __constant__		float			const_pMatrix_f1[ JOINT_SIZE * JOINT_WIDTH ];
 __constant__		float			const_pMatrixPrevious_f1[ JOINT_SIZE * JOINT_WIDTH ];
 
-template<typename F4>
-void globalMemoryUpdate( Joints<F4>* pJoints, Matrix_Separate_Mode		modeSeparete, Matrix_Memory_Mode modeMemory, int bAligned )
+template<typename F1>
+void globalMemoryUpdate( Joints<F1>* pJoints, Matrix_Separate_Mode		modeSeparete, Matrix_Memory_Mode modeMemory, int bAligned )
 {
 	if( modeMemory == CONSTANT_MEMORY )
 	{
@@ -181,7 +181,8 @@ __device__ void indexByFloat4( F4* pBuffer , F4* pMat , int index )
 	}
 
 	// 按矩阵一个浮点索引
-__device__ void indexByFloat1( float* pBuffer , float* pMat , int index )
+template<typename F1>
+__device__ void indexByFloat1( F1* pBuffer , F1* pMat , int index )
 	{
 		for(int j=0; j<JOINT_WIDTH; j++){
 			pMat[j] = pBuffer[index + JOINT_SIZE * j];
@@ -196,8 +197,8 @@ pVertexOut : 动态坐标数组结果输出
 */
 #if !USE_SHARED
 
-template<typename F4>
-__global__ void updateVectorByMatrix(F4* pVertexIn, int size, float* pMatrix, F4* pVertexOut, float* pMatrixPrevious, Matrix_Separate_Mode	modeSeparete)
+template<typename F4, typename F1>
+__global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* pVertexOut, F1* pMatrixPrevious, Matrix_Separate_Mode	modeSeparete)
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 
@@ -222,7 +223,7 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, float* pMatrix, F4
 			break;
 		
 		case COMPLETE_SEPARATE:
-			indexByFloat1( pMatrix, (float*)matrix, matrixIndex );
+			indexByFloat1( pMatrix, (F1*)matrix, matrixIndex );
 			break;
 		}
 
