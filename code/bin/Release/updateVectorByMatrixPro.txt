@@ -1,198 +1,99 @@
-0.20
-0.35
-0.69
-1.31
-2.53
-4.94
-9.82
- aligned=1 
- separate=0 
- sort=0 
- memory=0 
-0.10
-0.16
-0.27
-0.53
-1.00
-1.93
-3.76
- aligned=1 
- separate=0 
- sort=1 
- memory=0 
-0.15
-0.25
 0.46
-0.91
-1.74
-3.37
-6.67
- aligned=1 
- separate=0 
- sort=2 
- memory=0 
-0.16
-0.27
-0.53
-1.00
-1.94
-3.79
-7.50
- aligned=1 
- separate=1 
- sort=0 
- memory=0 
-0.10
-0.17
-0.29
-0.53
-1.03
-1.99
-3.89
- aligned=1 
- separate=1 
- sort=1 
- memory=0 
-0.11
-0.18
-0.32
-0.63
-1.28
-2.53
-5.05
- aligned=1 
- separate=1 
- sort=2 
- memory=0 
-0.13
-0.22
-0.41
-0.78
-1.51
-2.93
-5.80
- aligned=1 
- separate=2 
- sort=0 
- memory=0 
-0.11
-0.17
-0.30
-0.57
-1.11
-2.14
-4.19
- aligned=1 
- separate=2 
- sort=1 
- memory=0 
-0.12
-0.19
-0.34
-0.65
-1.26
-2.44
+0.76
+1.32
+2.47
 4.82
- aligned=1 
- separate=2 
- sort=2 
- memory=0 
-0.92
-1.74
-3.39
-6.68
-13.26
-26.46
-52.63
+9.35
+18.48
  aligned=1 
  separate=0 
  sort=0 
- memory=1 
-0.13
-0.20
-0.37
-0.69
+ memory=2 
+0.33
+0.52
+0.87
+1.57
+3.01
+5.81
+11.45
+ aligned=1 
+ separate=0 
+ sort=1 
+ memory=2 
+0.46
+0.77
 1.36
-2.63
-5.18
- aligned=1 
- separate=0 
- sort=1 
- memory=1 
-1.08
-2.06
-4.01
-7.92
-15.65
-31.25
-61.73
+2.55
+4.95
+9.59
+19.08
  aligned=1 
  separate=0 
  sort=2 
- memory=1 
+ memory=2 
+0.35
+0.54
+0.91
+1.66
+3.14
+6.13
+12.08
+ aligned=1 
+ separate=1 
+ sort=0 
+ memory=2 
+0.34
 0.51
-0.98
-1.88
-3.65
-7.22
-14.49
-28.82
- aligned=1 
- separate=1 
- sort=0 
- memory=1 
-0.14
-0.23
-0.41
-0.81
-1.56
-3.03
-6.01
+0.87
+1.57
+2.97
+5.89
+11.48
  aligned=1 
  separate=1 
  sort=1 
- memory=1 
-0.57
-1.06
-2.06
-4.02
-7.96
-15.50
-30.77
+ memory=2 
+0.34
+0.52
+0.87
+1.58
+2.97
+5.80
+11.36
  aligned=1 
  separate=1 
  sort=2 
- memory=1 
-0.81
-1.54
-2.99
-5.90
-11.70
-23.20
-45.66
+ memory=2 
+0.36
+0.54
+0.91
+1.60
+3.04
+5.98
+11.52
  aligned=1 
  separate=2 
  sort=0 
- memory=1 
-0.11
-0.18
-0.31
-0.60
-1.13
-2.18
-4.28
- aligned=1 
- separate=2 
- sort=1 
- memory=1 
+ memory=2 
+0.35
+0.53
 0.89
-1.71
-3.33
-6.51
-12.92
-25.71
-51.55
+1.60
+2.98
+5.84
+11.35
+ aligned=1 
+ separate=2 
+ sort=1 
+ memory=2 
+0.35
+0.53
+0.90
+1.61
+3.03
+5.85
+11.45
  aligned=1 
  separate=2 
  sort=2 
- memory=1 
+ memory=2 
