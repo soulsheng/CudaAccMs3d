@@ -34,7 +34,7 @@ enum Matrix_Memory_Mode {
 
 //关节矩阵---------------------------------------------------------
 
-template<typename T>
+template<typename F4>
 struct Joints{
 
 	// 初始化

@@ -14,13 +14,13 @@ enum Matrix_Sort_Mode {
 
 //顶点坐标---------------------------------------------------------
 //typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
-template<typename T>
+template<typename F4>
 struct Vertexes{
 
 	// 获取顶点坐标，内存到显存
 	void initialize(int size, float* pBufferCoord, int* pBufferIndex){
 		nSize = size;
-		pVertex = new T[nSize];
+		pVertex = new F4[nSize];
 		for(int i=0;i<nSize;i++){
 			pVertex[i].x = pBufferCoord[i*3];
 			pVertex[i].y = pBufferCoord[i*3+1];
@@ -48,12 +48,12 @@ struct Vertexes{
 		}
 		indexMatrix.clear();
 
-		T* pVertexTemp = new T[nSize];
+		F4* pVertexTemp = new F4[nSize];
 		for( i=0;i<nSize;i++){
 			pVertexTemp[i] = pVertex[ pIndexMatrix[i] ];
 		}
 
-		memcpy( pVertex, pVertexTemp, sizeof(T) * nSize );
+		memcpy( pVertex, pVertexTemp, sizeof(F4) * nSize );
 		delete[] pVertexTemp;
 		delete[] pIndexMatrix;
 	}
@@ -106,11 +106,11 @@ struct Vertexes{
 		}
 
 		// 按照循环索引，调整存储
-		T* pVertexTemp = new T[nSize];
+		F4* pVertexTemp = new F4[nSize];
 		for( i=0;i<nSize;i++){
 			pVertexTemp[i] = pVertex[ pIndexMatrix[i] ];
 		}
-		memcpy( pVertex, pVertexTemp, sizeof(T) * nSize );
+		memcpy( pVertex, pVertexTemp, sizeof(F4) * nSize );
 		
 		// 释放临时内存空间
 		delete[] pVertexTemp;
@@ -128,10 +128,10 @@ struct Vertexes{
 		nSize = size;
 		nSizeJoint = sizeJoint;
 
-		pVertex = new T[nSize];
+		pVertex = new F4[nSize];
 		
 		if( bDevice ){
-		cudaMalloc( &pVertexDevice, sizeof(T) * nSize ) ;//Vertex[nSize];
+		cudaMalloc( &pVertexDevice, sizeof(F4) * nSize ) ;//Vertex[nSize];
 		}
 		else{
 			pVertexDevice = NULL;
@@ -164,7 +164,7 @@ struct Vertexes{
 		}
 
 		if( bDevice ){
-			cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pVertexDevice, pVertex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
 		}
 		
 	}
@@ -179,12 +179,12 @@ struct Vertexes{
 	void copy( Vertexes& ref )
 	{
 		if( pVertex!=NULL && ref.pVertex!=NULL )
-			memcpy( pVertex, ref.pVertex, sizeof(T) * nSize );
+			memcpy( pVertex, ref.pVertex, sizeof(F4) * nSize );
 		if( pVertexDevice!=NULL )
-			cudaMemcpy( pVertexDevice, pVertex, sizeof(T) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pVertexDevice, pVertex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
 	}
 
-	T*  pVertex, *pVertexDevice;
+	F4*  pVertex, *pVertexDevice;
 	int   nSize;// 顶点的数目
 	int   nSizeJoint;// 关节的数目
 	Matrix_Sort_Mode		eSort;

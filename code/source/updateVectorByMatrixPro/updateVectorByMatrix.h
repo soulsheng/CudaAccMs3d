@@ -30,11 +30,11 @@ void transformVec3ByMatrix4Host(float4* pVertexIn, float pMatrix[], float4* pVer
 	vertexOut.z = vertexIn.x * pMatrix[2*4+0] + vertexIn.y * pMatrix[2*4+1] + vertexIn.z * pMatrix[2*4+2] + pMatrix[2*4+3]  ;
 	*pVertexOut = vertexOut;
 }
-template<typename T>
-void transformVec3ByMatrix4Host(T* pVertexIn, T pMatrix[], T* pVertexOut)
+template<typename F4>
+void transformVec3ByMatrix4Host(F4* pVertexIn, F4 pMatrix[], F4* pVertexOut)
 {
-	T vertexIn = *pVertexIn;
-	T vertexOut;
+	F4 vertexIn = *pVertexIn;
+	F4 vertexOut;
 	vertexOut.x = vertexIn.x * pMatrix[0].x + vertexIn.y * pMatrix[0].y + vertexIn.z * pMatrix[0].z + pMatrix[0].w ; 
 	vertexOut.y = vertexIn.x * pMatrix[1].x + vertexIn.y * pMatrix[1].y + vertexIn.z * pMatrix[1].z + pMatrix[1].w  ; 
 	vertexOut.z = vertexIn.x * pMatrix[2].x + vertexIn.y * pMatrix[2].y + vertexIn.z * pMatrix[2].z + pMatrix[2].w  ;
@@ -107,8 +107,8 @@ void multMatrix4Host(float matIn1[], float matIn2[], float matOut[])
 
 
 // 按矩阵索引
-template<typename T>
-void indexByFloat44Host( T* pBuffer , T* pMat , int index )
+template<typename F4>
+void indexByFloat44Host( F4* pBuffer , F4* pMat , int index )
 {
 	for(int j=0; j<MATRIX_SIZE_LINE; j++){
 		pMat[j] = pBuffer[index * MATRIX_SIZE_LINE + j];
@@ -116,8 +116,8 @@ void indexByFloat44Host( T* pBuffer , T* pMat , int index )
 }
 
 // 按矩阵一行索引
-template<typename T>
-void indexByFloat4Host( T* pBuffer , T* pMat , int index )
+template<typename F4>
+void indexByFloat4Host( F4* pBuffer , F4* pMat , int index )
 {
 	for(int j=0; j<MATRIX_SIZE_LINE; j++){
 		pMat[j] = pBuffer[index + JOINT_SIZE * j];
@@ -139,15 +139,15 @@ pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
 #if !SEPERATE_STRUCT_FULLY
-template<typename T>
-void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVertexOut, Matrix_Separate_Mode mode){
+template<typename F4>
+void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F4>* pJoints, F4* pVertexOut, Matrix_Separate_Mode mode){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 		
-		T   matrix[MATRIX_SIZE_LINE];		
+		F4   matrix[MATRIX_SIZE_LINE];		
 
 		// 读取操作数：初始的顶点坐标
-		T   vertexIn = pVertexIn[i];
+		F4   vertexIn = pVertexIn[i];
 
 		// 读取操作数：顶点对应的矩阵
 		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
@@ -155,11 +155,11 @@ void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVe
 		switch( mode )
 		{
 		case NO_SEPARATE:
-			indexByFloat44Host( (T*)pJoints->pMatrix, matrix, matrixIndex );
+			indexByFloat44Host( (F4*)pJoints->pMatrix, matrix, matrixIndex );
 			break;
 
 		case HALF_SEPARATE:
-			indexByFloat4Host( (T*)pJoints->pMatrix, matrix, matrixIndex );
+			indexByFloat4Host( (F4*)pJoints->pMatrix, matrix, matrixIndex );
 			break;
 
 		case COMPLETE_SEPARATE:
@@ -173,12 +173,12 @@ void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVe
 
 }
 
-template<typename T>
-void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVertexOut){
+template<typename F4>
+void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F4>* pJoints, F4* pVertexOut){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 
-		T   matrix[MATRIX_SIZE_LINE];
+		F4   matrix[MATRIX_SIZE_LINE];
 #if !USE_MEMORY_BUY_TIME
 		float   matrixPrevious[JOINT_WIDTH];
 		float   matrixCurrent[JOINT_WIDTH];
@@ -187,9 +187,9 @@ void updateVectorByMatrixGold(T* pVertexIn, int size, Joints<T>* pJoints, T* pVe
 
 		// 读取操作数：初始的顶点坐标
 #if !USE_MEMORY_BUY_TIME
-		T   vertexIn = pVertexOut[i];
+		F4   vertexIn = pVertexOut[i];
 #else
-		T   vertexIn = pVertexIn[i];
+		F4   vertexIn = pVertexIn[i];
 #endif // USE_MEMORY_BUY_TIME
 
 		// 读取操作数：顶点对应的矩阵
@@ -300,12 +300,12 @@ size : 坐标个数
 pVertexBase : 参考坐标数组
 返回值： 1表示坐标相同，0表示坐标不同
 */
-template<typename T>
-bool equalVector(T* pVertex, int size, T* pVertexBase)
+template<typename F4>
+bool equalVector(F4* pVertex, int size, F4* pVertexBase)
 {
 	for(int i=0;i<size;i++)
 	{
-		T   vertex, vertexBase;
+		F4   vertex, vertexBase;
 		vertex = pVertex[i];
 		vertexBase = pVertexBase[i];
 		if (fabs(vertex.x - vertexBase.x) / fabs(vertexBase.x) >1.7e-1 && fabs(vertex.x) * fabs(vertexBase.x) >10.0f || 
