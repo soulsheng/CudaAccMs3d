@@ -1,3 +1,5 @@
+rem time = 1.58
+
 set exe=updateVectorByMatrixPro
 
 cd Release
