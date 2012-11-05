@@ -6,6 +6,6 @@ cd Release
 
 if exist %exe%.txt del %exe%.txt
 
-start /wait %exe% --problem=3 --quiet=1 --aligned=1 --separate=1 --sort=1 --memory=1
+start /wait %exe% --problem=3 --quiet=1 --aligned=1 --separate=1 --sort=1 --memory=2
 
 notepad %exe%

@@ -19,13 +19,13 @@ float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
 
 // 命令行参数
-int iProblem=6;			// 问题规模最大值，16M/512M显存、32M/1G显存
+int iProblem=3;			// 问题规模最大值，16M/512M显存、32M/1G显存
 int bAligned = 1;	// 结构体是否对齐
-Matrix_Separate_Mode	eSeparate = COMPLETE_SEPARATE;	// 结构体拆分模式，不拆分、半拆分、全拆分
+Matrix_Separate_Mode	eSeparate = HALF_SEPARATE;	// 结构体拆分模式，不拆分、半拆分、全拆分
 
-int bQuiet = 0;		// 静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒
-Matrix_Sort_Mode eSort=NO_SORT;			// 顶点以矩阵id为索引的排序方式，不排序、顺序排序、交叉排序
-Matrix_Memory_Mode	eMemory=CONSTANT_MEMORY;	// 矩阵存储位置，全局显存、常量显存、共享显存
+int bQuiet = 1;		// 静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒
+Matrix_Sort_Mode eSort=SERIAL_SORT;			// 顶点以矩阵id为索引的排序方式，不排序、顺序排序、交叉排序
+Matrix_Memory_Mode	eMemory=SHARED_MEMORY;	// 矩阵存储位置，全局显存、常量显存、共享显存
 
 // 数据初始化：坐标、矩阵
 template<typename F4, typename F1>
