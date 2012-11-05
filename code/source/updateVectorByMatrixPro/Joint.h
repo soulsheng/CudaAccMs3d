@@ -13,7 +13,7 @@
 #define		SEPERATE_STRUCT_FULLY		0 // 结构体彻底拆分开关：0不拆分，1拆分
 
 #define    JOINT_SIZE    100
-#define    MATRIX_SIZE_LINE    4//3
+#define    MATRIX_SIZE_LINE    3//3
 #define    JOINT_WIDTH    ((MATRIX_SIZE_LINE)*4)//12
 
 
