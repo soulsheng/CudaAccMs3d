@@ -10,6 +10,9 @@
 #define		USE_ELEMENT_CROSS	1	// 同一线程处理多个数据元素， 1表示多元素交替，0表示不交替即顺序
 #define		USE_ELEMENT_SINGLE	0	// 同一线程处理一个数据元素， 1表示一个元素，0表示多个元素且不交替
 
+#define		KERNEL_MEMORY	0	// 显存访问， 1表示开，0表示关
+#define		KERNEL_MATH		0	// 算法执行， 1表示开，0表示关
+
 __constant__		Vector4		const_pMatrix_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
 __constant__		Vector4		const_pMatrixPrevious_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
 __constant__		float4		const_pMatrix_f4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
@@ -205,7 +208,7 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* p
 		for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 
 		F4   matrix[MATRIX_SIZE_LINE];
-
+#if KERNEL_MEMORY
 		// 读取操作数：初始的顶点坐标
 		F4   vertexIn = pVertexIn[i];
 
@@ -226,10 +229,24 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* p
 			indexByFloat1( pMatrix, (F1*)matrix, matrixIndex );
 			break;
 		}
-
+#endif
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
+#if KERNEL_MATH&&KERNEL_MEMORY
 		transformVec3ByMatrix4( &vertexIn, matrix, pVertexOut+i);
+#else
 
+	#if KERNEL_MEMORY
+		pVertexOut[i] = vertexIn;
+	#elif KERNEL_MATH
+		F4   vertexIn, vertexOut;
+		transformVec3ByMatrix4(&vertexIn, matrix, &vertexOut);
+		if ( indexBase * modeSeparete )
+		{
+			pVertexOut[i] = vertexOut;
+		}
+	#endif
+
+#endif
 	}//for
 }
 
