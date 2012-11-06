@@ -203,7 +203,7 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS)
 			sm_per_multiproc = _ConvertSMVer2Cores(deviceProp.major, deviceProp.minor);
 		}
 
-		int compute_perf  = deviceProp.multiProcessorCount * sm_per_multiproc * deviceProp.clockRate;
+		int compute_perf  = deviceProp.multiProcessorCount * sm_per_multiproc * deviceProp.clockRate * 2;
 		// clockRate指shader的频率，单位是kHz，即"Clock frequency in kilohertz "，参考：http://developer.download.nvidia.com/compute/cuda/4_2/rel/toolkit/docs/online/structcudaDeviceProp_dee14230e417cb3059d697d6804da414.html#dee14230e417cb3059d697d6804da414
 
 		if( compute_perf  > max_compute_perf )
@@ -232,7 +232,7 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS)
 		++current_device;
 	}
 	fGFLOPS = max_compute_perf * 1.0e-6;
-	return max_perf_device;
+	return fGFLOPS;
 }
 // 命令行参数说明
 void printHelp(void)
