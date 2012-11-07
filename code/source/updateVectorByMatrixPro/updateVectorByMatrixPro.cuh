@@ -256,7 +256,7 @@ template<typename F4>
 __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix, F4* pVertexOut, F4* pMatrixPrevious, Matrix_Separate_Mode	modeSeparete)
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
-
+#if KERNEL_MEMORY_ACCESS
 	// 一次性读取矩阵，整个block块共享
 	__shared__	float1 matrixShared[JOINT_WIDTH*JOINT_SIZE];
 
@@ -306,12 +306,12 @@ __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix,
 		}//switch
 	}//if
 	__syncthreads();
-
+#endif
 	for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 
 		//F4   matrix[MATRIX_SIZE_LINE];
 		float1 matrix[JOINT_WIDTH];
-
+#if KERNEL_MEMORY_ACCESS
 		// 读取操作数：初始的顶点坐标
 		F4   vertexIn = pVertexIn[i];
 
@@ -346,9 +346,25 @@ __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix,
 			}
 			break;
 		}
-
+#endif
+		
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
+#if KERNEL_MATH_RUN&&KERNEL_MEMORY_ACCESS
 		transformVec3ByMatrix4( &vertexIn, matrix, pVertexOut+i);
+#else
+
+	#if KERNEL_MEMORY_ACCESS
+		pVertexOut[i] = vertexIn;
+	#elif KERNEL_MATH_RUN
+		F4   vertexIn, vertexOut;
+		transformVec3ByMatrix4(&vertexIn, matrix, &vertexOut);
+		if ( indexBase * modeSeparete )
+		{
+			pVertexOut[i] = vertexOut;
+		}
+	#endif
+
+#endif
 
 	}//for
 }
