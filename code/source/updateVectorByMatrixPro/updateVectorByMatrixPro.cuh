@@ -241,7 +241,7 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* p
 	#elif KERNEL_MATH_RUN
 		F4   vertexIn, vertexOut;
 		transformVec3ByMatrix4(&vertexIn, matrix, &vertexOut);
-		if ( indexBase * modeSeparete )
+		if ( indexBase * (modeSeparete/2) )
 		{
 			pVertexOut[i] = vertexOut;
 		}
@@ -358,7 +358,7 @@ __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix,
 	#elif KERNEL_MATH_RUN
 		F4   vertexIn, vertexOut;
 		transformVec3ByMatrix4(&vertexIn, matrix, &vertexOut);
-		if ( indexBase * modeSeparete )
+		if ( indexBase * (modeSeparete/2) )
 		{
 			pVertexOut[i] = vertexOut;
 		}

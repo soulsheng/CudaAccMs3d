@@ -291,12 +291,13 @@ void runCuda(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 #endif
 
 	
+	int nSizeSharedMemoryDynamic = (1<<10) * 10;  // 10k
 	// 执行运算：坐标矩阵变换
 	switch( eMemory )
 	{
 		case SHARED_MEMORY: 
 			{
-				updateVectorByMatrixShared<F4><<<nBlocksPerGrid, nThreadsPerBlock>>>
+				updateVectorByMatrixShared<F4><<<nBlocksPerGrid, nThreadsPerBlock, nSizeSharedMemoryDynamic>>>
 					( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, (F4*)joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
 					(F4*)joints.pMatrixDevicePrevious, eSeparate );
 			}
@@ -311,7 +312,7 @@ void runCuda(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 
 		default:
 			{
-				updateVectorByMatrix<F4, F1><<<nBlocksPerGrid, nThreadsPerBlock>>>
+				updateVectorByMatrix<F4, F1><<<nBlocksPerGrid, nThreadsPerBlock, nSizeSharedMemoryDynamic>>>
 					( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
 					joints.pMatrixDevicePrevious, eSeparate);
 			}
