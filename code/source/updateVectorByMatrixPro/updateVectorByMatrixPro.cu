@@ -274,7 +274,9 @@ void printHelp(void)
 template<typename F4, typename F1>
 void runCuda(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&vertexesDynamic  )
 {
+#if KERNEL_MEMORY_PREPARE
 	globalMemoryUpdate<F1>( &joints, eSeparate, eMemory, bAligned );
+#endif
 
 #if !USE_MEMORY_BUY_TIME && _DEBUG
 	// 为了确保重复试验得到相同结果，恢复缺省值

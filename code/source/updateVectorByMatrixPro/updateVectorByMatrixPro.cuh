@@ -10,8 +10,9 @@
 #define		USE_ELEMENT_CROSS	1	// 同一线程处理多个数据元素， 1表示多元素交替，0表示不交替即顺序
 #define		USE_ELEMENT_SINGLE	0	// 同一线程处理一个数据元素， 1表示一个元素，0表示多个元素且不交替
 
-#define		KERNEL_MEMORY	0	// 显存访问， 1表示开，0表示关
-#define		KERNEL_MATH		0	// 算法执行， 1表示开，0表示关
+#define		KERNEL_MEMORY_ACCESS	1	// 显存访问， 1表示开，0表示关
+#define		KERNEL_MATH_RUN			1	// 数学运算， 1表示开，0表示关
+#define		KERNEL_MEMORY_PREPARE	1	// 预备数据， 1表示开，0表示关
 
 __constant__		Vector4		const_pMatrix_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
 __constant__		Vector4		const_pMatrixPrevious_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
@@ -208,7 +209,7 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* p
 		for( int i=indexBase; i<size; i+=blockDim.x * gridDim.x ){
 
 		F4   matrix[MATRIX_SIZE_LINE];
-#if KERNEL_MEMORY
+#if KERNEL_MEMORY_ACCESS
 		// 读取操作数：初始的顶点坐标
 		F4   vertexIn = pVertexIn[i];
 
@@ -231,13 +232,13 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* p
 		}
 #endif
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-#if KERNEL_MATH&&KERNEL_MEMORY
+#if KERNEL_MATH_RUN&&KERNEL_MEMORY_ACCESS
 		transformVec3ByMatrix4( &vertexIn, matrix, pVertexOut+i);
 #else
 
-	#if KERNEL_MEMORY
+	#if KERNEL_MEMORY_ACCESS
 		pVertexOut[i] = vertexIn;
-	#elif KERNEL_MATH
+	#elif KERNEL_MATH_RUN
 		F4   vertexIn, vertexOut;
 		transformVec3ByMatrix4(&vertexIn, matrix, &vertexOut);
 		if ( indexBase * modeSeparete )
