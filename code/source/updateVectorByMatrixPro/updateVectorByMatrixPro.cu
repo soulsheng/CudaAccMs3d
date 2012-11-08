@@ -12,7 +12,7 @@
 #include "updateVectorByMatrix.h"
 
 #define		SIZE_THREAD	256
-
+#define     SIZE_SHARE_MEMORY_DYNAMIC	0  // 10K（gts250）  40K（gtx670），为了稳定sp使用率为1/3，即每个sm只运行1个block
 int		SIZE_BLOCK=32; // 默认设置，动态设置为SM的两倍，确保每个SM有2个block
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
@@ -227,7 +227,7 @@ int gpuGetMaxGflopsDeviceId(float& fGFLOPS)
 				printf("sp核数：%d=%d(SM个数)*%d(每个SM包含SP个数), shader频率: %d \n", deviceProp.multiProcessorCount * sm_per_multiproc, 
 				deviceProp.multiProcessorCount, sm_per_multiproc, deviceProp.clockRate);
 			}
-			SIZE_BLOCK = deviceProp.multiProcessorCount * 2; // 修改块数默认设置，动态设置为SM的两倍，确保每个SM有2个block
+			SIZE_BLOCK = deviceProp.maxThreadsPerMultiProcessor / SIZE_THREAD * deviceProp.multiProcessorCount * 2; // 修改块数默认设置，动态设置为SM的两倍，确保每个SM有2个block
 		}
 		++current_device;
 	}
@@ -291,7 +291,7 @@ void runCuda(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 #endif
 
 	
-	int nSizeSharedMemoryDynamic = (1<<10) * 10;  // 10k
+	int nSizeSharedMemoryDynamic = (1<<10) * SIZE_SHARE_MEMORY_DYNAMIC;  // 10k 或者 40k
 	// 执行运算：坐标矩阵变换
 	switch( eMemory )
 	{
