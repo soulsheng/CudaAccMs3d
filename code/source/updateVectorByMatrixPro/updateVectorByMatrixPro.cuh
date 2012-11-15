@@ -14,6 +14,8 @@
 #define		KERNEL_MATH_RUN			1	// 数学运算， 1表示开，0表示关
 #define		KERNEL_MEMORY_PREPARE	1	// 预备数据， 1表示开，0表示关
 
+#define		IPL		2// 1 2 4 8
+
 __constant__		Vector4		const_pMatrix_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
 __constant__		Vector4		const_pMatrixPrevious_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
 __constant__		float4		const_pMatrix_f4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
@@ -702,4 +704,36 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F4* pMatrix, F4* p
 #if  !USE_ELEMENT_SINGLE
 	}
 #endif
+}
+
+template<typename F4>
+__global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix, F4* pVertexOut )
+{
+	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x * IPL+ threadIdx.x;
+	if( indexBase + blockDim.x * (IPL-1)  >= size)
+		return;
+
+		F4   vertexIn[IPL];
+
+		// 读取操作数：初始的顶点坐标
+		for(int i=0;i<IPL;i++)		vertexIn[i] = pVertexIn[ indexBase + blockDim.x * i ];
+
+		// 读取操作数：顶点对应的矩阵
+		int      matrixIndex[IPL];
+
+		for(int i=0;i<IPL;i++)		matrixIndex[i]= __float_as_int( vertexIn[i].w  );
+
+		float1 matrix[IPL][JOINT_WIDTH];
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		F4 vertexOut[IPL];
+
+		for(int i=0;i<IPL;i++)	{
+		vertexOut[i].x = vertexIn[i].x * matrix[i][0].x + vertexIn[i].y * matrix[i][1].x + vertexIn[i].z * matrix[i][2].x + matrix[i][3].x ; 
+		vertexOut[i].y = vertexIn[i].x * matrix[i][1*4+0].x + vertexIn[i].y * matrix[i][1*4+1].x + vertexIn[i].z * matrix[i][1*4+2].x + matrix[i][1*4+3].x  ; 
+		vertexOut[i].z = vertexIn[i].x * matrix[i][2*4+0].x + vertexIn[i].y * matrix[i][2*4+1].x + vertexIn[i].z * matrix[i][2*4+2].x + matrix[i][2*4+3].x  ;
+		}
+
+		for(int i=0;i<IPL;i++)		pVertexOut[indexBase + blockDim.x * i ] = vertexOut[i];
+	
 }
