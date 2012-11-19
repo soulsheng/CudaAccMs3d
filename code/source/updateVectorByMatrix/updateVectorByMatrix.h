@@ -43,3 +43,68 @@ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* 
 	}
 
 }
+
+
+void updateVectorByMatrixTest(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut, bool use_openmp){
+
+	if ( !use_openmp )
+	{	
+		omp_set_num_threads( 1 );
+	}
+#pragma omp parallel for
+	for(int i=0;i<size;i++){
+#if 0
+		// 读取操作数：顶点对应的矩阵
+		int matrixIndex = int(pVertexIn[i].w + 0.5);// float to int
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		pVertexOut[i].x = pVertexIn[i].x * pMatrix[matrixIndex][0].x + pVertexIn[i].y * pMatrix[matrixIndex][0].y + pVertexIn[i].z * pMatrix[matrixIndex][0].z  + pMatrix[matrixIndex][0].w; 
+		pVertexOut[i].y = pVertexIn[i].x * pMatrix[matrixIndex][1].x + pVertexIn[i].y * pMatrix[matrixIndex][1].y + pVertexIn[i].z * pMatrix[matrixIndex][1].z  + pMatrix[matrixIndex][1].w; 
+		pVertexOut[i].z = pVertexIn[i].x * pMatrix[matrixIndex][2].x + pVertexIn[i].y * pMatrix[matrixIndex][2].y + pVertexIn[i].z * pMatrix[matrixIndex][2].z  + pMatrix[matrixIndex][2].w; 
+#else
+		pVertexOut[i] = pVertexIn[i];
+#endif
+	}
+
+}
+
+template <typename F>
+void testMaxInstruction(F* in, F* out, int size, bool use_openmp)
+{
+	if ( !use_openmp )
+	{	
+		omp_set_num_threads( 1 );
+	}
+#pragma omp parallel for
+	for (int i=0;i<size;i++)
+	{
+		out[i] = in[i];
+	}
+}
+
+void testMaxInstruction(float4* in, float4* out, int size, bool use_openmp)
+{
+	if ( !use_openmp )
+	{	
+		omp_set_num_threads( 1 );
+	}
+#pragma omp parallel for
+	for (int i=0;i<size;i++)
+	{
+		out[i] = in[i];
+	}
+}
+
+void updateVectorByMatrix(Vertex* in, Vertex* out, int size, bool use_openmp)
+{
+	if ( !use_openmp )
+	{	
+		omp_set_num_threads( 1 );
+	}
+#pragma omp parallel for
+	for (int i=0;i<size;i++)
+	{
+		out[i] = in[i];
+	}
+}
+
