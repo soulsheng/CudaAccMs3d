@@ -31,10 +31,10 @@
 	<body>
 		<div id="info">Simple Cloth Simulation<br/>
 			Verlet integration with Constrains relaxation<br/>
-			Toggle: <a onclick="rotate = !rotate;">Camera</a> |
-			<a onclick="wind = !wind;">Wind</a> |
-			<a onclick="sphere.visible = !sphere.visible;">Ball</a> |
-			<a onclick="togglePins();">Pins</a>
+			Toggle: <a onClick="rotate = !rotate;">Camera</a> |
+			<a onClick="wind = !wind;">Wind</a> |
+			<a onClick="sphere.visible = !sphere.visible;">Ball</a> |
+			<a onClick="togglePins();">Pins</a>
 		</div>
 
 		<script src="../build/three.min.js"></script>
@@ -186,7 +186,7 @@
 
 				// cloth material
 
-				var clothTexture = THREE.ImageUtils.loadTexture( 'textures/patterns/circuit_pattern.png' );
+				var clothTexture = THREE.ImageUtils.loadTexture( 'textures/fivestarflag.jpg' );
 				clothTexture.wrapS = clothTexture.wrapT = THREE.RepeatWrapping;
 				clothTexture.anisotropy = 16;
 
