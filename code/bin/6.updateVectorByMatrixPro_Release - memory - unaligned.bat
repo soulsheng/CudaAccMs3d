@@ -7,7 +7,7 @@ if exist %exe%.txt del %exe%.txt
 for /l %%i in (0,1,2) do (
 for /l %%j in (0,1,2) do (
 for /l %%m in (0,1,2) do (
-start /wait /min %exe% --problem=%%k --quiet=1 --aligned=0 --separate=%%i --sort=%%j --memory=%%m
+start /wait /min %exe% --problem=3 --quiet=1 --aligned=0 --separate=%%i --sort=%%j --memory=%%m
 echo  aligned=0 >> %exe%.txt
 echo  separate=%%i >> %exe%.txt
 echo  sort=%%j >> %exe%.txt
