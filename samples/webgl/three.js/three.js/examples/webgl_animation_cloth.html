@@ -143,9 +143,9 @@
 
 				// camera
 
-				camera = new THREE.PerspectiveCamera( 30, window.innerWidth / window.innerHeight, 1, 10000 );
-				camera.position.y = 50;
-				camera.position.z = 1500;
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.y = 5;//50
+				camera.position.z = 500;//1500
 				scene.add( camera );
 
 				// lights
@@ -279,12 +279,14 @@
 				mesh.castShadow = true;
 				scene.add( mesh );
 
+				/*
 				var mesh = new THREE.Mesh( gg, poleMat );
 				mesh.position.y = -250;
 				mesh.position.x = -125;
 				mesh.receiveShadow = true;
 				mesh.castShadow = true;
 				scene.add( mesh );
+				*/
 
 				//
 
