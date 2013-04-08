@@ -4,6 +4,7 @@ Accelarate Ms3d with Nvidia CUDA, focus kernel function of transforming vertex p
 
 加速骨骼动画借用CUDA，核心函数是用变换矩阵更新顶点坐标。
 
+site: http://soulsheng.github.com/CudaAccMs3d
 
 v0.4 2012-10-13
 ===========
