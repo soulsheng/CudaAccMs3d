@@ -25,7 +25,7 @@ Joints		_joints;//关节矩阵
 void initialize(int problem_size, int joint_size);
 
 // 坐标矩阵变换
-void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut);
+void updateVectorByMatrix(Vertex* pVertexIn, int size, float4* pMatrix, Vertex* pVertexOut);
 
 // 数据销毁：坐标、矩阵
 void unInitialize();

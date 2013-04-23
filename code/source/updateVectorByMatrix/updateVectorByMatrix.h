@@ -12,7 +12,7 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
-void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* pVertexOut, bool use_openmp){
+void updateVectorByMatrix(Vertex* pVertexIn, int size, float4* pMatrix, Vertex* pVertexOut, bool use_openmp){
 
 	if ( !use_openmp )
 	{	
@@ -29,9 +29,9 @@ void updateVectorByMatrix(Vertex* pVertexIn, int size, Matrix* pMatrix, Vertex* 
 
 		// 读取操作数：顶点对应的矩阵
 		matrixIndex = int(vertexIn.w + 0.5);// float to int
-		matrix[0] = pMatrix[matrixIndex][0];
-		matrix[1] = pMatrix[matrixIndex][1];
-		matrix[2] = pMatrix[matrixIndex][2];
+		matrix[0] = pMatrix[matrixIndex*MATRIX_SIZE_LINE+0];
+		matrix[1] = pMatrix[matrixIndex*MATRIX_SIZE_LINE+1];
+		matrix[2] = pMatrix[matrixIndex*MATRIX_SIZE_LINE+2];
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		vertexOut.x = vertexIn.x * matrix[0].x + vertexIn.y * matrix[0].y + vertexIn.z * matrix[0].z  + matrix[0].w; 
