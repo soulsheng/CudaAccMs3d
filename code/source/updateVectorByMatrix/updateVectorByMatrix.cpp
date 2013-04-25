@@ -24,9 +24,6 @@ Joints		_joints;//关节矩阵
 // 数据初始化：坐标、矩阵
 void initialize(int problem_size, int joint_size);
 
-// 坐标矩阵变换
-void updateVectorByMatrix(Vertex* pVertexIn, int size, float4* pMatrix, Vertex* pVertexOut);
-
 // 数据销毁：坐标、矩阵
 void unInitialize();
 
@@ -62,15 +59,13 @@ int _tmain(int argc, char** pArgv)
 		
 		// 数据初始化：坐标、矩阵
 		initialize(PROBLEM_SIZE, JOINT_SIZE);
-		float *fIn=new float[PROBLEM_SIZE];
-		float *fOut=new float[PROBLEM_SIZE];
 
 		timer.start();
 
 		while ( timer.getTime() < 10000  )
 		{
 			// 执行运算：坐标矩阵变换
-			updateVectorByMatrix(_vertexesStatic.pVertex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex, USE_OPENMP);
+			updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex, USE_OPENMP);
 			//updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, PROBLEM_SIZE, USE_OPENMP);
 			//testMaxInstruction<float>(fIn, fOut, PROBLEM_SIZE, USE_OPENMP);
 			nRepeatPerSecond ++;
@@ -81,8 +76,6 @@ int _tmain(int argc, char** pArgv)
 		
 		// 数据销毁：坐标、矩阵
 		unInitialize();
-		delete[]		fIn;
-		delete[]		fOut;
 
 		// 查看时间效率
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
