@@ -21,7 +21,9 @@ struct Joints{
 	// 获取关节矩阵 模拟
 	void initialize( int size ){
 		nSize = size;
-		pMatrix = new float[nSize*MATRIX_SIZE_LINE*4];
+		//pMatrix = new float[nSize*MATRIX_SIZE_LINE*4];
+		pMatrix = (float*) _aligned_malloc(nSize*MATRIX_SIZE_LINE*4 * sizeof(float), 16);
+
 		for(int i=0;i<nSize;i++){
 			for(int j=0;j<MATRIX_SIZE_LINE;j++){
 				for(int k=0;k<4;k++){
@@ -34,7 +36,7 @@ struct Joints{
 	// 释放空间
 	void unInitialize()
 	{
-		if (pMatrix) delete[] pMatrix;
+		if (pMatrix)  _aligned_free(pMatrix);
 	}
 
 	float*  pMatrix;

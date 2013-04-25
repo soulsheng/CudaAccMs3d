@@ -12,8 +12,11 @@ struct Vertexes{
 	// 获取顶点坐标 模拟
 	void initialize(int size, int sizeJoint){
 		nSize = size;
-		pVertex = new float[nSize*VERTEX_VECTOR_SIZE];
-		pIndex = new int[nSize];
+		//pVertex = new float[nSize*VERTEX_VECTOR_SIZE];
+		//pIndex = new int[nSize];
+		pVertex = (float*) _aligned_malloc(nSize*VERTEX_VECTOR_SIZE * sizeof(float), 16);
+		pIndex = (int*) _aligned_malloc(nSize * sizeof(int), 16);
+
 		for(int i=0;i<nSize;i++){
 			pVertex[i*VERTEX_VECTOR_SIZE + 0] = rand() * 1.0f;
 			pVertex[i*VERTEX_VECTOR_SIZE + 1] = rand() * 1.0f;
@@ -26,8 +29,8 @@ struct Vertexes{
 	// 释放空间
 	void unInitialize()
 	{
-		if (pVertex) delete[] pVertex;
-		if (pIndex) delete[] pIndex;
+		if (pVertex) _aligned_free(pVertex);
+		if (pIndex) _aligned_free(pIndex);
 	}
 
 	float*  pVertex;
