@@ -66,29 +66,38 @@ void MatrixVectorMul(float* vIn, float* vOut, float* mat)
     __MM_ACCUM4_PS(_mm_mul_ps(r0, v0), _mm_mul_ps(r1, v1), _mm_mul_ps(r2, v2), r3)
 
 
-void MatrixVectorMulSSE(float* vIn, float* vOut, float* mat)
-{
-	__m128 vI[3], vO, m[4];
-	m[0] = _mm_load_ps( mat );
-    m[1] = _mm_load_ps( mat+4 );
-	m[2] = _mm_load_ps( mat+8 );
+void updateVectorByMatrixSSE(float* pVertexIn, int* pIndex, int size, float* pMatrix, float* pVertexOut, bool use_openmp=false){
+
+if (!use_openmp)
+	omp_set_num_threads(1);
+
+#pragma omp parallel for
+	for(int i=0;i<size;i++){
+		// 读取操作数：顶点对应的矩阵
+	float *mat = pMatrix + pIndex[i]*MATRIX_SIZE_LINE*4;
+	__m128 m0, m1, m2, m3;
+	m0 = _mm_load_ps( mat );
+    m1 = _mm_load_ps( mat+4 );
+	m2 = _mm_load_ps( mat+8 );
 	
 	// Rearrange to column-major matrix with rows shuffled order to: Z 0 X Y
-	m[3] = _mm_setzero_ps();
-	__MM_TRANSPOSE4x4_PS(m[2], m[3], m[0], m[1]);
+	m3 = _mm_setzero_ps();
+	__MM_TRANSPOSE4x4_PS(m2, m3, m0, m1);
 
 	// Load source position
-	vI[0] = _mm_load_ps1(vIn );
-	vI[1] = _mm_load_ps1(vIn + 1);
-	vI[2] = _mm_load_ps1(vIn + 2);
+	__m128 vI0, vI1, vI2;
+	vI0 = _mm_load_ps1(pVertexIn +4*i );
+	vI1 = _mm_load_ps1(pVertexIn  +4*i + 1);
+	vI2 = _mm_load_ps1(pVertexIn  +4*i + 2);
 
 	// Transform by collapsed matrix
-	vO = __MM_DOT4x3_PS(m[2], m[3], m[0], m[1], vI[0], vI[1], vI[2]);   // z 0 x y
+	__m128 vO = __MM_DOT4x3_PS(m2, m3, m0, m1, vI0, vI1, vI2);   // z 0 x y
 	
 	// Store blended position, no aligned requirement
-	_mm_storeh_pi((__m64*)vOut, vO);
-	_mm_store_ss(vOut+2, vO);
-	
+	_mm_storeh_pi((__m64*)(pVertexOut+4*i) , vO);
+	_mm_store_ss(pVertexOut+4*i+2, vO);
+
+	}
 }
 
 /* 坐标矩阵变换
@@ -97,25 +106,19 @@ size : 坐标个数参数
 pMatrix : 矩阵数组参数
 pVertexOut : 动态坐标数组结果输出
 */
-void updateVectorByMatrix(float* pVertexIn, int* pIndex, int size, float* pMatrix, float* pVertexOut, bool use_openmp=false, bool use_sse=false){
+void updateVectorByMatrix(float* pVertexIn, int* pIndex, int size, float* pMatrix, float* pVertexOut, bool use_openmp=false){
 
-	if ( !use_openmp )
-	{	
-		omp_set_num_threads( 1 );
-	}
 
+#if 0//use_openmp
 #pragma omp parallel for
+#endif
 	for(int i=0;i<size;i++){
 
 		// 读取操作数：顶点对应的矩阵
 		float *pMat = pMatrix + pIndex[i]*MATRIX_SIZE_LINE*4;
 		
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		if( use_sse )
-			MatrixVectorMulSSE( pVertexIn+4*i, pVertexOut+4*i, pMat);
-		else
-			MatrixVectorMul( pVertexIn+4*i, pVertexOut+4*i, pMat);
-
+		MatrixVectorMul( pVertexIn+4*i, pVertexOut+4*i, pMat);
 
 	}
 

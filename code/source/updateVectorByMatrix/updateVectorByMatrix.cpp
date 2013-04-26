@@ -70,9 +70,11 @@ int _tmain(int argc, char** pArgv)
 		while ( timer.getTime() < 10000  )
 		{
 			// 执行运算：坐标矩阵变换
-			updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex, USE_OPENMP,USE_SSE);
-			//updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, PROBLEM_SIZE, USE_OPENMP);
-			//testMaxInstruction<float>(fIn, fOut, PROBLEM_SIZE, USE_OPENMP);
+			if( !USE_SSE )
+				updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex, USE_OPENMP);
+			else
+				updateVectorByMatrixSSE(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex, USE_OPENMP);
+
 			nRepeatPerSecond ++;
 		}
 
