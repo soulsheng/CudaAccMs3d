@@ -15,10 +15,11 @@ int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即
 int iClass=6;
 
 bool USE_OPENMP = false;
+bool USE_SSE = false;
 
 // 数据定义
 Vertexes  _vertexesStatic;//静态顶点坐标
-Vertexes  _vertexesDynamic;//动态顶点坐标
+Vertexes  _vertexesDynamic, _vertexesDynamicRef;//动态顶点坐标
 Joints		_joints;//关节矩阵
 
 // 数据初始化：坐标、矩阵
@@ -48,6 +49,10 @@ int _tmain(int argc, char** pArgv)
 	{
 		USE_OPENMP = true;
 	}
+	if(shrCheckCmdLineFlag( argc, argv, "sse"))
+	{
+		USE_SSE = true;
+	}
 
 	int nRepeatPerSecond = 0;// 每秒重复次数，表示时间效率
 	
@@ -65,7 +70,7 @@ int _tmain(int argc, char** pArgv)
 		while ( timer.getTime() < 10000  )
 		{
 			// 执行运算：坐标矩阵变换
-			updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex, USE_OPENMP);
+			updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamic.pVertex, USE_OPENMP,USE_SSE);
 			//updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, PROBLEM_SIZE, USE_OPENMP);
 			//testMaxInstruction<float>(fIn, fOut, PROBLEM_SIZE, USE_OPENMP);
 			nRepeatPerSecond ++;
@@ -74,6 +79,12 @@ int _tmain(int argc, char** pArgv)
 		timer.stop();
 		timer.reset();
 		
+		// 核对结果是否正确
+		updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamicRef.pVertex);
+
+		bool isEqual = verifyEqual(_vertexesDynamicRef.pVertex, _vertexesDynamicRef.pVertex, PROBLEM_SIZE);
+		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", isEqual?"Right":"Wrong");
+
 		// 数据销毁：坐标、矩阵
 		unInitialize();
 
@@ -81,6 +92,7 @@ int _tmain(int argc, char** pArgv)
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "%d: F=%d, T=%.2f ms\n", iClass+1, nRepeatPerSecond/10, 10000.0f/nRepeatPerSecond);
 	}
 	
+
 	// 输出结果：绘制坐标，按照点、线、面的形式
 	// ...省略
 
@@ -93,6 +105,7 @@ void initialize(int problem_size, int joint_size)
 	_joints.initialize( JOINT_SIZE );
 	_vertexesStatic.initialize( PROBLEM_SIZE, JOINT_SIZE );
 	_vertexesDynamic.initialize( PROBLEM_SIZE, JOINT_SIZE );
+	_vertexesDynamicRef.initialize( PROBLEM_SIZE, JOINT_SIZE );
 }
 
 // 数据销毁：坐标、矩阵

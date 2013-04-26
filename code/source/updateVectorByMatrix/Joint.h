@@ -27,7 +27,7 @@ struct Joints{
 		for(int i=0;i<nSize;i++){
 			for(int j=0;j<MATRIX_SIZE_LINE;j++){
 				for(int k=0;k<4;k++){
-					pMatrix[i*j+k] = rand() * 1.0f;
+					pMatrix[i*MATRIX_SIZE_LINE*4 +4*j+k] = rand() * 1.0f;
 				}
 			}
 		}
