@@ -51,3 +51,6 @@
 /code/bin/Debug/updateVectorByMatrix.txt
 /code/bin/Release/updateVectorByMatrix.txt
 /code/source/SimpleOptimizations/Win32
+/code/source/SimpleOptimizations/*.user
+/code/source/ipch
+/code/source/Win32
