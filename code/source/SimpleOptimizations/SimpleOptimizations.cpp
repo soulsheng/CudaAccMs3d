@@ -274,7 +274,10 @@ void MatrixVectorMul(float* vIn, float* vOut, float* mat)
 void ExecuteNativeCPP()
 {
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStart);
-	
+
+#if 1//use_openmp
+#pragma omp parallel for
+#endif
 	for(int i=0;i<PROBLEM_SIZE;i++){
 
 		// 读取操作数：顶点对应的矩阵
