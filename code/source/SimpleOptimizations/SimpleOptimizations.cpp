@@ -254,7 +254,7 @@ bool Setup_OpenCL( const char *program_source )
 }
 bool verifyEqual(float *v, float* vRef, int size)
 {
-	for(int i=0;i<size;i++)
+	for(int i=0;i<size*VERTEX_VECTOR_SIZE;i++)
 	{
 		//if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1.7e-1 && fabs(v[i]) * fabs(vRef[i]) >10.0f || fabs(v[i]) >1.0e38  )
 		if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1e-3 )
@@ -401,8 +401,8 @@ bool ExecuteKernel()
 	cl_kernel	kernel = g_kernel;
     size_t globalWorkSize[2];
     size_t localWorkSize[2];
-    globalWorkSize[0] = g_szGlobalWork;
-	globalWorkSize[1] = 1;
+    globalWorkSize[0] = (size_t)sqrtf(g_szGlobalWork);
+	globalWorkSize[1] = globalWorkSize[0];
 	if(g_bGather4)
 	{
 	    globalWorkSize[0]/=4; //since proccesing in quadruples

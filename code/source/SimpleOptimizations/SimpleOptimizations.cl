@@ -35,7 +35,7 @@ SimpleKernel4( const __global float4 *input, __global float4 *output)
 __kernel void
 updateVectorByMatrix( const __global float *pInput, const __global int *pIndex,const __global float *pMatrix,__global float *pOutput)
 {
-	size_t index = get_global_id(0);
+	size_t index = get_global_id(0) + get_global_id(1) *get_global_size(0);
 	
 	const __global float *pMat = pMatrix + pIndex[index]*3*4;
 
