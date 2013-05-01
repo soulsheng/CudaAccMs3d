@@ -605,11 +605,18 @@ int _tmain(int argc, _TCHAR* argv[])
             g_bEnableProfiling = true;
             argn++;
         }
-        else if (_tcscmp(argv[argn], _T("-g")) == 0)
-        {
-            g_bRunOnPG = true;
-            argn++;
-        }
+		else if (_tcscmp(argv[argn], _T("-g")) == 0)
+		{
+			g_bRunOnPG = true;
+			argn++;
+		}
+		else if (_tcscmp(argv[argn], _T("-index")) == 0)
+		{
+			if(++argn==argc)
+				Usage();
+			iClass = _ttoi(argv[argn]);
+			argn++;
+		}
         else
         {
             argn++;
