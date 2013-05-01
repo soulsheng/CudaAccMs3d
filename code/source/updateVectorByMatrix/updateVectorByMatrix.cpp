@@ -84,7 +84,7 @@ int _tmain(int argc, char** pArgv)
 		// 核对结果是否正确
 		updateVectorByMatrix(_vertexesStatic.pVertex, _vertexesStatic.pIndex, PROBLEM_SIZE, _joints.pMatrix, _vertexesDynamicRef.pVertex);
 
-		bool isEqual = verifyEqual(_vertexesDynamicRef.pVertex, _vertexesDynamicRef.pVertex, PROBLEM_SIZE);
+		bool isEqual = verifyEqual(_vertexesDynamic.pVertex, _vertexesDynamicRef.pVertex, PROBLEM_SIZE);
 		shrLogEx( LOGBOTH|APPENDMODE, 0, "%s\n", isEqual?"Right":"Wrong");
 
 		// 数据销毁：坐标、矩阵

@@ -31,3 +31,15 @@ SimpleKernel4( const __global float4 *input, __global float4 *output)
 	size_t index = get_global_id(0);
     output[index] = rsqrt( input[index] );
 }
+
+__kernel void
+updateVectorByMatrix( const __global float *pInput, const __global int *pIndex,const __global float *pMatrix,__global float *pOutput)
+{
+	size_t index = get_global_id(0);
+	
+	const __global float *pMat = pMatrix + pIndex[index]*3*4;
+
+	pOutput[4*index+0] = pInput[4*index] * pMat[0] + pInput[4*index+1] * pMat[1] + pInput[4*index+2] * pMat[2]  + pMat[3];
+	pOutput[4*index+1] = pInput[4*index] * pMat[4] + pInput[4*index+1] * pMat[5] + pInput[4*index+2] * pMat[6]  + pMat[7];
+	pOutput[4*index+2] = pInput[4*index] * pMat[8] + pInput[4*index+1] * pMat[9] + pInput[4*index+2] * pMat[10]  + pMat[11];
+}

@@ -21,7 +21,8 @@
 #include "stdafx.h"
 #include "CL\cl.h"
 #include "utils.h"
-
+#include "Vertex.h"
+#include "Joint.h"
 //for perf. counters
 #include <Windows.h>
 #include <omp.h>
@@ -40,19 +41,22 @@ cl_device_id g_device_ID =0;
 cl_event g_perf_event = NULL;
 
 // Host arrays
-cl_float* g_pfInput = NULL;
-cl_float* g_pfRegularOutput = NULL;
-cl_float* g_pfOCLOutput = NULL;
-int g_szTask = 16*1024*1024;
+//cl_float* g_pfInput = NULL;
+//cl_float* g_pfRegularOutput = NULL;
+//cl_float* g_pfOCLOutput = NULL;
+//int g_szTask = 16*1024*1024;
 
 
 //	global and local sizes of global and local worksizes
 size_t g_szGlobalWork = 32768;
-size_t g_szLocalWork = 16;
+size_t g_szLocalWorkX = 8;
+size_t g_szLocalWorkY = 8;
 
 //	cl_mem objects used as parameters for kernels
 cl_mem g_pfInputBuffer = NULL;
 cl_mem g_pfOCLOutputBuffer = NULL;
+cl_mem g_pfOCLIndex = NULL;
+cl_mem g_pfOCLMatrix = NULL;
 
 bool g_bUseRelaxedMath = false;
 bool g_bUseHostPtr = false;
@@ -73,12 +77,46 @@ cl_double g_NDRangeTime;
 LARGE_INTEGER g_PerformanceCountReferenceStart;
 LARGE_INTEGER g_PerformanceCountReferenceStop;
 
+#define    MEGA_SIZE     (1<<20)  // Mega, or million
+#define    JOINT_SIZE    100
 
+float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
+int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
+int iClass=2;
+
+int g_szTask ;
+
+bool USE_OPENMP = false;
+bool USE_SSE = false;
+
+// 数据定义
+Vertexes  _vertexesStatic;//静态顶点坐标
+Vertexes  _vertexesDynamic, _vertexesDynamicRef;//动态顶点坐标
+Joints		_joints;//关节矩阵
+
+// 数据初始化：坐标、矩阵
+void initialize(int problem_size, int joint_size)
+{
+	_joints.initialize( JOINT_SIZE );
+	_vertexesStatic.initialize( g_szTask, JOINT_SIZE );
+	_vertexesDynamic.initialize( g_szTask, JOINT_SIZE );
+	_vertexesDynamicRef.initialize( g_szTask, JOINT_SIZE );
+}
+
+// 数据销毁：坐标、矩阵
+void unInitialize()
+{
+	_joints.unInitialize();
+	_vertexesStatic.unInitialize();
+	_vertexesDynamic.unInitialize();
+}
 void Cleanup()
 {
     //release g_kernel, g_program, and memory objects
     if( g_pfInputBuffer ) {clReleaseMemObject( g_pfInputBuffer ); g_pfInputBuffer = NULL;}
     if( g_pfOCLOutputBuffer ) {clReleaseMemObject( g_pfOCLOutputBuffer ); g_pfOCLOutputBuffer = NULL;}
+	if( g_pfOCLIndex ) {clReleaseMemObject( g_pfOCLIndex ); g_pfOCLIndex = NULL;}
+	if( g_pfOCLMatrix ) {clReleaseMemObject( g_pfOCLMatrix ); g_pfOCLMatrix = NULL;}
     if( g_kernel ) {clReleaseKernel( g_kernel );  g_kernel = NULL;}
     if( g_kernel4 ) {clReleaseKernel( g_kernel4 );  g_kernel4 = NULL;}
     if( g_program ) {clReleaseProgram( g_program );  g_program = NULL;}
@@ -86,10 +124,10 @@ void Cleanup()
     if( g_context ) {clReleaseContext( g_context );  g_context = NULL;}
 	if( g_perf_event ){clReleaseEvent(g_perf_event);g_perf_event =NULL;}
     //host memory
-    if(g_pfInput) {_aligned_free( g_pfInput ); g_pfInput = NULL;}
-    if(g_pfRegularOutput) {_aligned_free( g_pfRegularOutput ); g_pfRegularOutput = NULL;}
-    if(g_pfOCLOutput) {_aligned_free( g_pfOCLOutput ); g_pfOCLOutput = NULL;}
-
+//    if(g_pfInput) {_aligned_free( g_pfInput ); g_pfInput = NULL;}
+//    if(g_pfRegularOutput) {_aligned_free( g_pfRegularOutput ); g_pfRegularOutput = NULL;}
+    //if(g_pfOCLOutput) {_aligned_free( g_pfOCLOutput ); g_pfOCLOutput = NULL;}
+	unInitialize();
 }
 
 bool Setup_OpenCL( const char *program_source )
@@ -163,7 +201,7 @@ bool Setup_OpenCL( const char *program_source )
         return false;
     }
 
-    g_kernel = clCreateKernel(g_program, "SimpleKernel", NULL);
+    g_kernel = clCreateKernel(g_program, "updateVectorByMatrix", NULL);
     if (g_kernel == (cl_kernel)0)
     {
         printf("ERROR: Failed to create kernel...\n");
@@ -214,39 +252,115 @@ bool Setup_OpenCL( const char *program_source )
 
     return true; // success...
 }
+bool verifyEqual(float *v, float* vRef, int size)
+{
+	for(int i=0;i<size;i++)
+	{
+		//if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1.7e-1 && fabs(v[i]) * fabs(vRef[i]) >10.0f || fabs(v[i]) >1.0e38  )
+		if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1e-3 )
+		{
+			return false;
+		}
+	}
+	return true;
+}
+void MatrixVectorMul(float* vIn, float* vOut, float* mat)
+{
+	vOut[0] = vIn[0] * mat[0] + vIn[1] * mat[1] + vIn[2] * mat[2]  + mat[3];
+	vOut[1] = vIn[0] * mat[4] + vIn[1] * mat[5] + vIn[2] * mat[6]  + mat[7];
+	vOut[2] = vIn[0] * mat[8] + vIn[1] * mat[9] + vIn[2] * mat[10]  + mat[11];
+}
 
-void ExecuteNative()
+void ExecuteNativeCPP()
 {
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStart);
+	
+	for(int i=0;i<PROBLEM_SIZE;i++){
 
-//#pragma omp parallel for schedule(static)
-	//#pragma omp parallel for schedule(dynamic)
-//#pragma omp parallel for schedule(guided)
-    for (int i = 0; i < g_szTask ; ++i)
-    {
-        g_pfRegularOutput[i] = 1.0/sqrt( g_pfInput[i] );
-    }
+		// 读取操作数：顶点对应的矩阵
+		float *pMat =  _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE*4;
+
+		// 执行操作：对坐标执行矩阵变换，得到新坐标
+		MatrixVectorMul( _vertexesStatic.pVertex+4*i, _vertexesDynamicRef.pVertex+4*i, pMat);
+
+	}
 
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStop);
 
 }
 
-void ExecuteNative4()
+/** Performing the transpose of a 4x4 matrix of single precision floating
+    point values.
+    Arguments r0, r1, r2, and r3 are __m128 values whose elements
+    form the corresponding rows of a 4x4 matrix.
+    The matrix transpose is returned in arguments r0, r1, r2, and
+    r3 where r0 now holds column 0 of the original matrix, r1 now
+    holds column 1 of the original matrix, etc.
+*/
+#define __MM_TRANSPOSE4x4_PS(r0, r1, r2, r3)                                            \
+    {                                                                                   \
+        __m128 tmp3, tmp2, tmp1, tmp0;                                                  \
+                                                                                        \
+                                                            /* r00 r01 r02 r03 */       \
+                                                            /* r10 r11 r12 r13 */       \
+                                                            /* r20 r21 r22 r23 */       \
+                                                            /* r30 r31 r32 r33 */       \
+                                                                                        \
+        tmp0 = _mm_unpacklo_ps(r0, r1);                       /* r00 r10 r01 r11 */     \
+        tmp2 = _mm_unpackhi_ps(r0, r1);                       /* r02 r12 r03 r13 */     \
+        tmp1 = _mm_unpacklo_ps(r2, r3);                       /* r20 r30 r21 r31 */     \
+        tmp3 = _mm_unpackhi_ps(r2, r3);                       /* r22 r32 r23 r33 */     \
+                                                                                        \
+        r0 = _mm_movelh_ps(tmp0, tmp1);                         /* r00 r10 r20 r30 */   \
+        r1 = _mm_movehl_ps(tmp1, tmp0);                         /* r01 r11 r21 r31 */   \
+        r2 = _mm_movelh_ps(tmp2, tmp3);                         /* r02 r12 r22 r32 */   \
+        r3 = _mm_movehl_ps(tmp3, tmp2);                         /* r03 r13 r23 r33 */   \
+    }
+
+/// Accumulate four vector of single precision floating point values.
+#define __MM_ACCUM4_PS(a, b, c, d)                                                  \
+	_mm_add_ps(_mm_add_ps(a, b), _mm_add_ps(c, d))
+
+/** Performing dot-product between four vector and three vector of single
+    precision floating point values.
+*/
+#define __MM_DOT4x3_PS(r0, r1, r2, r3, v0, v1, v2)                                  \
+    __MM_ACCUM4_PS(_mm_mul_ps(r0, v0), _mm_mul_ps(r1, v1), _mm_mul_ps(r2, v2), r3)
+
+void ExecuteNativeSSE()
 {
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStart);
 
-	//#pragma omp parallel for schedule(static)
-	//#pragma omp parallel for schedule(dynamic)
-//#pragma omp parallel for schedule(guided)
-	for (int i = 0; i < g_szTask/4 ; ++i)
-	{
-		//g_pfRegularOutput[i] = 1.0/sqrt( g_pfInput[i] );
-		
-		__m128  input, output;
 
-		input = _mm_load_ps( (const float*)(g_pfInput + i*4) );
-		output = _mm_rsqrt_ps( input );
-		_mm_store_ps( (float*)(g_pfRegularOutput+ i*4), output);
+	if (!USE_OPENMP)
+		omp_set_num_threads(1);
+
+#pragma omp parallel for
+	for(int i=0;i<PROBLEM_SIZE;i++){
+		// 读取操作数：顶点对应的矩阵
+		float *mat = _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE*4;
+		__m128 m0, m1, m2, m3;
+		m0 = _mm_load_ps( mat );
+		m1 = _mm_load_ps( mat+4 );
+		m2 = _mm_load_ps( mat+8 );
+
+		// Rearrange to column-major matrix with rows shuffled order to: Z 0 X Y
+		m3 = _mm_setzero_ps();
+		__MM_TRANSPOSE4x4_PS(m2, m3, m0, m1);
+
+		// Load source position
+		__m128 vI0, vI1, vI2;
+		vI0 = _mm_load_ps1(_vertexesStatic.pVertex +4*i );
+		vI1 = _mm_load_ps1(_vertexesStatic.pVertex  +4*i + 1);
+		vI2 = _mm_load_ps1(_vertexesStatic.pVertex  +4*i + 2);
+
+		// Transform by collapsed matrix
+		__m128 vO = __MM_DOT4x3_PS(m2, m3, m0, m1, vI0, vI1, vI2);   // z 0 x y
+
+		// Store blended position, no aligned requirement
+		_mm_storeh_pi((__m64*)(_vertexesDynamicRef.pVertex+4*i) , vO);
+		_mm_store_ss(_vertexesDynamicRef.pVertex+4*i+2, vO);
+
 	}
 
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStop);
@@ -259,15 +373,22 @@ bool ExecuteKernel()
 
     const cl_mem_flags INFlags  = (g_bUseHostPtr ? CL_MEM_USE_HOST_PTR: CL_MEM_COPY_HOST_PTR) | CL_MEM_READ_ONLY; 
     const cl_mem_flags OUTFlags = (g_bUseHostPtr ? CL_MEM_USE_HOST_PTR: CL_MEM_COPY_HOST_PTR) | CL_MEM_READ_WRITE;
-
+	cl_int errcode_ret;
     // allocate buffers
-    g_pfInputBuffer = clCreateBuffer(g_context, INFlags, sizeof(cl_float) * g_szTask , g_pfInput, NULL);
-    if (g_pfInputBuffer == (cl_mem)0)
+    g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask*VERTEX_VECTOR_SIZE * sizeof(cl_float) , _vertexesStatic.pVertex, &errcode_ret);
+    if ( errcode_ret!=CL_SUCCESS )
+    {
+		printf("ERROR: Failed to create g_pfInputBuffer...\n");
+    }
+	if (g_pfInputBuffer == (cl_mem)0)
     {
         printf("ERROR: Failed to create g_pfInputBuffer...\n");
         return false;
     }
-    g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float) * g_szTask , g_pfOCLOutput, NULL);
+	g_pfOCLIndex = clCreateBuffer(g_context, INFlags, sizeof(cl_int)*g_szTask , _vertexesStatic.pIndex, NULL);
+	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * MATRIX_SIZE_LINE*JOINT_SIZE , _joints.pMatrix, NULL);
+
+	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * g_szTask , _vertexesDynamic.pVertex, NULL);
     if (g_pfOCLOutputBuffer == (cl_mem)0)
     {
         printf("ERROR: Failed to create g_pfOCLOutputBuffer...\n");
@@ -275,9 +396,10 @@ bool ExecuteKernel()
     }
 
 	cl_kernel	kernel = g_kernel;
-    size_t globalWorkSize[1];
-    size_t localWorkSize[1];
+    size_t globalWorkSize[2];
+    size_t localWorkSize[2];
     globalWorkSize[0] = g_szGlobalWork;
+	globalWorkSize[1] = 1;
 	if(g_bGather4)
 	{
 	    globalWorkSize[0]/=4; //since proccesing in quadruples
@@ -291,16 +413,20 @@ bool ExecuteKernel()
         printf("ERROR: Failed to set input g_kernel arguments...\n");
         return false;
     }
-    err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
+	err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLIndex);
+	err = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &g_pfOCLMatrix);
+
+    err = clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
     if (err != CL_SUCCESS)
     {
         printf("ERROR: Failed to set input g_kernel arguments...\n");
         return false;
     }
 
-    localWorkSize[0] = g_szLocalWork;
-    printf("Original global work size %lu\n", globalWorkSize[0]);
-    printf("Original local work size %lu\n", localWorkSize[0]);
+    localWorkSize[0] = g_szLocalWorkX;
+	localWorkSize[1] = g_szLocalWorkY;
+    printf("Original global work size (%lu, %lu)\n", globalWorkSize[0], globalWorkSize[1]);
+    printf("Original local work size (%lu, %lu)\n", localWorkSize[0], localWorkSize[1]);
 	if(g_bAutoGroupSize)
 	{
 		printf("Run-time determines optimal workgroup size\n\n");
@@ -309,10 +435,17 @@ bool ExecuteKernel()
 	err = clGetKernelWorkGroupInfo(g_kernel, g_device_ID, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), (void *)&workGroupSizeMaximum, NULL);
 	printf("Maximum workgroup size for this kernel  %lu\n\n",workGroupSizeMaximum );
 
+	if ( g_szGlobalWork>workGroupSizeMaximum )
+	{
+		globalWorkSize[0] = workGroupSizeMaximum;
+		globalWorkSize[1] = g_szGlobalWork / workGroupSizeMaximum;
+	}
+	printf("Actual global work size (%lu, %lu)\n", globalWorkSize[0], globalWorkSize[1]);
+
 	if(g_bWarming)
 	{
 		printf("Warming up OpenCL execution...");
-		err= clEnqueueNDRangeKernel(g_cmd_queue, kernel, 1, NULL, globalWorkSize, g_bAutoGroupSize? NULL:localWorkSize, 0, NULL, NULL);
+		err= clEnqueueNDRangeKernel(g_cmd_queue, kernel, 2, NULL, globalWorkSize, g_bAutoGroupSize? NULL:localWorkSize, 0, NULL, NULL);
 		clFinish(g_cmd_queue);
 		printf("Done\n");
 	}
@@ -320,7 +453,7 @@ bool ExecuteKernel()
     printf("Executing OpenCL kernel...");
     QueryPerformanceCounter(&g_PerformanceCountNDRangeStart);
 	// execute kernel, pls notice g_bAutoGroupSize
-	err= clEnqueueNDRangeKernel(g_cmd_queue, kernel, 1, NULL, globalWorkSize, g_bAutoGroupSize? NULL:localWorkSize, 0, NULL, &g_perf_event);
+	err= clEnqueueNDRangeKernel(g_cmd_queue, kernel, 2, NULL, globalWorkSize, g_bAutoGroupSize? NULL:localWorkSize, 0, NULL, &g_perf_event);
 	if (err != CL_SUCCESS)
     {
         printf("ERROR: Failed to execute kernel...\n");
@@ -360,8 +493,8 @@ bool ExecuteKernel()
     QueryPerformanceCounter(&g_PerformanceCountReadStart);
 	if(g_bUseHostPtr)
     {
-        tmp_ptr = clEnqueueMapBuffer(g_cmd_queue, g_pfOCLOutputBuffer, true, CL_MAP_READ, 0, sizeof(cl_float) * g_szTask , 0, NULL, NULL, NULL);
-        if(tmp_ptr!=g_pfOCLOutput)
+        tmp_ptr = clEnqueueMapBuffer(g_cmd_queue, g_pfOCLOutputBuffer, true, CL_MAP_READ, 0, sizeof(cl_float)*VERTEX_VECTOR_SIZE * g_szTask , 0, NULL, NULL, NULL);
+        if(tmp_ptr!=_vertexesDynamic.pVertex)
         {
             printf("ERROR: clEnqueueMapBuffer failed to return original pointer\n");
             return false;
@@ -369,7 +502,7 @@ bool ExecuteKernel()
     }
     else
     {
-        err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float) * g_szTask , g_pfOCLOutput, 0, NULL, NULL);
+        err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float) *VERTEX_VECTOR_SIZE* g_szTask , _vertexesDynamic.pVertex, 0, NULL, NULL);
         if (err != CL_SUCCESS)
         {
             printf("ERROR: Failed to clEnqueueReadBuffer...\n");
@@ -382,7 +515,8 @@ bool ExecuteKernel()
     clEnqueueUnmapMemObject(g_cmd_queue, g_pfOCLOutputBuffer, tmp_ptr, 0, NULL, NULL);
 	clReleaseMemObject(g_pfInputBuffer); g_pfInputBuffer = NULL;
     clReleaseMemObject(g_pfOCLOutputBuffer); g_pfOCLOutputBuffer = NULL;
-
+	clReleaseMemObject(g_pfOCLIndex); g_pfOCLIndex = NULL;
+	clReleaseMemObject(g_pfOCLMatrix); g_pfOCLMatrix = NULL;
     return true;
 }
 
@@ -435,7 +569,7 @@ int _tmain(int argc, _TCHAR* argv[])
         {
             if(++argn==argc)
                 Usage();
-            g_szLocalWork = _ttoi(argv[argn]);
+            g_szLocalWorkX = _ttoi(argv[argn]);
             argn++;
         }
         else if (_tcscmp(argv[argn], _T("-w")) == 0)
@@ -486,34 +620,30 @@ int _tmain(int argc, _TCHAR* argv[])
     //initialize Open CL objects (context, queue, etc.)
     if( Setup_OpenCL("SimpleOptimizations.cl")!=true )
         return -1;
+	
+	// 问题规模档次，7档，64K至256M，4倍递增
+	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
 
-
+	g_szTask = PROBLEM_SIZE;
     g_szGlobalWork = g_szTask;
-    if(g_szGlobalWork%g_szLocalWork!=0 && !g_bAutoGroupSize)
-    {
-        printf("Global or local work size is incorect.\n");
-        printf("g_szGlobalWork / g_szLocalWork remainder is = %lu. This value must be 0\n", g_szGlobalWork%g_szLocalWork);
+	if(g_szGlobalWork%(g_szLocalWorkX * g_szLocalWorkX) !=0 && !g_bAutoGroupSize)
+	{
+		printf("Global or local work size is incorect.\n");
+		printf("g_szGlobalWork / g_szLocalWork remainder is = %lu. This value must be 0\n", g_szGlobalWork%(g_szLocalWorkX * g_szLocalWorkX) );
         Cleanup();
         return -1;
     }
-
-    g_pfInput = (cl_float*)_aligned_malloc(sizeof(cl_float) * g_szTask , g_min_align);
-    g_pfRegularOutput = (cl_float*)_aligned_malloc(sizeof(cl_float) * g_szTask , g_min_align);
-    g_pfOCLOutput = (cl_float*)_aligned_malloc(sizeof(cl_float) * g_szTask , g_min_align);
-    if(g_pfInput == NULL || g_pfRegularOutput == NULL || g_pfOCLOutput == NULL)
-    {
-        printf("Host memory allocation error.\n");
-        Cleanup();
-        return -1;
-    }
-
 
     //	set input array to random legal values
-    srand(2011);
-    for (int i = 0; i < g_szTask ; i += 1)
-    {
-        g_pfInput[i] = randomFloat(5.0f, 255.0f);
-    }
+	srand(2011);
+
+	// 数据初始化：坐标、矩阵
+	initialize(PROBLEM_SIZE, JOINT_SIZE);
+
+// 	for (int i = 0; i < g_szTask ; i += 1)
+// 	{
+// 		g_pfInput[i] = randomFloat(5.0f, 255.0f);
+// 	}
 
     //retrieve perf. counter frequency
     QueryPerformanceFrequency(&g_PerfFrequency);
@@ -528,9 +658,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	printf("Executing reference...");
 	if(g_bGather4)	
-		ExecuteNative4();
+		ExecuteNativeSSE();
 	else
-		ExecuteNative();
+		ExecuteNativeCPP();
 
 	printf("Done\n\n");
 
@@ -544,20 +674,10 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	printf("Reference. counter time %f ms.\n", 
 		1000.0f*(float)(g_PerformanceCountReferenceStop.QuadPart - g_PerformanceCountReferenceStart.QuadPart)/(float)g_PerfFrequency.QuadPart);
-	printf("Thread Number %d.\n", omp_get_num_threads() );
 
     //Do verification
     printf("Performing verification...\n");
-    bool result = true;
-    for(cl_int i = 0; i < g_szTask ; i++)	
-    {
-        //Compare the data
-        if( fabsf(g_pfOCLOutput[i] - g_pfRegularOutput[i]) > 0.01 )	
-        {
-            printf("Error at location %d,  outputArray = %f, refArray = %f \n", i, g_pfOCLOutput[i], g_pfRegularOutput[i]);
-            result = false;
-        }
-    }
+	bool result = verifyEqual(_vertexesDynamic.pVertex, _vertexesDynamicRef.pVertex, PROBLEM_SIZE);
 	printf("%s", !result ?"ERROR: Verification failed.\n":"Verification succeeded.\n");
     
     Cleanup();

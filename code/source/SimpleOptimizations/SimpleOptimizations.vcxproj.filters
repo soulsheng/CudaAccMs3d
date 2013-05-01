@@ -35,10 +35,10 @@
     <ClInclude Include="..\common\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\updateVectorByMatrix\Joint.h">
+    <ClInclude Include="Joint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\updateVectorByMatrix\Vertex.h">
+    <ClInclude Include="Vertex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
