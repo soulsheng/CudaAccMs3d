@@ -43,3 +43,25 @@ updateVectorByMatrix( const __global float *pInput, const __global int *pIndex,c
 	pOutput[4*index+1] = pInput[4*index] * pMat[4] + pInput[4*index+1] * pMat[5] + pInput[4*index+2] * pMat[6]  + pMat[7];
 	pOutput[4*index+2] = pInput[4*index] * pMat[8] + pInput[4*index+1] * pMat[9] + pInput[4*index+2] * pMat[10]  + pMat[11];
 }
+
+
+__kernel void
+updateVectorByMatrix4( const __global float4 *pInput, const __global int *pIndex,const __global float4 *pMatrix,__global float4 *pOutput)
+{
+	size_t index = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	
+	const __global float4 *pMat0 = pMatrix + pIndex[index]*3;
+	float4 pMat[3];
+	pMat[0]=pMat0[0];
+	pMat[1]=pMat0[1];
+	pMat[2]=pMat0[2];
+
+	float4 vIn = pInput[index], vOut; 
+	
+	pOutput[index] = (float4)( 
+		vIn.x * pMat[0].x + vIn.y * pMat[0].y + vIn.z * pMat[0].z  + pMat[0].w ,
+		vIn.x * pMat[1].x + vIn.y * pMat[1].y + vIn.z * pMat[1].z  + pMat[1].w ,
+		vIn.x * pMat[2].x + vIn.y * pMat[2].y + vIn.z * pMat[2].z  + pMat[2].w ,
+		1.0f);
+
+}

@@ -200,8 +200,11 @@ bool Setup_OpenCL( const char *program_source )
         free(sources);
         return false;
     }
-
+#if !VECTOR_FLOAT4
     g_kernel = clCreateKernel(g_program, "updateVectorByMatrix", NULL);
+#else
+	g_kernel = clCreateKernel(g_program, "updateVectorByMatrix4", NULL);
+#endif
     if (g_kernel == (cl_kernel)0)
     {
         printf("ERROR: Failed to create kernel...\n");
@@ -264,11 +267,33 @@ bool verifyEqual(float *v, float* vRef, int size)
 	}
 	return true;
 }
+bool verifyEqual(cl_float4 *v, cl_float4* vRef, int size)
+{
+	for(int i=0;i<size;i++)
+	{
+		for (int j=0;j<4;j++)
+		{
+			//if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1.7e-1 && fabs(v[i]) * fabs(vRef[i]) >10.0f || fabs(v[i]) >1.0e38  )
+			if ( (fabs(v[i].s[j]) - vRef[i].s[j]) / fabs(vRef[i].s[j]) >1e-3 )
+			{
+				return false;
+			}
+		}
+		
+	}
+	return true;
+}
 void MatrixVectorMul(float* vIn, float* vOut, float* mat)
 {
 	vOut[0] = vIn[0] * mat[0] + vIn[1] * mat[1] + vIn[2] * mat[2]  + mat[3];
 	vOut[1] = vIn[0] * mat[4] + vIn[1] * mat[5] + vIn[2] * mat[6]  + mat[7];
 	vOut[2] = vIn[0] * mat[8] + vIn[1] * mat[9] + vIn[2] * mat[10]  + mat[11];
+}
+void MatrixVectorMul(cl_float4* vIn, cl_float4* vOut, cl_float4* mat)
+{
+	vOut->s[0] = vIn->s[0] * mat[0].s[0] + vIn->s[1] * mat[0].s[1] + vIn->s[2] * mat[0].s[2]  + mat[0].s[3];
+	vOut->s[1] = vIn->s[0] * mat[1].s[0] + vIn->s[1] * mat[1].s[1] + vIn->s[2] * mat[1].s[2]  + mat[1].s[3];
+	vOut->s[2] = vIn->s[0] * mat[2].s[0] + vIn->s[1] * mat[2].s[1] + vIn->s[2] * mat[2].s[2]  + mat[2].s[3];
 }
 
 void ExecuteNativeCPP()
@@ -280,12 +305,16 @@ void ExecuteNativeCPP()
 #endif
 	for(int i=0;i<PROBLEM_SIZE;i++){
 
+#if !VECTOR_FLOAT4
 		// 读取操作数：顶点对应的矩阵
 		float *pMat =  _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE*4;
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		MatrixVectorMul( _vertexesStatic.pVertex+4*i, _vertexesDynamicRef.pVertex+4*i, pMat);
-
+#else
+		cl_float4 *pMat =  _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE;
+		MatrixVectorMul( _vertexesStatic.pVertex+i, _vertexesDynamicRef.pVertex+i, pMat);
+#endif
 	}
 
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStop);
@@ -334,7 +363,7 @@ void ExecuteNativeSSE()
 {
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStart);
 
-
+#if 0
 	if (!USE_OPENMP)
 		omp_set_num_threads(1);
 
@@ -365,7 +394,7 @@ void ExecuteNativeSSE()
 		_mm_store_ss(_vertexesDynamicRef.pVertex+4*i+2, vO);
 
 	}
-
+#endif
 	QueryPerformanceCounter(&g_PerformanceCountReferenceStop);
 
 }
@@ -378,7 +407,11 @@ bool ExecuteKernel()
     const cl_mem_flags OUTFlags = (g_bUseHostPtr ? CL_MEM_USE_HOST_PTR: CL_MEM_COPY_HOST_PTR) | CL_MEM_READ_WRITE;
 	cl_int errcode_ret;
     // allocate buffers
+#if !VECTOR_FLOAT4
     g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask*VERTEX_VECTOR_SIZE * sizeof(cl_float) , _vertexesStatic.pVertex, &errcode_ret);
+#else
+	g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
+#endif
     if ( errcode_ret!=CL_SUCCESS )
     {
 		printf("ERROR: Failed to create g_pfInputBuffer...\n");
@@ -389,10 +422,18 @@ bool ExecuteKernel()
         return false;
     }
 	g_pfOCLIndex = clCreateBuffer(g_context, INFlags, sizeof(cl_int)*g_szTask , _vertexesStatic.pIndex, NULL);
+#if !VECTOR_FLOAT4
 	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * MATRIX_SIZE_LINE*JOINT_SIZE , _joints.pMatrix, NULL);
+#else
+	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE*JOINT_SIZE , _joints.pMatrix, NULL);
+#endif
 
+#if !VECTOR_FLOAT4
 	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * g_szTask , _vertexesDynamic.pVertex, NULL);
-    if (g_pfOCLOutputBuffer == (cl_mem)0)
+#else
+	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float4) * g_szTask , _vertexesDynamic.pVertex, NULL);
+#endif    
+	if (g_pfOCLOutputBuffer == (cl_mem)0)
     {
         printf("ERROR: Failed to create g_pfOCLOutputBuffer...\n");
         return false;
@@ -496,7 +537,11 @@ bool ExecuteKernel()
     QueryPerformanceCounter(&g_PerformanceCountReadStart);
 	if(g_bUseHostPtr)
     {
+#if !VECTOR_FLOAT4
         tmp_ptr = clEnqueueMapBuffer(g_cmd_queue, g_pfOCLOutputBuffer, true, CL_MAP_READ, 0, sizeof(cl_float)*VERTEX_VECTOR_SIZE * g_szTask , 0, NULL, NULL, NULL);
+#else
+		tmp_ptr = clEnqueueMapBuffer(g_cmd_queue, g_pfOCLOutputBuffer, true, CL_MAP_READ, 0, sizeof(cl_float4) * g_szTask , 0, NULL, NULL, NULL);
+#endif
         if(tmp_ptr!=_vertexesDynamic.pVertex)
         {
             printf("ERROR: clEnqueueMapBuffer failed to return original pointer\n");
@@ -505,8 +550,12 @@ bool ExecuteKernel()
     }
     else
     {
-        err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float) *VERTEX_VECTOR_SIZE* g_szTask , _vertexesDynamic.pVertex, 0, NULL, NULL);
-        if (err != CL_SUCCESS)
+#if !VECTOR_FLOAT4
+		err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float) *VERTEX_VECTOR_SIZE* g_szTask , _vertexesDynamic.pVertex, 0, NULL, NULL);
+#else
+		err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float4) * g_szTask , _vertexesDynamic.pVertex, 0, NULL, NULL);
+#endif
+		if (err != CL_SUCCESS)
         {
             printf("ERROR: Failed to clEnqueueReadBuffer...\n");
             return false;
@@ -687,7 +736,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
     //Do verification
     printf("Performing verification...\n");
-	bool result = verifyEqual(_vertexesDynamic.pVertex, _vertexesDynamicRef.pVertex, PROBLEM_SIZE);
+ 	bool result = verifyEqual(_vertexesDynamic.pVertex, _vertexesDynamicRef.pVertex, PROBLEM_SIZE);
 	printf("%s", !result ?"ERROR: Verification failed.\n":"Verification succeeded.\n");
     
     Cleanup();
