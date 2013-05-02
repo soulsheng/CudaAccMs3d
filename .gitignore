@@ -59,3 +59,7 @@
 /code/source/SimpleGL/Win32
 /code/source/SimpleGL/*.user
 /code/source/SDKUtil/*.user
+/code/source/SDKUtil/Debug
+/code/source/SDKUtil/build
+/code/source/SimpleGL/Debug
+/code/source/SDKUtil/*.asm

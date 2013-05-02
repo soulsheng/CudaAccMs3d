@@ -992,7 +992,7 @@ SimpleGLSample::run()
                 glTranslatef(0.0, 0.0, translateZ);
                 glRotatef(rotateX, 1.0, 0.0, 0.0);
                 glRotatef(rotateY, 0.0, 1.0, 0.0);
-#if 0
+#if 1
                 // render from the vbo
                 glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
                 glVertexPointer(4, GL_FLOAT, 0, 0);
