@@ -992,7 +992,7 @@ SimpleGLSample::run()
                 glTranslatef(0.0, 0.0, translateZ);
                 glRotatef(rotateX, 1.0, 0.0, 0.0);
                 glRotatef(rotateY, 0.0, 1.0, 0.0);
-
+#if 0
                 // render from the vbo
                 glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
                 glVertexPointer(4, GL_FLOAT, 0, 0);
@@ -1007,7 +1007,7 @@ SimpleGLSample::run()
                 glDisableClientState(GL_VERTEX_ARRAY);
 
                 glBindBuffer(GL_ARRAY_BUFFER, 0);
-
+#endif
                 glFinish();
 
                 SwapBuffers(gHdc);
