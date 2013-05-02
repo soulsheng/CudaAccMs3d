@@ -1,0 +1,205 @@
+4: F=678, T=1.47 ms
+4: F=386, T=2.59 ms
+4: F=24, T=40.32 ms
+4: F=24, T=40.32 ms
+4: F=16, T=60.98 ms
+4: F=24, T=40.49 ms
+4: F=16, T=60.98 ms
+4: F=16, T=61.35 ms
+4: F=0, T=10000.00 ms
+4: F=1, T=909.09 ms
+4: F=9557234, T=0.00 ms
+4: F=9289243, T=0.00 ms
+4: F=44, T=22.42 ms
+4: F=115, T=8.66 ms
+4: F=0, T=10000.00 ms
+4: F=21, T=47.39 ms
+4: F=93, T=10.65 ms
+4: F=0, T=10000.00 ms
+4: F=31, T=32.15 ms
+4: F=0, T=10000.00 ms
+4: F=1958892, T=0.00 ms
+4: F=16, T=60.61 ms
+4: F=24, T=40.32 ms
+4: F=24, T=40.32 ms
+4: F=16, T=60.61 ms
+4: F=16, T=60.98 ms
+4: F=24, T=40.32 ms
+4: F=78, T=12.67 ms
+4: F=8, T=113.64 ms
+4: F=46, T=21.46 ms
+4: F=8, T=114.94 ms
+4: F=8, T=114.94 ms
+4: F=46, T=21.46 ms
+4: F=121, T=8.26 ms
+4: F=38, T=26.04 ms
+4: F=119, T=8.38 ms
+4: F=132, T=7.56 ms
+4: F=117, T=8.48 ms
+4: F=37, T=26.95 ms
+4: F=36, T=27.32 ms
+4: F=102, T=9.76 ms
+4: F=109, T=9.16 ms
+4: F=127, T=7.87 ms
+4: F=132, T=7.53 ms
+4: F=128, T=7.78 ms
+4: F=129, T=7.71 ms
+4: F=133, T=7.52 ms
+4: F=131, T=7.60 ms
+4: F=129, T=7.73 ms
+4: F=40, T=24.63 ms
+4: F=40, T=24.51 ms
+4: F=9, T=103.09 ms
+4: F=9, T=103.09 ms
+4: F=40, T=24.45 ms
+4: F=40, T=25.00 ms
+4: F=39, T=25.06 ms
+4: F=40, T=24.57 ms
+4: F=50, T=19.92 ms
+4: F=50, T=19.96 ms
+4: F=42, T=23.75 ms
+4: F=128, T=7.78 ms
+4: F=133, T=7.48 ms
+7: F=16, T=60.98 ms
+7: F=16, T=60.24 ms
+4: F=42, T=23.75 ms
+4: F=50, T=19.80 ms
+4: F=47, T=21.10 ms
+4: F=14, T=67.57 ms
+4: F=48, T=20.62 ms
+4: F=48, T=20.62 ms
+4: F=48, T=20.79 ms
+4: F=48, T=20.62 ms
+4: F=63, T=15.85 ms
+4: F=48, T=20.66 ms
+4: F=31, T=31.35 ms
+4: F=31, T=31.35 ms
+4: F=42, T=23.53 ms
+4: F=42, T=23.70 ms
+4: F=41, T=23.92 ms
+4: F=23, T=41.84 ms
+4: F=77, T=12.92 ms
+4: F=52, T=18.90 ms
+4: F=17, T=57.80 ms
+4: F=13, T=75.19 ms
+4: F=129, T=7.72 ms
+4: F=13, T=74.07 ms
+4: F=134, T=7.41 ms
+4: F=122, T=8.17 ms
+4: F=128, T=7.80 ms
+4: F=127, T=7.86 ms
+4: F=132, T=7.55 ms
+4: F=132, T=7.55 ms
+4: F=133, T=7.51 ms
+4: F=132, T=7.53 ms
+4: F=1295681, T=0.00 ms
+4: F=131, T=7.60 ms
+4: F=115, T=8.67 ms
+4: F=116, T=8.60 ms
+4: F=114, T=8.71 ms
+4: F=115, T=8.63 ms
+4: F=101, T=9.85 ms
+4: F=7, T=140.85 ms
+4: F=98, T=10.13 ms
+4: F=78, T=12.80 ms
+4: F=100, T=9.97 ms
+4: F=78, T=12.79 ms
+4: F=50, T=20.00 ms
+4: F=54, T=18.32 ms
+4: F=53, T=18.55 ms
+Right
+4: F=51, T=19.53 ms
+Right
+4: F=24, T=41.32 ms
+Right
+4: F=3, T=285.71 ms
+Right
+4: F=49, T=20.04 ms
+Right
+4: F=66, T=15.04 ms
+Right
+4: F=68, T=14.53 ms
+Right
+4: F=29, T=34.25 ms
+Right
+4: F=29, T=33.67 ms
+Right
+4: F=49, T=20.12 ms
+Right
+4: F=48, T=20.62 ms
+Right
+4: F=48, T=20.45 ms
+Right
+4: F=23, T=41.84 ms
+Right
+4: F=24, T=41.15 ms
+Right
+4: F=74, T=13.51 ms
+Right
+4: F=74, T=13.51 ms
+Right
+4: F=49, T=20.16 ms
+Right
+4: F=127, T=7.86 ms
+Right
+4: F=54, T=18.21 ms
+Right
+4: F=124, T=8.04 ms
+Right
+4: F=54, T=18.21 ms
+Right
+4: F=8, T=116.28 ms
+Right
+4: F=73, T=13.55 ms
+Right
+4: F=73, T=13.62 ms
+Right
+4: F=74, T=13.39 ms
+Right
+4: F=43, T=22.94 ms
+Right
+4: F=43, T=23.04 ms
+Right
+4: F=73, T=13.70 ms
+Right
+4: F=130, T=7.68 ms
+Right
+4: F=73, T=13.64 ms
+Right
+4: F=127, T=7.82 ms
+Right
+4: F=134, T=7.45 ms
+Right
+4: F=33926993, T=0.00 ms
+Right
+4: F=74, T=13.40 ms
+Right
+4: F=128, T=7.77 ms
+Right
+4: F=13, T=73.53 ms
+Right
+4: F=128, T=7.81 ms
+Right
+4: F=131, T=7.63 ms
+Right
+4: F=128, T=7.79 ms
+Right
+4: F=127, T=7.87 ms
+Right
+1
+4: F=125, T=7.95 ms
+Right
+omp_get_num_threads=1
+4: F=129, T=7.71 ms
+Right
+omp_get_num_threads=1
+4: F=129, T=7.75 ms
+Right
+omp_get_num_threads=1
+4: F=124, T=8.02 ms
+Right
+omp_get_num_threads=1
+4: F=126, T=7.89 ms
+Right
+omp_get_num_threads=1
+4: F=124, T=8.01 ms
