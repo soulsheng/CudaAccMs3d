@@ -54,3 +54,8 @@
 /code/source/SimpleOptimizations/*.user
 /code/source/ipch
 /code/source/Win32
+/code/source/SDKUtil/Release
+/code/source/SimpleGL/Release
+/code/source/SimpleGL/Win32
+/code/source/SimpleGL/*.user
+/code/source/SDKUtil/*.user
