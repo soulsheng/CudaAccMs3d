@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testPointerArray", "testPoi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleOptimizations", "SimpleOptimizations\SimpleOptimizations.vcxproj", "{98D2DB05-645D-4BA4-BF7A-223D1DDA4D32}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleGL", "SimpleGL\SimpleGLVS10.vcxproj", "{D0B75E1F-7A76-40F5-BF04-19A04F372B49}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -43,6 +45,14 @@ Global
 		{98D2DB05-645D-4BA4-BF7A-223D1DDA4D32}.Release|Win32.Build.0 = Release|Win32
 		{98D2DB05-645D-4BA4-BF7A-223D1DDA4D32}.Release|x64.ActiveCfg = Release|x64
 		{98D2DB05-645D-4BA4-BF7A-223D1DDA4D32}.Release|x64.Build.0 = Release|x64
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Debug|Win32.Build.0 = Debug|Win32
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Debug|x64.ActiveCfg = Debug|x64
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Debug|x64.Build.0 = Debug|x64
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Release|Win32.ActiveCfg = Release|Win32
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Release|Win32.Build.0 = Release|Win32
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Release|x64.ActiveCfg = Release|x64
+		{D0B75E1F-7A76-40F5-BF04-19A04F372B49}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
