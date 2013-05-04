@@ -812,13 +812,24 @@ SimpleGLSample::executeKernel()
     size_t globalWorkSize[2] = {meshWidth, meshHeight};
     size_t localWorkSize[2] = {groupSize, 1};
 
-    // Acquire GL buffer
+	int timer = getTimerCurrent(2);
+	resetTimer(timer);
+	startTimer(timer);
+    
+	// Acquire GL buffer
     status = clEnqueueAcquireGLObjects(commandQueue, 1, &posBuf, 0, 0, NULL);
     CHECK_OPENCL_ERROR(status, "clEnqueueAcquireGLObjects failed.");
+
+	stopTimer(timer);
+	double dTime = readTimer(timer);
+	insertTimer("1.1.AcquireGLObjects", dTime);
 
     // Set kernel argument animate with updated value
     status = clSetKernelArg(kernel, 3, sizeof(float), &animate);
     CHECK_OPENCL_ERROR(status, "clSetKernelArg failed(animate).");
+
+	resetTimer(timer);
+	startTimer(timer);
 
     // Execute kernel on given device
     cl_event  eventND[1];
@@ -831,9 +842,20 @@ SimpleGLSample::executeKernel()
     status = sampleCommon->waitForEventAndRelease(&eventND[0]);
     CHECK_ERROR(status, SDK_SUCCESS, "WaitForEventAndRelease(eventND[0]) Failed");
 
+	stopTimer(timer);
+	dTime = readTimer(timer);
+	insertTimer("1.2.Kernel", dTime);
+
+	resetTimer(timer);
+	startTimer(timer);
+
     // Release GL buffer
     status = clEnqueueReleaseGLObjects(commandQueue, 1, &posBuf, 0, 0, 0);
     CHECK_OPENCL_ERROR(status, "clEnqueueReleaseGLObjects failed.");
+
+	stopTimer(timer);
+	dTime = readTimer(timer);
+	insertTimer("1.3.ReleaseGLObjects", dTime);
 
     status = clFinish(commandQueue);
     CHECK_OPENCL_ERROR(status, "clFinish failed.");
@@ -1001,7 +1023,7 @@ SimpleGLSample::run()
 
 				stopTimer(timer);
 				double dTime = (cl_double)readTimer(timer);
-				insertTimer("executeKernel", dTime);
+				insertTimer("1.executeKernel", dTime);
 
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1036,7 +1058,7 @@ SimpleGLSample::run()
 
 				stopTimer(timer);
 				dTime = (cl_double)readTimer(timer);
-				insertTimer("render", dTime);
+				insertTimer("2.render", dTime);
 #endif
                 t2 = clock() * CLOCKS_PER_SEC;
                 totalElapsedTime += (double)(t2 - t1);
