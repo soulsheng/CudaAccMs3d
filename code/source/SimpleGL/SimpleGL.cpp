@@ -876,6 +876,12 @@ SimpleGLSample::initialize()
      // Call base class Initialize to get default configuration
     if (this->SDKSample::initialize() != SDK_SUCCESS)
             return SDK_FAILURE;
+	
+	for (int i=0;i< _initTimerCount;i++)
+	{
+		int timer = createTimer();
+		_timers.push_back(timer);
+	}
 
     return SDK_SUCCESS;
 }
@@ -977,13 +983,26 @@ SimpleGLSample::run()
             } 
             else 
             {
+				int timer1 = getTimerCurrent(1);
+				resetTimer(timer1);
+				startTimer(timer1);
+
                 // OpenGL animation code goes here		
 
                 t1 = clock() * CLOCKS_PER_SEC;
                 frameCount++;
 
                 // run OpenCL kernel to generate vertex positions
+				int timer = getTimerCurrent(0);
+				resetTimer(timer);
+				startTimer(timer);
+
                 executeKernel();
+
+				stopTimer(timer);
+				double dTime = (cl_double)readTimer(timer);
+				insertTimer("executeKernel", dTime);
+
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
                 // set view matrix
@@ -993,6 +1012,9 @@ SimpleGLSample::run()
                 glRotatef(rotateX, 1.0, 0.0, 0.0);
                 glRotatef(rotateY, 0.0, 1.0, 0.0);
 #if 1
+				resetTimer(timer);
+				startTimer(timer);
+
                 // render from the vbo
                 glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
                 glVertexPointer(4, GL_FLOAT, 0, 0);
@@ -1007,14 +1029,18 @@ SimpleGLSample::run()
                 glDisableClientState(GL_VERTEX_ARRAY);
 
                 glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
+
                 glFinish();
 
                 SwapBuffers(gHdc);
 
+				stopTimer(timer);
+				dTime = (cl_double)readTimer(timer);
+				insertTimer("render", dTime);
+#endif
                 t2 = clock() * CLOCKS_PER_SEC;
                 totalElapsedTime += (double)(t2 - t1);
-                if(frameCount && frameCount > frameRefCount)
+                if(1&&frameCount && frameCount > frameRefCount)
                 {
 
                     // set  Window Title
@@ -1022,7 +1048,7 @@ SimpleGLSample::run()
                     double fMs = (double)((totalElapsedTime / (double)CLOCKS_PER_SEC) / (double) frameCount);
                     int framesPerSec = (int)(1.0 / (fMs / CLOCKS_PER_SEC));
             #if defined (_WIN32) && !defined(__MINGW32__)
-                    sprintf_s(title, 256, "OpenCL SimpleGL | %d fps ", framesPerSec);
+                    sprintf_s(title, 256, "OpenCL SimpleGL | %d fps : %lf s", framesPerSec, fMs/ CLOCKS_PER_SEC);
             #else 
                     sprintf(title, "OpenCL SimpleGL | %d fps ", framesPerSec);
             #endif
@@ -1032,6 +1058,10 @@ SimpleGLSample::run()
                 }
 
                 animate += 0.01f;
+
+				stopTimer(timer1);
+				double dTime1 = (cl_double)readTimer(timer1);
+				insertTimer("run", dTime1);
             }
             
         }
@@ -1317,6 +1347,24 @@ SimpleGLSample::~SimpleGLSample()
     FREE(devices);
 }
 
+void SimpleGLSample::printfTimer()
+{
+	for (TimerListItr itr=_timeValueList.begin(); itr!=_timeValueList.end(); itr++)
+	{
+		std::cout << itr->first << ":  " << itr->second << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+void SimpleGLSample::insertTimer( std::string item, double time)
+{
+	if ( _timeValueList.size()>100 )
+	{
+		return;
+	}
+	_timeValueList.insert( std::make_pair(item, time) );
+}
+
 SimpleGLSample *SimpleGLSample::simpleGLSample = NULL;
 
 
@@ -1344,8 +1392,16 @@ main(int argc, char* argv[])
     if(status != SDK_SUCCESS)
         return (status == SDK_EXPECTED_FAILURE) ? SDK_SUCCESS : SDK_FAILURE;
 
-    if (glSampleObj.run() != SDK_SUCCESS)
-        return SDK_FAILURE;
+	int timer = glSampleObj.getTimerCurrent();
+	glSampleObj.resetTimer(timer);
+	glSampleObj.startTimer(timer);
+
+	if (glSampleObj.run() != SDK_SUCCESS)
+		return SDK_FAILURE;
+
+	glSampleObj.stopTimer(timer);
+	double dTime = (cl_double)glSampleObj.readTimer(timer);
+	glSampleObj.insertTimer("run", dTime);
 
 #ifdef _WIN32
     glSampleObj.disableGL(gHwnd, gHdc, gGlCtx);
@@ -1356,6 +1412,8 @@ main(int argc, char* argv[])
 
     if (glSampleObj.cleanup() != SDK_SUCCESS)
         return SDK_FAILURE;
+	
+	glSampleObj.printfTimer();
 
     return SDK_SUCCESS;
 }

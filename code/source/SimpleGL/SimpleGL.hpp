@@ -32,7 +32,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <SDKCommandArgs.hpp>
 #include <SDKFile.hpp>
 #include <SDKBitMap.hpp>
-
+#include <map>
 #ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
 #pragma	comment(lib, "glu32.lib")
@@ -149,6 +149,11 @@ public:
     {
         return sampleCommon->startTimer(handle);
     }
+
+	int stopTimer(int handle)
+	{
+		return sampleCommon->stopTimer(handle);
+	}
 
     double readTimer(int handle)
     {
@@ -288,6 +293,17 @@ public:
     int loadTexture(GLuint * texture);	
 
 private:
+	const static int _initTimerCount=3;
+	std::vector<int> _timers;
+	typedef std::multimap<std::string, double> TimerList;
+	typedef std::multimap<std::string, double>::iterator TimerListItr;
+	TimerList	_timeValueList;
+
+	public:
+		void printfTimer();
+		void insertTimer(std::string, double);
+		int getTimerCurrent(int index=0) { return _timers[index]; }
+
 };
 
 
