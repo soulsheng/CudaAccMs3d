@@ -222,12 +222,14 @@
     </Intel_OpenCL_Build_Rules>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MatrixMulVector.cpp" />
     <ClCompile Include="SimpleOptimizations.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="..\common\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Joint.h" />
+    <ClInclude Include="MatrixMulVector.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="..\common\utils.h" />

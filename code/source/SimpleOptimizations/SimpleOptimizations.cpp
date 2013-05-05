@@ -21,11 +21,14 @@
 #include "stdafx.h"
 #include "CL\cl.h"
 #include "utils.h"
-#include "Vertex.h"
-#include "Joint.h"
+//#include "Vertex.h"
+//#include "Joint.h"
 //for perf. counters
 #include <Windows.h>
-#include <omp.h>
+//#include <omp.h>
+
+#include "MatrixMulVector.h"
+
 //we want to use POSIX functions
 #pragma warning( push )
 #pragma warning( disable : 4996 )
@@ -89,27 +92,6 @@ int g_szTask ;
 bool USE_OPENMP = false;
 bool USE_SSE = false;
 
-// 数据定义
-Vertexes  _vertexesStatic;//静态顶点坐标
-Vertexes  _vertexesDynamic, _vertexesDynamicRef;//动态顶点坐标
-Joints		_joints;//关节矩阵
-
-// 数据初始化：坐标、矩阵
-void initialize(int problem_size, int joint_size)
-{
-	_joints.initialize( JOINT_SIZE );
-	_vertexesStatic.initialize( g_szTask, JOINT_SIZE );
-	_vertexesDynamic.initialize( g_szTask, JOINT_SIZE );
-	_vertexesDynamicRef.initialize( g_szTask, JOINT_SIZE );
-}
-
-// 数据销毁：坐标、矩阵
-void unInitialize()
-{
-	_joints.unInitialize();
-	_vertexesStatic.unInitialize();
-	_vertexesDynamic.unInitialize();
-}
 void Cleanup()
 {
     //release g_kernel, g_program, and memory objects
@@ -127,7 +109,7 @@ void Cleanup()
 //    if(g_pfInput) {_aligned_free( g_pfInput ); g_pfInput = NULL;}
 //    if(g_pfRegularOutput) {_aligned_free( g_pfRegularOutput ); g_pfRegularOutput = NULL;}
     //if(g_pfOCLOutput) {_aligned_free( g_pfOCLOutput ); g_pfOCLOutput = NULL;}
-	unInitialize();
+	//unInitialize();
 }
 
 bool Setup_OpenCL( const char *program_source )
@@ -255,151 +237,8 @@ bool Setup_OpenCL( const char *program_source )
 
     return true; // success...
 }
-bool verifyEqual(float *v, float* vRef, int size)
-{
-	for(int i=0;i<size*VERTEX_VECTOR_SIZE;i++)
-	{
-		//if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1.7e-1 && fabs(v[i]) * fabs(vRef[i]) >10.0f || fabs(v[i]) >1.0e38  )
-		if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1e-3 )
-		{
-			return false;
-		}
-	}
-	return true;
-}
-bool verifyEqual(cl_float4 *v, cl_float4* vRef, int size)
-{
-	for(int i=0;i<size;i++)
-	{
-		for (int j=0;j<4;j++)
-		{
-			//if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1.7e-1 && fabs(v[i]) * fabs(vRef[i]) >10.0f || fabs(v[i]) >1.0e38  )
-			if ( (fabs(v[i].s[j]) - vRef[i].s[j]) / fabs(vRef[i].s[j]) >1e-3 )
-			{
-				return false;
-			}
-		}
-		
-	}
-	return true;
-}
-void MatrixVectorMul(float* vIn, float* vOut, float* mat)
-{
-	vOut[0] = vIn[0] * mat[0] + vIn[1] * mat[1] + vIn[2] * mat[2]  + mat[3];
-	vOut[1] = vIn[0] * mat[4] + vIn[1] * mat[5] + vIn[2] * mat[6]  + mat[7];
-	vOut[2] = vIn[0] * mat[8] + vIn[1] * mat[9] + vIn[2] * mat[10]  + mat[11];
-}
-void MatrixVectorMul(cl_float4* vIn, cl_float4* vOut, cl_float4* mat)
-{
-	vOut->s[0] = vIn->s[0] * mat[0].s[0] + vIn->s[1] * mat[0].s[1] + vIn->s[2] * mat[0].s[2]  + mat[0].s[3];
-	vOut->s[1] = vIn->s[0] * mat[1].s[0] + vIn->s[1] * mat[1].s[1] + vIn->s[2] * mat[1].s[2]  + mat[1].s[3];
-	vOut->s[2] = vIn->s[0] * mat[2].s[0] + vIn->s[1] * mat[2].s[1] + vIn->s[2] * mat[2].s[2]  + mat[2].s[3];
-}
 
-void ExecuteNativeCPP()
-{
-	QueryPerformanceCounter(&g_PerformanceCountReferenceStart);
-
-#if 1//use_openmp
-#pragma omp parallel for
-#endif
-	for(int i=0;i<PROBLEM_SIZE;i++){
-
-#if !VECTOR_FLOAT4
-		// 读取操作数：顶点对应的矩阵
-		float *pMat =  _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE*4;
-
-		// 执行操作：对坐标执行矩阵变换，得到新坐标
-		MatrixVectorMul( _vertexesStatic.pVertex+4*i, _vertexesDynamicRef.pVertex+4*i, pMat);
-#else
-		cl_float4 *pMat =  _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE;
-		MatrixVectorMul( _vertexesStatic.pVertex+i, _vertexesDynamicRef.pVertex+i, pMat);
-#endif
-	}
-
-	QueryPerformanceCounter(&g_PerformanceCountReferenceStop);
-
-}
-
-/** Performing the transpose of a 4x4 matrix of single precision floating
-    point values.
-    Arguments r0, r1, r2, and r3 are __m128 values whose elements
-    form the corresponding rows of a 4x4 matrix.
-    The matrix transpose is returned in arguments r0, r1, r2, and
-    r3 where r0 now holds column 0 of the original matrix, r1 now
-    holds column 1 of the original matrix, etc.
-*/
-#define __MM_TRANSPOSE4x4_PS(r0, r1, r2, r3)                                            \
-    {                                                                                   \
-        __m128 tmp3, tmp2, tmp1, tmp0;                                                  \
-                                                                                        \
-                                                            /* r00 r01 r02 r03 */       \
-                                                            /* r10 r11 r12 r13 */       \
-                                                            /* r20 r21 r22 r23 */       \
-                                                            /* r30 r31 r32 r33 */       \
-                                                                                        \
-        tmp0 = _mm_unpacklo_ps(r0, r1);                       /* r00 r10 r01 r11 */     \
-        tmp2 = _mm_unpackhi_ps(r0, r1);                       /* r02 r12 r03 r13 */     \
-        tmp1 = _mm_unpacklo_ps(r2, r3);                       /* r20 r30 r21 r31 */     \
-        tmp3 = _mm_unpackhi_ps(r2, r3);                       /* r22 r32 r23 r33 */     \
-                                                                                        \
-        r0 = _mm_movelh_ps(tmp0, tmp1);                         /* r00 r10 r20 r30 */   \
-        r1 = _mm_movehl_ps(tmp1, tmp0);                         /* r01 r11 r21 r31 */   \
-        r2 = _mm_movelh_ps(tmp2, tmp3);                         /* r02 r12 r22 r32 */   \
-        r3 = _mm_movehl_ps(tmp3, tmp2);                         /* r03 r13 r23 r33 */   \
-    }
-
-/// Accumulate four vector of single precision floating point values.
-#define __MM_ACCUM4_PS(a, b, c, d)                                                  \
-	_mm_add_ps(_mm_add_ps(a, b), _mm_add_ps(c, d))
-
-/** Performing dot-product between four vector and three vector of single
-    precision floating point values.
-*/
-#define __MM_DOT4x3_PS(r0, r1, r2, r3, v0, v1, v2)                                  \
-    __MM_ACCUM4_PS(_mm_mul_ps(r0, v0), _mm_mul_ps(r1, v1), _mm_mul_ps(r2, v2), r3)
-
-void ExecuteNativeSSE()
-{
-	QueryPerformanceCounter(&g_PerformanceCountReferenceStart);
-
-#if 0
-	if (!USE_OPENMP)
-		omp_set_num_threads(1);
-
-#pragma omp parallel for
-	for(int i=0;i<PROBLEM_SIZE;i++){
-		// 读取操作数：顶点对应的矩阵
-		float *mat = _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE*4;
-		__m128 m0, m1, m2, m3;
-		m0 = _mm_load_ps( mat );
-		m1 = _mm_load_ps( mat+4 );
-		m2 = _mm_load_ps( mat+8 );
-
-		// Rearrange to column-major matrix with rows shuffled order to: Z 0 X Y
-		m3 = _mm_setzero_ps();
-		__MM_TRANSPOSE4x4_PS(m2, m3, m0, m1);
-
-		// Load source position
-		__m128 vI0, vI1, vI2;
-		vI0 = _mm_load_ps1(_vertexesStatic.pVertex +4*i );
-		vI1 = _mm_load_ps1(_vertexesStatic.pVertex  +4*i + 1);
-		vI2 = _mm_load_ps1(_vertexesStatic.pVertex  +4*i + 2);
-
-		// Transform by collapsed matrix
-		__m128 vO = __MM_DOT4x3_PS(m2, m3, m0, m1, vI0, vI1, vI2);   // z 0 x y
-
-		// Store blended position, no aligned requirement
-		_mm_storeh_pi((__m64*)(_vertexesDynamicRef.pVertex+4*i) , vO);
-		_mm_store_ss(_vertexesDynamicRef.pVertex+4*i+2, vO);
-
-	}
-#endif
-	QueryPerformanceCounter(&g_PerformanceCountReferenceStop);
-
-}
-
-bool ExecuteKernel()
+bool ExecuteKernel(CMatrixMulVector* 	pMvm)
 {
     cl_int err = CL_SUCCESS;
 
@@ -408,9 +247,9 @@ bool ExecuteKernel()
 	cl_int errcode_ret;
     // allocate buffers
 #if !VECTOR_FLOAT4
-    g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask*VERTEX_VECTOR_SIZE * sizeof(cl_float) , _vertexesStatic.pVertex, &errcode_ret);
+    g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask*VERTEX_VECTOR_SIZE * sizeof(cl_float) , pMvm->_vertexesStatic.pVertex, &errcode_ret);
 #else
-	g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
+	g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask * sizeof(cl_float4) , pMvm->_vertexesStatic.pVertex, &errcode_ret);
 #endif
     if ( errcode_ret!=CL_SUCCESS )
     {
@@ -421,17 +260,17 @@ bool ExecuteKernel()
         printf("ERROR: Failed to create g_pfInputBuffer...\n");
         return false;
     }
-	g_pfOCLIndex = clCreateBuffer(g_context, INFlags, sizeof(cl_int)*g_szTask , _vertexesStatic.pIndex, NULL);
+	g_pfOCLIndex = clCreateBuffer(g_context, INFlags, sizeof(cl_int)*g_szTask , pMvm->_vertexesStatic.pIndex, NULL);
 #if !VECTOR_FLOAT4
-	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * MATRIX_SIZE_LINE*JOINT_SIZE , _joints.pMatrix, NULL);
+	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * MATRIX_SIZE_LINE*JOINT_SIZE , pMvm->_joints.pMatrix, NULL);
 #else
-	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE*JOINT_SIZE , _joints.pMatrix, NULL);
+	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE*JOINT_SIZE , pMvm->_joints.pMatrix, NULL);
 #endif
 
 #if !VECTOR_FLOAT4
-	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * g_szTask , _vertexesDynamic.pVertex, NULL);
+	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * g_szTask , pMvm->_vertexesDynamic.pVertex, NULL);
 #else
-	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float4) * g_szTask , _vertexesDynamic.pVertex, NULL);
+	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float4) * g_szTask , pMvm->_vertexesDynamic.pVertex, NULL);
 #endif    
 	if (g_pfOCLOutputBuffer == (cl_mem)0)
     {
@@ -542,7 +381,7 @@ bool ExecuteKernel()
 #else
 		tmp_ptr = clEnqueueMapBuffer(g_cmd_queue, g_pfOCLOutputBuffer, true, CL_MAP_READ, 0, sizeof(cl_float4) * g_szTask , 0, NULL, NULL, NULL);
 #endif
-        if(tmp_ptr!=_vertexesDynamic.pVertex)
+        if(tmp_ptr!=pMvm->_vertexesDynamic.pVertex)
         {
             printf("ERROR: clEnqueueMapBuffer failed to return original pointer\n");
             return false;
@@ -551,9 +390,9 @@ bool ExecuteKernel()
     else
     {
 #if !VECTOR_FLOAT4
-		err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float) *VERTEX_VECTOR_SIZE* g_szTask , _vertexesDynamic.pVertex, 0, NULL, NULL);
+		err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float) *VERTEX_VECTOR_SIZE* g_szTask , pMvm->_vertexesDynamic.pVertex, 0, NULL, NULL);
 #else
-		err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float4) * g_szTask , _vertexesDynamic.pVertex, 0, NULL, NULL);
+		err = clEnqueueReadBuffer(g_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float4) * g_szTask , pMvm->_vertexesDynamic.pVertex, 0, NULL, NULL);
 #endif
 		if (err != CL_SUCCESS)
         {
@@ -697,7 +536,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	srand(2011);
 
 	// 数据初始化：坐标、矩阵
-	initialize(PROBLEM_SIZE, JOINT_SIZE);
+	CMatrixMulVector	mvm;	
+	mvm.initialize(PROBLEM_SIZE, JOINT_SIZE);//initialize(PROBLEM_SIZE, JOINT_SIZE);
 
 // 	for (int i = 0; i < g_szTask ; i += 1)
 // 	{
@@ -708,21 +548,24 @@ int _tmain(int argc, _TCHAR* argv[])
     QueryPerformanceFrequency(&g_PerfFrequency);
 
     //do simple math
-    if(ExecuteKernel()!=true)
+    if(ExecuteKernel( &mvm )!=true)
     {
         printf("Failed executing OpenCL kernel...\n");
         Cleanup();
         return -1;
     }
 
+	QueryPerformanceCounter(&g_PerformanceCountReferenceStart);
+
 	printf("Executing reference...");
 	if(g_bGather4)	
-		ExecuteNativeSSE();
+		mvm.ExecuteNativeSSE();
 	else
-		ExecuteNativeCPP();
+		mvm.ExecuteNativeCPP();
 
 	printf("Done\n\n");
 
+	QueryPerformanceCounter(&g_PerformanceCountReferenceStop);
 
     printf("NDRange perf. counter time %f ms.\n", 
         1000.0f*(float)(g_PerformanceCountNDRangeStop.QuadPart - g_PerformanceCountNDRangeStart.QuadPart)/(float)g_PerfFrequency.QuadPart);
@@ -736,18 +579,13 @@ int _tmain(int argc, _TCHAR* argv[])
 
     //Do verification
     printf("Performing verification...\n");
- 	bool result = verifyEqual(_vertexesDynamic.pVertex, _vertexesDynamicRef.pVertex, PROBLEM_SIZE);
+ 	bool result = mvm.verifyEqual( );
 	printf("%s", !result ?"ERROR: Verification failed.\n":"Verification succeeded.\n");
     
+	mvm.unInitialize();
     Cleanup();
-    if(!result)
-    {
-		return -1;
-	}
-    else
-    {
-		return 0;
-    }
+   
+	return 0;
 }
 
 #pragma warning( pop )
