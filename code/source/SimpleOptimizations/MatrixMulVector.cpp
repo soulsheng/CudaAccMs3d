@@ -104,8 +104,9 @@ bool CMatrixMulVector::verifyEqual( cl_float4 *v, cl_float4* vRef, int size )
 	{
 		for (int j=0;j<4;j++)
 		{
-			//if ( (fabs(v[i]) - vRef[i]) / fabs(vRef[i]) >1.7e-1 && fabs(v[i]) * fabs(vRef[i]) >10.0f || fabs(v[i]) >1.0e38  )
-			if ( (fabs(v[i].s[j]) - vRef[i].s[j]) / fabs(vRef[i].s[j]) >1e-3 )
+			float f1=fabs(v[i].s[j] - vRef[i].s[j]);
+			float f2=fabs(v[i].s[j]);
+			if (  f1/f2  >1e-3 )
 			{
 				return false;
 			}

@@ -50,7 +50,7 @@ struct Joints{
 		for(int i=0;i<nSize;i++){
 			for(int j=0;j<MATRIX_SIZE_LINE;j++){
 				for(int k=0;k<4;k++){
-					pMatrix[i*MATRIX_SIZE_LINE +j].s[k] = rand() * 1.0f;
+					pMatrix[i*MATRIX_SIZE_LINE +j].s[k] = rand() % nSize / (nSize * 1.0f);
 				}
 			}
 		}
