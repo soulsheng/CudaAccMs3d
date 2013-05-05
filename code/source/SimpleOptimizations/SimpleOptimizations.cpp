@@ -238,84 +238,48 @@ bool Setup_OpenCL( const char *program_source )
     return true; // success...
 }
 
-bool ExecuteKernel(CMatrixMulVector* 	pMvm)
+void SetupKernel(CMatrixMulVector* 	pMvm)
 {
-    cl_int err = CL_SUCCESS;
-
-    const cl_mem_flags INFlags  = (g_bUseHostPtr ? CL_MEM_USE_HOST_PTR: CL_MEM_COPY_HOST_PTR) | CL_MEM_READ_ONLY; 
-    const cl_mem_flags OUTFlags = (g_bUseHostPtr ? CL_MEM_USE_HOST_PTR: CL_MEM_COPY_HOST_PTR) | CL_MEM_READ_WRITE;
+	const cl_mem_flags INFlags  = (g_bUseHostPtr ? CL_MEM_USE_HOST_PTR: CL_MEM_COPY_HOST_PTR) | CL_MEM_READ_ONLY; 
+	const cl_mem_flags OUTFlags = (g_bUseHostPtr ? CL_MEM_USE_HOST_PTR: CL_MEM_COPY_HOST_PTR) | CL_MEM_READ_WRITE;
 	cl_int errcode_ret;
-    // allocate buffers
+	// allocate buffers
 #if !VECTOR_FLOAT4
-    g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask*VERTEX_VECTOR_SIZE * sizeof(cl_float) , pMvm->_vertexesStatic.pVertex, &errcode_ret);
-#else
-	g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask * sizeof(cl_float4) , pMvm->_vertexesStatic.pVertex, &errcode_ret);
-#endif
-    if ( errcode_ret!=CL_SUCCESS )
-    {
-		printf("ERROR: Failed to create g_pfInputBuffer...\n");
-    }
-	if (g_pfInputBuffer == (cl_mem)0)
-    {
-        printf("ERROR: Failed to create g_pfInputBuffer...\n");
-        return false;
-    }
-	g_pfOCLIndex = clCreateBuffer(g_context, INFlags, sizeof(cl_int)*g_szTask , pMvm->_vertexesStatic.pIndex, NULL);
-#if !VECTOR_FLOAT4
+	g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask*VERTEX_VECTOR_SIZE * sizeof(cl_float) , pMvm->_vertexesStatic.pVertex, &errcode_ret);
 	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * MATRIX_SIZE_LINE*JOINT_SIZE , pMvm->_joints.pMatrix, NULL);
-#else
-	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE*JOINT_SIZE , pMvm->_joints.pMatrix, NULL);
-#endif
-
-#if !VECTOR_FLOAT4
 	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * g_szTask , pMvm->_vertexesDynamic.pVertex, NULL);
 #else
+	g_pfInputBuffer = clCreateBuffer(g_context, INFlags, g_szTask * sizeof(cl_float4) , pMvm->_vertexesStatic.pVertex, &errcode_ret);
+	g_pfOCLMatrix = clCreateBuffer(g_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE*JOINT_SIZE , pMvm->_joints.pMatrix, NULL);
 	g_pfOCLOutputBuffer = clCreateBuffer(g_context, OUTFlags, sizeof(cl_float4) * g_szTask , pMvm->_vertexesDynamic.pVertex, NULL);
-#endif    
-	if (g_pfOCLOutputBuffer == (cl_mem)0)
-    {
-        printf("ERROR: Failed to create g_pfOCLOutputBuffer...\n");
-        return false;
-    }
+#endif
 
+	g_pfOCLIndex = clCreateBuffer(g_context, INFlags, sizeof(cl_int)*g_szTask , pMvm->_vertexesStatic.pIndex, NULL);   
+
+	//Set kernel arguments
 	cl_kernel	kernel = g_kernel;
-    size_t globalWorkSize[2];
-    size_t localWorkSize[2];
-    globalWorkSize[0] = (size_t)sqrtf(g_szGlobalWork);
+	clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &g_pfInputBuffer);
+	clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLIndex);
+	clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &g_pfOCLMatrix);
+	clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
+}
+
+void SetupWorksize(size_t* globalWorkSize, size_t* localWorkSize, int dim)
+{
+	globalWorkSize[0] = (size_t)sqrtf(g_szGlobalWork);
 	globalWorkSize[1] = globalWorkSize[0];
 	if(g_bGather4)
 	{
-	    globalWorkSize[0]/=4; //since proccesing in quadruples
-		kernel = g_kernel4;
+		globalWorkSize[0]/=4; //since proccesing in quadruples
 	}
 
-    //Set kernel arguments
-    err = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &g_pfInputBuffer);
-    if (err != CL_SUCCESS)
-    {
-        printf("ERROR: Failed to set input g_kernel arguments...\n");
-        return false;
-    }
-	err = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLIndex);
-	err = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &g_pfOCLMatrix);
-
-    err = clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
-    if (err != CL_SUCCESS)
-    {
-        printf("ERROR: Failed to set input g_kernel arguments...\n");
-        return false;
-    }
-
-    localWorkSize[0] = g_szLocalWorkX;
+	localWorkSize[0] = g_szLocalWorkX;
 	localWorkSize[1] = g_szLocalWorkY;
-    printf("Original global work size (%lu, %lu)\n", globalWorkSize[0], globalWorkSize[1]);
-    printf("Original local work size (%lu, %lu)\n", localWorkSize[0], localWorkSize[1]);
-	if(g_bAutoGroupSize)
-	{
-		printf("Run-time determines optimal workgroup size\n\n");
-	}
+	printf("Original global work size (%lu, %lu)\n", globalWorkSize[0], globalWorkSize[1]);
+	printf("Original local work size (%lu, %lu)\n", localWorkSize[0], localWorkSize[1]);
+
 	size_t  workGroupSizeMaximum;
-	err = clGetKernelWorkGroupInfo(g_kernel, g_device_ID, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), (void *)&workGroupSizeMaximum, NULL);
+	clGetKernelWorkGroupInfo(g_kernel, g_device_ID, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), (void *)&workGroupSizeMaximum, NULL);
 	printf("Maximum workgroup size for this kernel  %lu\n\n",workGroupSizeMaximum );
 
 	if ( g_szGlobalWork>workGroupSizeMaximum )
@@ -324,13 +288,23 @@ bool ExecuteKernel(CMatrixMulVector* 	pMvm)
 		globalWorkSize[1] = g_szGlobalWork / workGroupSizeMaximum;
 	}
 	printf("Actual global work size (%lu, %lu)\n", globalWorkSize[0], globalWorkSize[1]);
+}
 
-	if(g_bWarming)
+bool ExecuteKernel(CMatrixMulVector* 	pMvm)
+{
+    cl_int err = CL_SUCCESS;
+
+    SetupKernel(pMvm);
+	
+
+	size_t globalWorkSize[2];
+	size_t localWorkSize[2];
+	SetupWorksize(globalWorkSize, localWorkSize, 2);
+
+	cl_kernel	kernel = g_kernel;
+	if(g_bGather4)
 	{
-		printf("Warming up OpenCL execution...");
-		err= clEnqueueNDRangeKernel(g_cmd_queue, kernel, 2, NULL, globalWorkSize, g_bAutoGroupSize? NULL:localWorkSize, 0, NULL, NULL);
-		clFinish(g_cmd_queue);
-		printf("Done\n");
+		kernel = g_kernel4;
 	}
 
     printf("Executing OpenCL kernel...");
@@ -351,26 +325,6 @@ bool ExecuteKernel(CMatrixMulVector* 	pMvm)
     QueryPerformanceCounter(&g_PerformanceCountNDRangeStop);
     printf("Done\n");
 
-    if(g_bEnableProfiling)
-    {    
-        cl_ulong start = 0;
-        cl_ulong end = 0;
-
-        //notice that pure HW execution time is END-START
-		err = clGetEventProfilingInfo(g_perf_event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("ERROR: Failed to get clGetEventProfilingInfo CL_PROFILING_COMMAND_START...\n");
-            return false;
-        }
-        err = clGetEventProfilingInfo(g_perf_event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end, NULL);
-        if (err != CL_SUCCESS)
-        {
-            printf("ERROR: Failed to get clGetEventProfilingInfo CL_PROFILING_COMMAND_END...\n");
-            return false;
-        }
-        g_NDRangeTime = (cl_double)(end - start)*(cl_double)(1e-06);
-    }
 
     void* tmp_ptr = NULL;
     QueryPerformanceCounter(&g_PerformanceCountReadStart);
