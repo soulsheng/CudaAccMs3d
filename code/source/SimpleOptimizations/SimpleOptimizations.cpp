@@ -411,17 +411,6 @@ bool ExecuteKernel(CMatrixMulVector* 	pMvm)
     return true;
 }
 
-static cl_float randomFloat(const cl_float fMinValue, const cl_float fMaxValue)
-{
-    if (fMinValue == fMaxValue)
-    {
-        return fMaxValue;
-    }
-    cl_float tmp = (cl_float)(rand() % (int)(fMaxValue - fMinValue));
-    tmp = (0 == tmp) ? 1.0f : tmp;
-    return fMinValue + ((cl_float)(rand() % (int)(fMaxValue - fMinValue))) / tmp;
-}
-
 void Usage()
 {
     printf("Usage: SimpleOptimizations.exe [--h] [-t <TaskSize>][-l <GroupSize>] [-r] [-p] [-a] [-w] [-v] [-g]\n");
@@ -445,52 +434,14 @@ int _tmain(int argc, _TCHAR* argv[])
     int argn = 1;
     while (argn < argc)
     {
-        if (_tcscmp(argv[argn], _T("--h")) == 0)
-        {
-            Usage();
-        }
-        else if (_tcscmp(argv[argn], _T("-t")) == 0)
-        {
-            if(++argn==argc)
-                Usage();
-            g_szTask = _ttoi(argv[argn]);
-            argn++;
-        }
-        else if (_tcscmp(argv[argn], _T("-l")) == 0)
-        {
-            if(++argn==argc)
-                Usage();
-            g_szLocalWorkX = _ttoi(argv[argn]);
-            argn++;
-        }
-        else if (_tcscmp(argv[argn], _T("-w")) == 0)
-        {
-            g_bWarming= true;
-            argn++;
-        }
-        else if (_tcscmp(argv[argn], _T("-v")) == 0)
+       if (_tcscmp(argv[argn], _T("-v")) == 0)
         {
             g_bGather4 = true;
-            argn++;
-        }
-		else if (_tcscmp(argv[argn], _T("-r")) == 0)
-        {
-            g_bUseRelaxedMath = true;
             argn++;
         }
         else if (_tcscmp(argv[argn], _T("-p")) == 0)
         {
             g_bUseHostPtr = true;
-            argn++;
-        }
-        else if (_tcscmp(argv[argn], _T("-a")) == 0)
-        {
-            g_bAutoGroupSize = true;
-            argn++;
-        }
-        else if (_tcscmp(argv[argn], _T("-f")) == 0)
-        {
-            g_bEnableProfiling = true;
             argn++;
         }
 		else if (_tcscmp(argv[argn], _T("-g")) == 0)
