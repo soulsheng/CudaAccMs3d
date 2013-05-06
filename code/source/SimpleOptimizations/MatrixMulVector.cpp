@@ -3,6 +3,9 @@
 #include <omp.h>
 #include "stdafx.h"
 
+#define  LocalWorkX		8
+#define  LocalWorkY		8
+
 /** Performing the transpose of a 4x4 matrix of single precision floating
     point values.
     Arguments r0, r1, r2, and r3 are __m128 values whose elements
@@ -140,6 +143,13 @@ void CMatrixMulVector::unInitialize()
 	_joints.unInitialize();
 	_vertexesStatic.unInitialize();
 	_vertexesDynamic.unInitialize();
+
+	//release g_kernel, g_program, and memory objects
+	if( g_pfInputBuffer ) {clReleaseMemObject( g_pfInputBuffer ); g_pfInputBuffer = NULL;}
+	if( g_pfOCLOutputBuffer ) {clReleaseMemObject( g_pfOCLOutputBuffer ); g_pfOCLOutputBuffer = NULL;}
+	if( g_pfOCLIndex ) {clReleaseMemObject( g_pfOCLIndex ); g_pfOCLIndex = NULL;}
+	if( g_pfOCLMatrix ) {clReleaseMemObject( g_pfOCLMatrix ); g_pfOCLMatrix = NULL;}
+
 }
 
 void CMatrixMulVector::initialize(int sizeVertex, int sizeJoint)
@@ -172,4 +182,113 @@ void CMatrixMulVector::MatrixVectorMul( cl_float4* vIn, cl_float4* vOut, cl_floa
 	vOut->s[0] = vIn->s[0] * mat[0].s[0] + vIn->s[1] * mat[0].s[1] + vIn->s[2] * mat[0].s[2]  + mat[0].s[3];
 	vOut->s[1] = vIn->s[0] * mat[1].s[0] + vIn->s[1] * mat[1].s[1] + vIn->s[2] * mat[1].s[2]  + mat[1].s[3];
 	vOut->s[2] = vIn->s[0] * mat[2].s[0] + vIn->s[1] * mat[2].s[1] + vIn->s[2] * mat[2].s[2]  + mat[2].s[3];
+}
+
+void CMatrixMulVector::SetupKernel(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue)
+{
+	_context = pContext;
+	_device_ID = pDevice_ID;
+	_kernel = pKernel;
+	_cmd_queue = pCmdQueue;
+
+	const cl_mem_flags INFlags  = CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY; 
+	const cl_mem_flags OUTFlags = CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE;
+	cl_int errcode_ret;
+	// allocate buffers
+#if !VECTOR_FLOAT4
+	g_pfInputBuffer = clCreateBuffer(_context, INFlags, _vertexesStatic.nSize*VERTEX_VECTOR_SIZE * sizeof(cl_float) , _vertexesStatic.pVertex, &errcode_ret);
+	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * MATRIX_SIZE_LINE*_joints.nSize , _joints.pMatrix, NULL);
+	g_pfOCLOutputBuffer = clCreateBuffer(_context, OUTFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * _vertexesStatic.nSize , _vertexesDynamic.pVertex, NULL);
+#else
+	g_pfInputBuffer = clCreateBuffer(_context, INFlags,  _vertexesStatic.nSize * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
+	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE* _joints.nSize , _joints.pMatrix, NULL);
+	g_pfOCLOutputBuffer = clCreateBuffer(_context, OUTFlags, sizeof(cl_float4) *  _vertexesStatic.nSize , _vertexesDynamic.pVertex, NULL);
+#endif
+
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_int)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
+
+	//Set kernel arguments
+	cl_kernel	kernel = _kernel;
+	clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &g_pfInputBuffer);
+	clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLIndex);
+	clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &g_pfOCLMatrix);
+	clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
+}
+
+void CMatrixMulVector::SetupWorksize( size_t* globalWorkSize, size_t* localWorkSize, int dim )
+{
+	globalWorkSize[0] = (size_t)sqrtf(_vertexesStatic.nSize);
+	globalWorkSize[1] = globalWorkSize[0];
+#if VECTOR_FLOAT4
+		globalWorkSize[0]/=4; //since proccesing in quadruples
+#endif
+
+	localWorkSize[0] = LocalWorkX;
+	localWorkSize[1] = LocalWorkX;
+	printf("Original global work size (%lu, %lu)\n", globalWorkSize[0], globalWorkSize[1]);
+	printf("Original local work size (%lu, %lu)\n", localWorkSize[0], localWorkSize[1]);
+
+	size_t  workGroupSizeMaximum;
+	clGetKernelWorkGroupInfo(_kernel, _device_ID, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), (void *)&workGroupSizeMaximum, NULL);
+	printf("Maximum workgroup size for this kernel  %lu\n\n",workGroupSizeMaximum );
+
+	if ( _vertexesStatic.nSize>workGroupSizeMaximum )
+	{
+		globalWorkSize[0] = workGroupSizeMaximum;
+		globalWorkSize[1] = _vertexesStatic.nSize / workGroupSizeMaximum;
+	}
+	printf("Actual global work size (%lu, %lu)\n", globalWorkSize[0], globalWorkSize[1]);
+}
+
+bool CMatrixMulVector::ExecuteKernel(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue)
+{
+	cl_int err = CL_SUCCESS;
+
+	SetupKernel(pContext, pDevice_ID, pKernel, pCmdQueue);
+
+
+	size_t globalWorkSize[2];
+	size_t localWorkSize[2];
+	SetupWorksize(globalWorkSize, localWorkSize, 2);
+
+	printf("Executing OpenCL kernel...");
+
+	cl_event g_perf_event = NULL;
+	// execute kernel, pls notice g_bAutoGroupSize
+	err= clEnqueueNDRangeKernel(_cmd_queue, _kernel, 2, NULL, globalWorkSize, localWorkSize, 0, NULL, &g_perf_event);
+	if (err != CL_SUCCESS)
+	{
+		printf("ERROR: Failed to execute kernel...\n");
+		return false;
+	}
+	err = clWaitForEvents(1, &g_perf_event);
+	if (err != CL_SUCCESS)
+	{
+		printf("ERROR: Failed to clWaitForEvents...\n");
+		return false;
+	}
+
+	printf("Done\n");
+
+
+	void* tmp_ptr = NULL;
+
+	
+
+#if !VECTOR_FLOAT4
+		err = clEnqueueReadBuffer(_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float) *VERTEX_VECTOR_SIZE* _vertexesStatic.nSize , _vertexesDynamic.pVertex, 0, NULL, NULL);
+#else
+		err = clEnqueueReadBuffer(_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float4) * _vertexesStatic.nSize , _vertexesDynamic.pVertex, 0, NULL, NULL);
+#endif
+		if (err != CL_SUCCESS)
+		{
+			printf("ERROR: Failed to clEnqueueReadBuffer...\n");
+			return false;
+		}
+	
+	clFinish(_cmd_queue);
+
+	clEnqueueUnmapMemObject(_cmd_queue, g_pfOCLOutputBuffer, tmp_ptr, 0, NULL, NULL);
+	
+	return true;
 }
