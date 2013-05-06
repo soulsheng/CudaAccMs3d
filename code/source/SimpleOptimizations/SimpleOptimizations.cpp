@@ -43,25 +43,8 @@ cl_uint     g_min_align = 0;
 cl_device_id g_device_ID =0;
 cl_event g_perf_event = NULL;
 
-// Host arrays
-//cl_float* g_pfInput = NULL;
-//cl_float* g_pfRegularOutput = NULL;
-//cl_float* g_pfOCLOutput = NULL;
-//int g_szTask = 16*1024*1024;
 
 
-//	global and local sizes of global and local worksizes
-size_t g_szGlobalWork = 32768;
-size_t g_szLocalWorkX = 8;
-size_t g_szLocalWorkY = 8;
-
-
-
-bool g_bUseRelaxedMath = false;
-bool g_bUseHostPtr = false;
-bool g_bAutoGroupSize = false;
-bool g_bEnableProfiling = false;
-bool g_bWarming = false;
 bool g_bGather4 = false;
 
 bool g_bRunOnPG = false;
@@ -75,10 +58,6 @@ float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
 int iClass=2;
 
-int g_szTask ;
-
-bool USE_OPENMP = false;
-bool USE_SSE = false;
 
 void Cleanup()
 {
@@ -140,7 +119,7 @@ bool Setup_OpenCL( const char *program_source )
     // get the list of CPU devices associated with context
     err = clGetContextInfo(g_context, CL_CONTEXT_DEVICES, 0, NULL, &cb);
     clGetContextInfo(g_context, CL_CONTEXT_DEVICES, cb, devices, NULL);
-	g_cmd_queue = clCreateCommandQueue(g_context, devices[0], g_bEnableProfiling ? CL_QUEUE_PROFILING_ENABLE: 0, NULL);
+	g_cmd_queue = clCreateCommandQueue(g_context, devices[0], 0, NULL);
     if (g_cmd_queue == (cl_command_queue)0)
     {
         Cleanup();
@@ -157,7 +136,7 @@ bool Setup_OpenCL( const char *program_source )
         return false;
     }
 
-	err = clBuildProgram(g_program, 0, NULL, g_bUseRelaxedMath ? buildOpts :NULL, NULL, NULL);
+	err = clBuildProgram(g_program, 0, NULL, NULL, NULL, NULL);
     if (err != CL_SUCCESS)
     {
         printf("ERROR: Failed to build program...\n");
@@ -251,11 +230,6 @@ int _tmain(int argc, _TCHAR* argv[])
             g_bGather4 = true;
             argn++;
         }
-        else if (_tcscmp(argv[argn], _T("-p")) == 0)
-        {
-            g_bUseHostPtr = true;
-            argn++;
-        }
 		else if (_tcscmp(argv[argn], _T("-g")) == 0)
 		{
 			g_bRunOnPG = true;
@@ -285,18 +259,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	// 问题规模档次，7档，64K至256M，4倍递增
 	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
 
-	g_szTask = PROBLEM_SIZE;
-    g_szGlobalWork = g_szTask;
-	if(g_szGlobalWork%(g_szLocalWorkX * g_szLocalWorkX) !=0 && !g_bAutoGroupSize)
-	{
-		printf("Global or local work size is incorect.\n");
-		printf("g_szGlobalWork / g_szLocalWork remainder is = %lu. This value must be 0\n", g_szGlobalWork%(g_szLocalWorkX * g_szLocalWorkX) );
-        Cleanup();
-        return -1;
-    }
-
     //	set input array to random legal values
-	srand(2011);
 
 	// 数据初始化：坐标、矩阵
 	CMatrixMulVector	mvm;	

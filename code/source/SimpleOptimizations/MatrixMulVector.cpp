@@ -154,6 +154,8 @@ void CMatrixMulVector::unInitialize()
 
 void CMatrixMulVector::initialize(int sizeVertex, int sizeJoint)
 {
+	srand(2011);
+
 	_joints.initialize( sizeJoint );
 	_vertexesStatic.initialize( sizeVertex, sizeJoint );
 	_vertexesDynamic.initialize( sizeVertex, sizeJoint );
