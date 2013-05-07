@@ -42,3 +42,21 @@ void sineWave(
     // write output vertex
     pos[y*width+x] = (float4)(u, w, v, 1.0f);
 }
+
+
+__kernel void
+updateVectorByMatrix4( const __global float4 *pInput, const __global int *pIndex,__constant float4 *pMatrix,__global float4 *pOutput)
+{
+	size_t index = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	
+	int offset = pIndex[index]*3;
+
+	float4 vIn = pInput[index]; 
+	
+	pOutput[index] = (float4)( 
+		vIn.x * pMatrix[offset+0].x + vIn.y * pMatrix[offset+0].y + vIn.z * pMatrix[offset+0].z  + pMatrix[offset+0].w ,
+		vIn.x * pMatrix[offset+1].x + vIn.y * pMatrix[offset+1].y + vIn.z * pMatrix[offset+1].z  + pMatrix[offset+1].w ,
+		vIn.x * pMatrix[offset+2].x + vIn.y * pMatrix[offset+2].y + vIn.z * pMatrix[offset+2].z  + pMatrix[offset+2].w ,
+		1.0f);
+
+}
