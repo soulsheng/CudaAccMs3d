@@ -1044,7 +1044,7 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
-                executeKernel();
+//                executeKernel();
 
 				stopTimer(timer);
 				double dTime = (cl_double)readTimer(timer);
