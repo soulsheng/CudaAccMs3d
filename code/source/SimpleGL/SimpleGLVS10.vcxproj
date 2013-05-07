@@ -174,10 +174,14 @@ copy SimpleGL.bmp  "$(OUTDIR)"\SimpleGL.bmp</Command>
     <None Include="SimpleGL_Kernels.cl" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MatrixMulVector.cpp" />
     <ClCompile Include="SimpleGL.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Joint.h" />
+    <ClInclude Include="MatrixMulVector.h" />
     <ClInclude Include="SimpleGL.hpp" />
+    <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

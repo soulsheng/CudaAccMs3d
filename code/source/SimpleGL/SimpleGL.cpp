@@ -58,6 +58,14 @@ int frameCount = 0;
 int frameRefCount = 90;
 double totalElapsedTime = 0.0;
 
+
+#define    MEGA_SIZE     (1<<20)  // Mega, or million
+#define    JOINT_SIZE    100
+
+float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
+int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
+int iClass=2;
+
 #define STRINGIFY(A) #A
 
 const char * vertexShader = STRINGIFY(
@@ -672,7 +680,7 @@ SimpleGLSample::setupCL()
     //Set device info of given cl_device_id
     retValue = deviceInfo.setDeviceInfo(interopDeviceId);
     CHECK_ERROR(retValue, SDK_SUCCESS, "SDKDeviceInfo::setDeviceInfo() failed");
-
+#if 1
     // Create Vertex buffer object
     glGenBuffers(1, &vertexObj);
     glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
@@ -687,7 +695,7 @@ SimpleGLSample::setupCL()
     // create OpenCL buffer from GL VBO
     posBuf = clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, vertexObj, &status);
     CHECK_OPENCL_ERROR(status, "clCreateFromGLBuffer failed. (posBuf)");
-
+#endif
     // create a CL program using the kernel source 
     streamsdk::buildProgramData buildData;
     buildData.kernelName = std::string("SimpleGL_Kernels.cl");
@@ -706,7 +714,7 @@ SimpleGLSample::setupCL()
     // get a kernel object handle for a kernel with the given name
     kernel = clCreateKernel(
         program,
-        "sineWave",
+        "updateVectorByMatrix4",
         &status);
     CHECK_OPENCL_ERROR(status, "clCreateKernel failed.");
 
@@ -738,13 +746,21 @@ SimpleGLSample::setup()
     if (retValue != SDK_SUCCESS)
     return retValue;
 
+	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
+	mvm.initialize( PROBLEM_SIZE, JOINT_SIZE );
+
     return SDK_SUCCESS;
 }
 
 int 
 SimpleGLSample::setupCLKernels()
 {
-     cl_int status;
+#if 1
+
+	mvm.SetupKernel( context, interopDeviceId, kernel, commandQueue );
+
+#else
+	cl_int status;
 
     // Set appropriate arguments to the kernel
 
@@ -799,13 +815,18 @@ SimpleGLSample::setupCLKernels()
         std::cout << "Falling back to " << kernelInfo.kernelWorkGroupSize << std::endl;
         groupSize = kernelInfo.kernelWorkGroupSize;
     }
-
+#endif
     return SDK_SUCCESS;
 }
 
 int 
 SimpleGLSample::executeKernel()
 {	
+#if 1
+
+	mvm.ExecuteKernel( );
+
+#else
     cl_int status = CL_SUCCESS;
     // Set local and global work group sizes
     size_t localX = (size_t)sqrt((double)groupSize);
@@ -859,7 +880,7 @@ SimpleGLSample::executeKernel()
 
     status = clFinish(commandQueue);
     CHECK_OPENCL_ERROR(status, "clFinish failed.");
-
+#endif
     return SDK_SUCCESS;
 }
 
@@ -912,14 +933,16 @@ int
 SimpleGLSample::cleanup()
 {
     // Releases OpenCL resources (Context, Memory etc.)
-    cl_int status;
+	mvm.unInitialize();
 
+    cl_int status;
+#if 1
     glBindBuffer(1, vertexObj);
     glDeleteBuffers(1, &vertexObj);
 
     status = clReleaseMemObject(posBuf);
     CHECK_OPENCL_ERROR(status, "clReleaseMemObject failed.(posBuf)");
-
+#endif
     status = clReleaseKernel(kernel);
     CHECK_OPENCL_ERROR(status, "clReleaseKernel failed.(kernel)");
 
@@ -951,6 +974,11 @@ SimpleGLSample::genBinaryImage()
 int 
 SimpleGLSample::verifyResults()
 {
+	//Do verification
+	printf("Performing verification...\n");
+	bool result = mvm.verifyEqual( );
+	printf("%s", !result ?"ERROR: Verification failed.\n":"Verification succeeded.\n");
+
      if(verify)
     {
         // it overwrites the input array with the output
@@ -1023,7 +1051,18 @@ SimpleGLSample::run()
 
 				stopTimer(timer);
 				double dTime = (cl_double)readTimer(timer);
-				insertTimer("1.executeKernel", dTime);
+				insertTimer("1.executeKernelOCL", dTime);
+
+				// run CPP kernel to generate vertex positions
+				timer = getTimerCurrent(0);
+				resetTimer(timer);
+				startTimer(timer);
+
+				mvm.ExecuteNativeCPP();
+
+				stopTimer(timer);
+				dTime = (cl_double)readTimer(timer);
+				insertTimer("2.executeKernelCPP", dTime);
 
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1033,7 +1072,7 @@ SimpleGLSample::run()
                 glTranslatef(0.0, 0.0, translateZ);
                 glRotatef(rotateX, 1.0, 0.0, 0.0);
                 glRotatef(rotateY, 0.0, 1.0, 0.0);
-#if 1
+#if 0
 				resetTimer(timer);
 				startTimer(timer);
 

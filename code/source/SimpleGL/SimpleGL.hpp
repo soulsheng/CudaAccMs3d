@@ -33,6 +33,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <SDKFile.hpp>
 #include <SDKBitMap.hpp>
 #include <map>
+
+#include "MatrixMulVector.h"
+
 #ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
 #pragma	comment(lib, "glu32.lib")
@@ -303,6 +306,9 @@ private:
 		void printfTimer();
 		void insertTimer(std::string, double);
 		int getTimerCurrent(int index=0) { return _timers[index]; }
+
+		private:
+			CMatrixMulVector	mvm;	
 
 };
 
