@@ -4,6 +4,11 @@
 #include <GL/glew.h>
 #include "Vertex.h"
 #include "Joint.h"
+#include <SDKCommon.hpp>
+#include <map>
+
+typedef std::multimap<std::string, double> TimerList;
+typedef std::multimap<std::string, double>::iterator TimerListItr;
 
 class CMatrixMulVector
 {
@@ -13,7 +18,7 @@ public:
 
 public:
 	// 数据初始化：坐标、矩阵
-	void initialize(int sizeVertex, int sizeJoint);
+	void initialize(int sizeVertex, int sizeJoint, streamsdk::SDKCommon * pSampleCommon, TimerList* pTL);
 	
 	// 数据销毁：坐标、矩阵
 	void unInitialize();
@@ -30,6 +35,36 @@ public:
 	void SetupWorksize( );
 	bool ExecuteKernel();
 	bool ExecuteKernelVBO();
+
+public:
+	/**
+     * Timer functions
+     */
+    int createTimer()
+    {
+        return sampleCommon->createTimer();
+    }
+
+    int resetTimer(int handle)
+    {
+        return sampleCommon->resetTimer(handle);
+    }
+
+    int startTimer(int handle)
+    {
+        return sampleCommon->startTimer(handle);
+    }
+
+	int stopTimer(int handle)
+	{
+		return sampleCommon->stopTimer(handle);
+	}
+
+    double readTimer(int handle)
+    {
+        return sampleCommon->readTimer(handle);
+    }
+	void insertTimer(std::string, double);
 
 private:
 	// 矩阵变换
@@ -62,5 +97,9 @@ public:
 
 	// vbo
 	GLuint vertexObj;                   /**< Vertex object */
+
+	// Timer
+	streamsdk::SDKCommon * sampleCommon;    /**< SDKCommon class object */	
+	TimerList*	_timeValueList;
 
 };

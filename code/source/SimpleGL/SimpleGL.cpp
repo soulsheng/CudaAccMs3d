@@ -71,17 +71,14 @@ int iClass=2;
 const char * vertexShader = STRINGIFY(
 void main()
 {
-    gl_TexCoord[0].st = vec2(gl_Vertex.xy) * vec2(2.0, -2.0) + vec2(-1.0, 1.0);
     gl_Position    = ftransform();
 }
 );
 
 const char * pixelShader = STRINGIFY(
-uniform sampler2D tex;
 void main()
 {
-  vec3 color         = vec3(texture2D(tex,gl_TexCoord[0].st));
-  gl_FragColor       = vec4(color, 1.0);
+  gl_FragColor       = vec4(1.0, 0.0, 0.0, 1.0);
 }
 );
 
@@ -719,11 +716,11 @@ SimpleGLSample::setupCL()
     CHECK_OPENCL_ERROR(status, "clCreateKernel failed.");
 
     // Load texture
-    if(loadTexture(&texture) == SDK_FAILURE)
-    {
-        std::cout << "ERROR: Failed to load texture " << std::endl;
-        return SDK_FAILURE;
-    }
+//     if(loadTexture(&texture) == SDK_FAILURE)
+//     {
+//         std::cout << "ERROR: Failed to load texture " << std::endl;
+//         return SDK_FAILURE;
+//     }
 
     // Compile Vertex and Pixel shaders and create glProgram
 	glProgram = compileProgram(vertexShader, pixelShader);
@@ -747,7 +744,7 @@ SimpleGLSample::setup()
     return retValue;
 
 	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
-	mvm.initialize( PROBLEM_SIZE, JOINT_SIZE );
+	mvm.initialize( PROBLEM_SIZE, JOINT_SIZE , sampleCommon, &_timeValueList );
 
     return SDK_SUCCESS;
 }
@@ -1075,21 +1072,18 @@ SimpleGLSample::run()
                 glTranslatef(0.0, 0.0, translateZ);
                 glRotatef(rotateX, 1.0, 0.0, 0.0);
                 glRotatef(rotateY, 0.0, 1.0, 0.0);
-#if 0
+#if 1
 				resetTimer(timer);
 				startTimer(timer);
 
                 // render from the vbo
-                glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
+                glBindBuffer(GL_ARRAY_BUFFER, mvm.vertexObj);
                 glVertexPointer(4, GL_FLOAT, 0, 0);
-
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, texture);
 
                 glUseProgram(glProgram);
                 glEnableClientState(GL_VERTEX_ARRAY);
                 glColor3f(1.0, 0.0, 0.0);
-                glDrawArrays(GL_POINTS, 0, WINDOW_WIDTH * WINDOW_HEIGHT);
+                glDrawArrays(GL_POINTS, 0, mvm._vertexesStatic.nSize );
                 glDisableClientState(GL_VERTEX_ARRAY);
 
                 glBindBuffer(GL_ARRAY_BUFFER, 0);

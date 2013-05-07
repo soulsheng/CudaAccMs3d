@@ -298,8 +298,7 @@ public:
 private:
 	const static int _initTimerCount=3;
 	std::vector<int> _timers;
-	typedef std::multimap<std::string, double> TimerList;
-	typedef std::multimap<std::string, double>::iterator TimerListItr;
+	
 	TimerList	_timeValueList;
 
 	public:
