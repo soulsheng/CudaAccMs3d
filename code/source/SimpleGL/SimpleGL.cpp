@@ -42,7 +42,7 @@ XEvent          xev;
 float theta = 0.0f;
 
 cl_float animate = 0.0f;            /**< Animation rate */
-GLuint vertexObj;                   /**< Vertex object */
+//GLuint vertexObj;                   /**< Vertex object */
 GLuint texture;                     /**< Texture */
 GLuint glProgram;                   /**< GL program object */
 
@@ -680,7 +680,7 @@ SimpleGLSample::setupCL()
     //Set device info of given cl_device_id
     retValue = deviceInfo.setDeviceInfo(interopDeviceId);
     CHECK_ERROR(retValue, SDK_SUCCESS, "SDKDeviceInfo::setDeviceInfo() failed");
-#if 1
+#if 0
     // Create Vertex buffer object
     glGenBuffers(1, &vertexObj);
     glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
@@ -757,7 +757,7 @@ SimpleGLSample::setupCLKernels()
 {
 #if 1
 
-	mvm.SetupKernel( context, interopDeviceId, kernel, commandQueue );
+	mvm.SetupKernelVBO( context, interopDeviceId, kernel, commandQueue );
 
 #else
 	cl_int status;
@@ -824,7 +824,7 @@ SimpleGLSample::executeKernel()
 {	
 #if 1
 
-	mvm.ExecuteKernel( );
+	mvm.ExecuteKernelVBO( );
 
 #else
     cl_int status = CL_SUCCESS;
@@ -936,7 +936,7 @@ SimpleGLSample::cleanup()
 	mvm.unInitialize();
 
     cl_int status;
-#if 1
+#if 0
     glBindBuffer(1, vertexObj);
     glDeleteBuffers(1, &vertexObj);
 
@@ -1058,7 +1058,7 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
-#if !VECTOR_FLOAT4
+#if 1//!VECTOR_FLOAT4
 				mvm.ExecuteNativeCPP();
 #else
 				mvm.ExecuteNativeSSE();
@@ -1261,7 +1261,7 @@ SimpleGLSample::run()
         if(verify || timing)
         {
             executeKernel();
-
+/*
             // Copy vertex buffer values to host ptr for correctness verification
             glBindBufferARB(GL_ARRAY_BUFFER, vertexObj); 
 
@@ -1276,7 +1276,7 @@ SimpleGLSample::run()
  
             memcpy(pos, ptr, meshWidth * meshHeight * sizeof(cl_float4));
             glUnmapBufferARB(GL_ARRAY_BUFFER); 
-
+*/
         }
         if(!quiet)
             sampleCommon->printArray<cl_float>("Output", pos, 256, 1);

@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <emmintrin.h>
+#include <CL/cl_gl.h>
 
 #define  LocalWorkX		8
 #define  LocalWorkY		8
@@ -152,6 +153,8 @@ void CMatrixMulVector::unInitialize()
 	if( g_pfOCLIndex ) {clReleaseMemObject( g_pfOCLIndex ); g_pfOCLIndex = NULL;}
 	if( g_pfOCLMatrix ) {clReleaseMemObject( g_pfOCLMatrix ); g_pfOCLMatrix = NULL;}
 
+	glBindBuffer(1, vertexObj);
+	glDeleteBuffers(1, &vertexObj);
 }
 
 void CMatrixMulVector::initialize(int sizeVertex, int sizeJoint)
@@ -188,6 +191,41 @@ void CMatrixMulVector::MatrixVectorMul( cl_float4* vIn, cl_float4* vOut, cl_floa
 	vOut->s[2] = vIn->s[0] * mat[2].s[0] + vIn->s[1] * mat[2].s[1] + vIn->s[2] * mat[2].s[2]  + mat[2].s[3];
 }
 
+void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue)
+{
+	_context = pContext;
+	_device_ID = pDevice_ID;
+	_kernel = pKernel;
+	_cmd_queue = pCmdQueue;
+
+	// Create Vertex buffer object
+	glGenBuffers(1, &vertexObj);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
+
+	// initialize buffer object
+	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float4), (GLvoid *)_vertexesStatic.pVertex, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// create OpenCL buffer from GL VBO
+	cl_int status = CL_SUCCESS;
+	g_pfOCLOutputBuffer = clCreateFromGLBuffer(_context, CL_MEM_WRITE_ONLY, vertexObj, NULL);
+
+	const cl_mem_flags INFlags  = CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY; 
+	const cl_mem_flags OUTFlags = CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE;
+	cl_int errcode_ret;
+	g_pfInputBuffer = clCreateBuffer(_context, INFlags,  _vertexesStatic.nSize * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
+	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE* _joints.nSize , _joints.pMatrix, NULL);
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_int)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
+
+	//Set kernel arguments
+	cl_kernel	kernel = _kernel;
+	clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *) &g_pfInputBuffer);
+	clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLIndex);
+	clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &g_pfOCLMatrix);
+	clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
+
+	SetupWorksize();
+}
 void CMatrixMulVector::SetupKernel(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue)
 {
 	_context = pContext;
@@ -289,5 +327,24 @@ bool CMatrixMulVector::ExecuteKernel()
 
 	clEnqueueUnmapMemObject(_cmd_queue, g_pfOCLOutputBuffer, tmp_ptr, 0, NULL, NULL);
 	
+	return true;
+}
+bool CMatrixMulVector::ExecuteKernelVBO()
+{
+	// Acquire GL buffer
+	clEnqueueAcquireGLObjects(_cmd_queue, 1, &g_pfOCLOutputBuffer, 0, 0, NULL);
+
+	cl_event g_perf_event = NULL;
+	clEnqueueNDRangeKernel(_cmd_queue, _kernel, 2, NULL, globalWorkSize, localWorkSize, 0, NULL, &g_perf_event);
+	clWaitForEvents(1, &g_perf_event);
+
+	void* tmp_ptr = NULL;
+	clEnqueueReadBuffer(_cmd_queue, g_pfOCLOutputBuffer, CL_TRUE, 0, sizeof(cl_float4) * _vertexesStatic.nSize , _vertexesDynamic.pVertex, 0, NULL, NULL);
+
+	// Release GL buffer
+	clEnqueueReleaseGLObjects(_cmd_queue, 1, &g_pfOCLOutputBuffer, 0, 0, 0);
+
+	clFinish(_cmd_queue);
+
 	return true;
 }

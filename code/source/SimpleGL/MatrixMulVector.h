@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CL\cl.h"
+#include <GL/glew.h>
 #include "Vertex.h"
 #include "Joint.h"
 
@@ -24,9 +25,11 @@ public:
 	// 验证结果是否正确
 	bool verifyEqual();
 
+	void SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue);
 	void SetupKernel(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue);
 	void SetupWorksize( );
 	bool ExecuteKernel();
+	bool ExecuteKernelVBO();
 
 private:
 	// 矩阵变换
@@ -56,4 +59,8 @@ public:
 
 	size_t globalWorkSize[2];
 	size_t localWorkSize[2];
+
+	// vbo
+	GLuint vertexObj;                   /**< Vertex object */
+
 };
