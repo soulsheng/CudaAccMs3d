@@ -4,6 +4,7 @@
 //#include "stdafx.h"
 #include <math.h>
 #include <stdio.h>
+#include <emmintrin.h>
 
 #define  LocalWorkX		8
 #define  LocalWorkY		8
@@ -49,18 +50,17 @@
 
 void CMatrixMulVector::ExecuteNativeSSE()
 {
-#if 0
-	if (!USE_OPENMP)
-		omp_set_num_threads(1);
-
+#if 1
 #pragma omp parallel for
-	for(int i=0;i<PROBLEM_SIZE;i++){
+	for(int i=0;i<_vertexesStatic.nSize;i++){
 		// 读取操作数：顶点对应的矩阵
-		float *mat = _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE*4;
+		//float *mat = _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE*4;
+		cl_float4 *pMat =  _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE;
+
 		__m128 m0, m1, m2, m3;
-		m0 = _mm_load_ps( mat );
-		m1 = _mm_load_ps( mat+4 );
-		m2 = _mm_load_ps( mat+8 );
+		m0 = _mm_load_ps( &pMat[0].s[0] );
+		m1 = _mm_load_ps( &pMat[1].s[0] );
+		m2 = _mm_load_ps( &pMat[2].s[0] );
 
 		// Rearrange to column-major matrix with rows shuffled order to: Z 0 X Y
 		m3 = _mm_setzero_ps();
@@ -68,16 +68,16 @@ void CMatrixMulVector::ExecuteNativeSSE()
 
 		// Load source position
 		__m128 vI0, vI1, vI2;
-		vI0 = _mm_load_ps1(_vertexesStatic.pVertex +4*i );
-		vI1 = _mm_load_ps1(_vertexesStatic.pVertex  +4*i + 1);
-		vI2 = _mm_load_ps1(_vertexesStatic.pVertex  +4*i + 2);
+		vI0 = _mm_load_ps1( &_vertexesStatic.pVertex[i].s[0] );
+		vI1 = _mm_load_ps1( &_vertexesStatic.pVertex[i].s[1] );
+		vI2 = _mm_load_ps1( &_vertexesStatic.pVertex[i].s[2] );
 
 		// Transform by collapsed matrix
 		__m128 vO = __MM_DOT4x3_PS(m2, m3, m0, m1, vI0, vI1, vI2);   // z 0 x y
 
 		// Store blended position, no aligned requirement
-		_mm_storeh_pi((__m64*)(_vertexesDynamicRef.pVertex+4*i) , vO);
-		_mm_store_ss(_vertexesDynamicRef.pVertex+4*i+2, vO);
+		_mm_storeh_pi((__m64*)(&_vertexesDynamicRef.pVertex[i].s[0]) , vO);
+		_mm_store_ss(&_vertexesDynamicRef.pVertex[i].s[2], vO);
 
 	}
 #endif

@@ -1058,8 +1058,11 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
+#if !VECTOR_FLOAT4
 				mvm.ExecuteNativeCPP();
-
+#else
+				mvm.ExecuteNativeSSE();
+#endif
 				stopTimer(timer);
 				dTime = (cl_double)readTimer(timer);
 				insertTimer("2.executeKernelCPP", dTime);
