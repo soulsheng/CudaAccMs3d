@@ -51,7 +51,7 @@
 
 void CMatrixMulVector::ExecuteNativeSSE()
 {
-#if 1
+#if 0
 #pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++){
 		// 读取操作数：顶点对应的矩阵
@@ -98,8 +98,32 @@ void CMatrixMulVector::ExecuteNativeCPP()
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		MatrixVectorMul( _vertexesStatic.pVertex+4*i, _vertexesDynamicRef.pVertex+4*i, pMat);
 #else
-		cl_float4 *pMat =  _joints.pMatrix + _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE;
-		MatrixVectorMul( _vertexesStatic.pVertex+i, _vertexesDynamicRef.pVertex+i, pMat);
+		cl_float4  blendpos, lastpos;
+
+		for(int j= 0 ; j< SIZE_PER_BONE; j++){
+
+			for (int k=0;k<3;k++)
+			{
+				blendpos.s[k]= 0.0f;
+				lastpos.s[k]= 0.0f;
+			}
+
+			cl_float4 indexes = _vertexesStatic.pIndex[i];
+			cl_float4 *pMat =  _joints.pMatrix + (int)indexes.s[j]*MATRIX_SIZE_LINE;
+			
+			MatrixVectorMul( _vertexesStatic.pVertex+i, &blendpos, pMat);
+			
+			cl_float4  weight = _vertexesStatic.pWeight[i];
+			for (int k=0;k<3;k++)
+			{
+				lastpos.s[k]+= blendpos.s[k] * weight.s[j];
+			}
+		}
+
+		for (int k=0;k<3;k++)
+		{
+			_vertexesDynamicRef.pVertex[i].s[k] = lastpos.s[k] ;
+		}
 #endif
 	}
 }
@@ -153,8 +177,11 @@ void CMatrixMulVector::unInitialize()
 	if( g_pfOCLIndex ) {clReleaseMemObject( g_pfOCLIndex ); g_pfOCLIndex = NULL;}
 	if( g_pfOCLMatrix ) {clReleaseMemObject( g_pfOCLMatrix ); g_pfOCLMatrix = NULL;}
 
-	glBindBuffer(1, vertexObj);
-	glDeleteBuffers(1, &vertexObj);
+	for (int i=0;i< SIZE_VBO;i++)
+	{
+		glBindBuffer(1, vertexObj[i]);
+		glDeleteBuffers(1, &vertexObj[i]);
+	}
 }
 
 void CMatrixMulVector::initialize(int sizeVertex, int sizeJoint, streamsdk::SDKCommon * pSampleCommon, TimerList* pTL)
@@ -194,31 +221,52 @@ void CMatrixMulVector::MatrixVectorMul( cl_float4* vIn, cl_float4* vOut, cl_floa
 	vOut->s[2] = vIn->s[0] * mat[2].s[0] + vIn->s[1] * mat[2].s[1] + vIn->s[2] * mat[2].s[2]  + mat[2].s[3];
 }
 
-void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue)
+void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue,
+																int* nLocationAttrib)
 {
 	_context = pContext;
 	_device_ID = pDevice_ID;
 	_kernel = pKernel;
 	_cmd_queue = pCmdQueue;
 
-	// Create Vertex buffer object
-	glGenBuffers(1, &vertexObj);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
+	_locationAttrib = nLocationAttrib;
 
-	// initialize buffer object
+	glGenVertexArrays( 1, &vertexVAO );
+	glBindVertexArray( vertexVAO );
+
+	glGenBuffers( SIZE_VBO, &vertexObj[0]);
+	
+	// Create Vertex buffer object: 顶点属性 坐标
+	glBindBuffer(GL_ARRAY_BUFFER, vertexObj[0]);
 	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float4), (GLvoid *)_vertexesStatic.pVertex, GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glEnableVertexAttribArray( 0 );
+	glVertexAttribPointer( 0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	// 	Create Vertex buffer object: 顶点属性 矩阵索引
+	glBindBuffer(GL_ARRAY_BUFFER, vertexObj[1]);
+	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float4), (GLvoid *)_vertexesStatic.pIndex, GL_DYNAMIC_DRAW);
+
+	glEnableVertexAttribArray( _locationAttrib[0] );
+	glVertexAttribPointer( _locationAttrib[0], 4, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	// 	Create Vertex buffer object: 顶点属性 矩阵权重
+	glBindBuffer(GL_ARRAY_BUFFER, vertexObj[2]);
+	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float4), (GLvoid *)_vertexesStatic.pWeight, GL_DYNAMIC_DRAW);
+
+	glEnableVertexAttribArray( _locationAttrib[1] );
+	glVertexAttribPointer( _locationAttrib[1], 4, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	// create OpenCL buffer from GL VBO
 	cl_int status = CL_SUCCESS;
-	g_pfOCLOutputBuffer = clCreateFromGLBuffer(_context, CL_MEM_WRITE_ONLY, vertexObj, NULL);
+	g_pfOCLOutputBuffer = clCreateFromGLBuffer(_context, CL_MEM_WRITE_ONLY, vertexObj[0], NULL);
 
 	const cl_mem_flags INFlags  = CL_MEM_COPY_HOST_PTR | CL_MEM_READ_ONLY; 
 	const cl_mem_flags OUTFlags = CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE;
 	cl_int errcode_ret;
 	g_pfInputBuffer = clCreateBuffer(_context, INFlags,  _vertexesStatic.nSize * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
 	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE* _joints.nSize , _joints.pMatrix, NULL);
-	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_int)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_short)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
 
 	//Set kernel arguments
 	cl_kernel	kernel = _kernel;
@@ -250,7 +298,7 @@ void CMatrixMulVector::SetupKernel(cl_context	pContext, cl_device_id pDevice_ID,
 	g_pfOCLOutputBuffer = clCreateBuffer(_context, OUTFlags, sizeof(cl_float4) *  _vertexesStatic.nSize , _vertexesDynamic.pVertex, NULL);
 #endif
 
-	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_int)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_short)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
 
 	//Set kernel arguments
 	cl_kernel	kernel = _kernel;
@@ -392,4 +440,15 @@ void CMatrixMulVector::insertTimer( std::string item, double time)
 		return;
 	}
 	_timeValueList->insert( std::make_pair(item, time) );
+}
+
+void CMatrixMulVector::renderVBO()
+{
+	// render from the vAo
+	glBindVertexArray( vertexVAO );
+	
+	glDrawArrays(GL_POINTS, 0,  _vertexesStatic.nSize );
+	
+	glBindVertexArray( NULL );
+
 }

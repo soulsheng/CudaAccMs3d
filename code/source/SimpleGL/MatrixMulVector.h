@@ -7,6 +7,8 @@
 #include <SDKCommon.hpp>
 #include <map>
 
+#define  SIZE_VBO		3
+
 typedef std::multimap<std::string, double> TimerList;
 typedef std::multimap<std::string, double>::iterator TimerListItr;
 
@@ -30,11 +32,13 @@ public:
 	// 验证结果是否正确
 	bool verifyEqual();
 
-	void SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue);
+	void SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue,int* nLocationAttrib);
 	void SetupKernel(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue);
 	void SetupWorksize( );
 	bool ExecuteKernel();
 	bool ExecuteKernelVBO();
+
+	void  renderVBO();
 
 public:
 	/**
@@ -96,7 +100,10 @@ public:
 	size_t localWorkSize[2];
 
 	// vbo
-	GLuint vertexObj;                   /**< Vertex object */
+	GLuint vertexVAO;                   /**< Vertex Array object */
+	GLuint vertexObj[SIZE_VBO];                   /**< Vertex object */
+	
+	int*   _locationAttrib;
 
 	// Timer
 	streamsdk::SDKCommon * sampleCommon;    /**< SDKCommon class object */	

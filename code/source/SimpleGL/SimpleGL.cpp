@@ -58,6 +58,9 @@ int frameCount = 0;
 int frameRefCount = 90;
 double totalElapsedTime = 0.0;
 
+#define    MATRIX_SIZE_LINE    3//3
+
+#define  SIZE_PER_BONE		1
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
 #define    JOINT_SIZE    100
@@ -69,9 +72,27 @@ int iClass=2;
 #define STRINGIFY(A) #A
 
 const char * vertexShader = STRINGIFY(
+	uniform vec4 matrixLine[100 * 3];	
+uniform int		boneNumber;  
+attribute vec4  blendIndices ;
+attribute vec4 blendWeights;
 void main()
 {
-    gl_Position    = ftransform();
+	vec4 blendPos = vec4(0, 0, 0, 0);
+	int i=0;
+	for (;i<boneNumber;i++)
+	{
+		int idx = int(blendIndices[i]+0.5) * 3 ;
+		mat4 worldMatrix;
+		worldMatrix[0] = matrixLine[idx];
+		worldMatrix[1] = matrixLine[idx + 1];
+		worldMatrix[2] = matrixLine[idx + 2];
+		worldMatrix[3] = vec4(0);
+
+		blendPos += worldMatrix * gl_Vertex * blendWeights[i];
+	}
+
+	gl_Position    = gl_ModelViewProjectionMatrix * blendPos;
 }
 );
 
@@ -754,7 +775,7 @@ SimpleGLSample::setupCLKernels()
 {
 #if 1
 
-	mvm.SetupKernelVBO( context, interopDeviceId, kernel, commandQueue );
+	mvm.SetupKernelVBO( context, interopDeviceId, kernel, commandQueue , _locationAttrib);
 
 #else
 	cl_int status;
@@ -1076,17 +1097,12 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
-                // render from the vbo
-                glBindBuffer(GL_ARRAY_BUFFER, mvm.vertexObj);
-                glVertexPointer(4, GL_FLOAT, 0, 0);
+				glUniform1i( _locationUniform[1], SIZE_PER_BONE );
+				glUniform4fv( _locationUniform[0], mvm._joints.nSize * MATRIX_SIZE_LINE, (float*)mvm._joints.pMatrix );
 
-                glUseProgram(glProgram);
-                glEnableClientState(GL_VERTEX_ARRAY);
-                glColor3f(1.0, 0.0, 0.0);
-                glDrawArrays(GL_POINTS, 0, mvm._vertexesStatic.nSize );
-                glDisableClientState(GL_VERTEX_ARRAY);
-
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
+ 				glUseProgram(glProgram);
+               
+				mvm.renderVBO();
 
                 glFinish();
 
@@ -1319,6 +1335,12 @@ GLuint SimpleGLSample::compileProgram(const char * vsrc, const char * psrc)
     glAttachShader(program, pixelShader);
 
     glLinkProgram(program);
+
+
+	_locationUniform[0] = glGetUniformLocation( program, "matrixLine");
+	_locationUniform[1] = glGetUniformLocation( program, "boneNumber");
+	_locationAttrib[0] = glGetAttribLocation( program, "blendIndices");
+	_locationAttrib[1] = glGetAttribLocation( program, "blendWeights");
 
     // check if program linked
     err = 0;

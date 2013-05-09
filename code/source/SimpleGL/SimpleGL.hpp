@@ -308,7 +308,8 @@ private:
 
 		private:
 			CMatrixMulVector	mvm;	
-
+			int   _locationUniform[2]; // matrix  bonenumber
+			int   _locationAttrib[2];   // index  weight
 };
 
 
