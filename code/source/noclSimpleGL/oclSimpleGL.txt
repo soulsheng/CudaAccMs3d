@@ -1,0 +1,29 @@
+C:\ProgramData\NVIDIA Corporation\NVIDIA GPU Computing SDK 4.2\OpenCL\src\oclSimpleGL\..\..\bin\win32\Debug\oclSimpleGL.exe Starting...
+
+Calling InitGL...
+
+Using CL-GL Interop...
+
+Device # 0, GeForce GTS 250
+
+Standard GL Loop...
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+ OpenCL Simple GL (VBO) | W: 256  H: 256
+
+Starting Cleanup...
+
+C:\ProgramData\NVIDIA Corporation\NVIDIA GPU Computing SDK 4.2\OpenCL\src\oclSimpleGL\..\..\bin\win32\Debug\oclSimpleGL.exe Exiting...
+Press <Enter> to Quit
+-----------------------------------------------------------
