@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SimpleGL", "SimpleGL\Simple
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SDKUtil", "SDKUtil\SDKUtil.vcxproj", "{721EBCD6-B0AA-48AD-A3EF-87D3EF265564}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "oclSimpleGL", "noclSimpleGL\oclSimpleGL_vs2010.vcxproj", "{48D760A3-A90C-439B-A976-7AC2896B30FE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -63,6 +65,14 @@ Global
 		{721EBCD6-B0AA-48AD-A3EF-87D3EF265564}.Release|Win32.Build.0 = Release|Win32
 		{721EBCD6-B0AA-48AD-A3EF-87D3EF265564}.Release|x64.ActiveCfg = Release|x64
 		{721EBCD6-B0AA-48AD-A3EF-87D3EF265564}.Release|x64.Build.0 = Release|x64
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Debug|Win32.Build.0 = Debug|Win32
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Debug|x64.ActiveCfg = Debug|x64
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Debug|x64.Build.0 = Debug|x64
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Release|Win32.ActiveCfg = Release|Win32
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Release|Win32.Build.0 = Release|Win32
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Release|x64.ActiveCfg = Release|x64
+		{48D760A3-A90C-439B-A976-7AC2896B30FE}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="oclSimpleGL.cpp" />
+    <ClCompile Include="..\common\oclUtils.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\cmd_arg_reader.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\shrUtils.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="simpleGL.cl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="util">
+      <UniqueIdentifier>{1bef13af-2855-47ce-aa5b-b01cadeab378}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\common\oclUtils.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\cmd_arg_reader.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\shrUtils.h">
+      <Filter>util</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

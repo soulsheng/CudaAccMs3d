@@ -14,7 +14,7 @@
 // *********************************************************************
 
 // includes
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "shrUtils.h"
 #include "cmd_arg_reader.h"
 #include <stdio.h>

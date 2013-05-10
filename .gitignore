@@ -63,3 +63,9 @@
 /code/source/SDKUtil/build
 /code/source/SimpleGL/Debug
 /code/source/SDKUtil/*.asm
+/code/source/noclSimpleGL/ipch
+/code/source/noclSimpleGL/Debug
+/code/source/noclSimpleGL/doc
+/code/source/noclSimpleGL/*.sdf
+/code/source/noclSimpleGL/*.suo
+/code/source/noclSimpleGL/Release

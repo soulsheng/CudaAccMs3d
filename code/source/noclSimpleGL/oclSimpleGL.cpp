@@ -48,8 +48,8 @@
 #include <cassert>
 
 // Utilities, OpenCL and system includes
-#include <oclUtils.h>
-#include <shrQATest.h>
+#include "oclUtils.h"
+//#include <shrQATest.h>
 
 #if defined (__APPLE__) || defined(MACOSX)
    #define GL_SHARING_EXTENSION "cl_APPLE_gl_sharing"
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
     pArgv = argv;
 
     // start logs 
-    shrQAStart(argc, argv);
+    //shrQAStart(argc, argv);
     cExecutableName = argv[0];
     shrSetLogFileName ("oclSimpleGL.txt");
     shrLog("%s Starting...\n\n", argv[0]); 
@@ -657,7 +657,7 @@ void Cleanup(int iExitCode)
     if(cdDevices)delete(cdDevices);
 
     // finalize logs and leave
-    shrQAFinish2(bQATest, *pArgc, (const char **)pArgv, (iExitCode == 0) ? QA_PASSED : QA_FAILED ); 
+    //shrQAFinish2(bQATest, *pArgc, (const char **)pArgv, (iExitCode == 0) ? QA_PASSED : QA_FAILED ); 
     if (bQATest || bNoPrompt)
     {
         shrLogEx(LOGBOTH | CLOSELOG, 0, "%s Exiting...\n", cExecutableName);
