@@ -23,6 +23,7 @@
 
     Host code
 */
+#include "stopwatch_win.h"
 
 #ifdef _WIN32
 #  define WINDOWS_LEAN_AND_MEAN
@@ -64,8 +65,8 @@
 // Rendering window vars
 const unsigned int window_width = 512;
 const unsigned int window_height = 512;
-const unsigned int mesh_width = 256;
-const unsigned int mesh_height = 256;
+const unsigned int mesh_width = (1<<8);
+const unsigned int mesh_height = (1<<8);
 
 // OpenCL vars
 cl_platform_id cpPlatform;
@@ -80,6 +81,8 @@ cl_int ciErrNum;
 char* cPathAndName = NULL;          // var for full paths to data, src, etc.
 char* cSourceCL = NULL;             // Buffer to hold source for compilation 
 size_t szGlobalWorkSize[] = {mesh_width, mesh_height};
+size_t szLocalWorkSize[] = {8, 8};
+
 const char* cExecutableName = NULL;
 
 // vbo variables
@@ -391,7 +394,7 @@ void runKernel()
 
     // Set arg 3 and execute the kernel
     ciErrNum = clSetKernelArg(ckKernel, 3, sizeof(float), &anim);
-    ciErrNum |= clEnqueueNDRangeKernel(cqCommandQueue, ckKernel, 2, NULL, szGlobalWorkSize, NULL, 0,0,0 );
+    ciErrNum |= clEnqueueNDRangeKernel(cqCommandQueue, ckKernel, 2, NULL, szGlobalWorkSize, szLocalWorkSize, 0,0,0 );
     shrCheckErrorEX(ciErrNum, CL_SUCCESS, pCleanup);
 
 #ifdef GL_INTEROP
@@ -473,6 +476,12 @@ void DisplayGL()
         dProcessingTime = shrDeltaT(0); 
     }
 
+	// start timer 0 if it's update time
+	double dRenderTime = 0.0;
+	if (iFrameCount >= iFrameTrigger)
+	{
+		shrDeltaT(2); 
+	}
     // clear graphics then render from the vbo
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -485,12 +494,19 @@ void DisplayGL()
     // flip backbuffer to screen
     glutSwapBuffers();
 
+	if (iFrameCount >= iFrameTrigger)
+	{
+		dRenderTime = shrDeltaT(2); 
+	}
+
     // Increment the frame counter, and do fps if it's time
+	double dTotalTime = 0.0;
     if (iFrameCount++ > iFrameTrigger) 
     {
         // set GLUT Window Title
         char cTitle[256];
-        iFramesPerSec = (int)((double)iFrameCount/shrDeltaT(1));
+		dTotalTime = shrDeltaT(1) ;
+        iFramesPerSec = (int)((double)iFrameCount/dTotalTime );
 #ifdef GPU_PROFILING
         #ifdef _WIN32
             sprintf_s(cTitle, 256, "OpenCL Simple GL (VBO) | %u x %u | %i fps | Proc. t = %.5f s", 
@@ -501,12 +517,13 @@ void DisplayGL()
         #endif
 #else
         #ifdef _WIN32
-            sprintf_s(cTitle, 256, "OpenCL Simple GL (VBO) | W: %u  H: %u", mesh_width, mesh_height );
+            sprintf_s(cTitle, 256, "OpenCL Simple GL (VBO) | W: %u  H: %u | %i fps | Proc. t = %.5f s | Render. t = %.5f s | tpf= %.5f s", mesh_width, mesh_height , 
+				iFramesPerSec, dProcessingTime, dRenderTime, 1.0f/iFramesPerSec);
         #else 
             sprintf(cTitle, "OpenCL Simple GL (VBO) | W: %u  H: %u", mesh_width, mesh_height);
         #endif
 #endif
-        glutSetWindowTitle(cTitle);
+        //glutSetWindowTitle(cTitle);
 
         // Log fps and processing info to console and file 
         shrLog(" %s\n", cTitle); 
