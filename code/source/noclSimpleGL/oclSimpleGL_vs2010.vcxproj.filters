@@ -11,6 +11,9 @@
     <ClCompile Include="..\common\shrUtils.cpp">
       <Filter>util</Filter>
     </ClCompile>
+    <ClCompile Include="..\common\stopwatch_win.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="simpleGL.cl" />
@@ -28,6 +31,12 @@
       <Filter>util</Filter>
     </ClInclude>
     <ClInclude Include="..\common\shrUtils.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\stopwatch_win.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\stdafx.h">
       <Filter>util</Filter>
     </ClInclude>
   </ItemGroup>

@@ -11,7 +11,7 @@
 
 /* CUda UTility Library */
 
-//#include "stdafx.h"
+#include "stdafx.h"
 
 // includes, file
 #include "cmd_arg_reader.h"

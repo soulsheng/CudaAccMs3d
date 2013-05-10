@@ -145,7 +145,7 @@
       <Optimization>MaxSpeed</Optimization>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <AdditionalIncludeDirectories>../../common/inc/;../../../shared/inc/;..\..\dependence\include;..\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;GL_INTEROP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -199,6 +199,7 @@
     <ClCompile Include="..\common\cmd_arg_reader.cpp" />
     <ClCompile Include="..\common\oclUtils.cpp" />
     <ClCompile Include="..\common\shrUtils.cpp" />
+    <ClCompile Include="..\common\stopwatch_win.cpp" />
     <ClCompile Include="oclSimpleGL.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -244,6 +245,8 @@
     <ClInclude Include="..\common\cmd_arg_reader.h" />
     <ClInclude Include="..\common\oclUtils.h" />
     <ClInclude Include="..\common\shrUtils.h" />
+    <ClInclude Include="..\common\stdafx.h" />
+    <ClInclude Include="..\common\stopwatch_win.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
