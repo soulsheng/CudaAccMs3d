@@ -70,7 +70,14 @@ int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即
 int iClass=2;
 
 #define STRINGIFY(A) #A
-
+#if 1
+const char * vertexShader = STRINGIFY(
+	void main()
+{
+	gl_Position    = ftransform();
+}
+);
+#else
 const char * vertexShader = STRINGIFY(
 	uniform vec4 matrixLine[100 * 3];	
 uniform int		boneNumber;  
@@ -95,7 +102,7 @@ void main()
 	gl_Position    = gl_ModelViewProjectionMatrix * blendPos;
 }
 );
-
+#endif
 const char * pixelShader = STRINGIFY(
 void main()
 {
@@ -1077,7 +1084,7 @@ SimpleGLSample::run()
 				startTimer(timer);
 
 #if 1//!VECTOR_FLOAT4
-				mvm.ExecuteNativeCPP();
+				//mvm.ExecuteNativeCPP();
 #else
 				mvm.ExecuteNativeSSE();
 #endif
@@ -1097,10 +1104,10 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
-				glUniform1i( _locationUniform[1], SIZE_PER_BONE );
-				glUniform4fv( _locationUniform[0], mvm._joints.nSize * MATRIX_SIZE_LINE, (float*)mvm._joints.pMatrix );
+				//glUniform1i( _locationUniform[1], SIZE_PER_BONE );
+				//glUniform4fv( _locationUniform[0], mvm._joints.nSize * MATRIX_SIZE_LINE, (float*)mvm._joints.pMatrix );
 
- 				glUseProgram(glProgram);
+ 				//glUseProgram(glProgram);
                
 				mvm.renderVBO();
 

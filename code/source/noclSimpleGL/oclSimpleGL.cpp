@@ -65,8 +65,8 @@
 // Rendering window vars
 const unsigned int window_width = 512;
 const unsigned int window_height = 512;
-const unsigned int mesh_width = (1<<8);
-const unsigned int mesh_height = (1<<8);
+const unsigned int mesh_width = (1<<10);
+const unsigned int mesh_height = (1<<10);
 
 // OpenCL vars
 cl_platform_id cpPlatform;
@@ -468,7 +468,7 @@ void DisplayGL()
     }
 
     // run OpenCL kernel to generate vertex positions
-    runKernel();
+  //  runKernel();
 
     // get processing time from timer 0, if it's update time
     if (iFrameCount >= iFrameTrigger)
@@ -492,7 +492,8 @@ void DisplayGL()
     glDisableClientState(GL_VERTEX_ARRAY);
 
     // flip backbuffer to screen
-    glutSwapBuffers();
+	glFinish();
+	glutSwapBuffers();
 
 	if (iFrameCount >= iFrameTrigger)
 	{
