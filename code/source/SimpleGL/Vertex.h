@@ -2,7 +2,7 @@
 
 #include "Joint.h"
 
-#define  SIZE_PER_BONE		3
+#define  SIZE_PER_BONE		4
 
 #if !VECTOR_FLOAT4
 //¶¥µã×ø±ê---------------------------------------------------------

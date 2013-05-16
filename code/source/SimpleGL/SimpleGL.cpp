@@ -59,7 +59,6 @@ int frameRefCount = 90;
 double totalElapsedTime = 0.0;
 
 #define    MATRIX_SIZE_LINE    3//3
-#define  SIZE_PER_BONE		1
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
 #define    JOINT_SIZE    100
@@ -637,17 +636,8 @@ SimpleGLSample::run()
                 t1 = clock() * CLOCKS_PER_SEC;
                 frameCount++;
 
-                // run OpenCL kernel to generate vertex positions
-				int timer = getTimerCurrent(0);
-				resetTimer(timer);
-				startTimer(timer);
-
-				stopTimer(timer);
-				double dTime = (cl_double)readTimer(timer);
-				insertTimer("1.executeKernelOCL", dTime);
-
 				// run CPP kernel to generate vertex positions
-				timer = getTimerCurrent(0);
+				int timer = getTimerCurrent(0);
 				resetTimer(timer);
 				startTimer(timer);
 
@@ -657,7 +647,7 @@ SimpleGLSample::run()
 				mvm.ExecuteNativeSSE();
 #endif
 				stopTimer(timer);
-				dTime = (cl_double)readTimer(timer);
+				double dTime = (cl_double)readTimer(timer);
 				insertTimer("2.executeKernelCPP", dTime);
 
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
