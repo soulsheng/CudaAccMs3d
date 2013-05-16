@@ -62,7 +62,7 @@ double totalElapsedTime = 0.0;
 #define    MATRIX_SIZE_LINE    3//3
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
-#define    JOINT_SIZE    100
+#define    JOINT_SIZE    8
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
@@ -71,7 +71,7 @@ int iClass=2;
 #define STRINGIFY(A) #A
 
 const char * vertexShader = STRINGIFY(
-	uniform vec4 matrixLine[100 * 3];	
+	uniform vec4 matrixLine[8 * 3];	
 uniform int		boneNumber;  
 attribute vec4  blendIndices ;
 attribute vec4 blendWeights;
