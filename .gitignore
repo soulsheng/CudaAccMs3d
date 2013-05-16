@@ -63,3 +63,8 @@
 /code/source/SDKUtil/build
 /code/source/SimpleGL/Debug
 /code/source/SDKUtil/*.asm
+/code/source/noclSimpleGL/Debug
+/code/source/noclSimpleGL/Release
+/code/source/noclSimpleGL/*.sdf
+/code/source/noclSimpleGL/*.suo
+/code/source/noclSimpleGL/oclSimpleGL.txt
