@@ -10,8 +10,16 @@
 #define  LocalWorkX		8
 #define  LocalWorkY		8
 
+#define  VBO_MAP		1
+
 void CMatrixMulVector::ExecuteNativeCPP()
 {
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	cl_float4* pVertex = (cl_float4*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#endif
+
+
 #if 1//use_openmp
 #pragma omp parallel for
 #endif
@@ -48,10 +56,19 @@ void CMatrixMulVector::ExecuteNativeCPP()
 
 		for (int k=0;k<3;k++)
 		{
+#if  VBO_MAP
+			pVertex[i].s[k] = lastpos.s[k] ;
+#else
 			_vertexesDynamicRef.pVertex[i].s[k] = lastpos.s[k] ;
+#endif
 		}
 #endif
 	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
 }
 
 bool CMatrixMulVector::verifyEqual( cl_float4 *v, cl_float4* vRef, int size )
