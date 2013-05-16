@@ -200,21 +200,8 @@ public:
     * Build CL kernel program executable
     * @return SDK_SUCCESS on success and SDK_FAILURE on failure
     */
-    int setupCL();
+    int setupSL();
 
-
-    /**
-    * Set values for kernels' arguments
-    * @return SDK_SUCCESS on success and SDK_FAILURE on failure
-    */
-    int setupCLKernels();
-
-    /**
-    * Enqueue calls to the kernels
-    * on to the command queue, wait till end of kernel execution.
-    * @return SDK_SUCCESS on success and SDK_FAILURE on failure
-    */
-    int executeKernel();
 
     /**
     * Reference CPU implementation of Binomial Option
@@ -309,6 +296,8 @@ private:
 		private:
 			CMatrixMulVector	mvm;	
 
+			int   _locationUniform[2]; // matrix  bonenumber
+			int   _locationAttrib[2];   // index  weight
 };
 
 

@@ -58,6 +58,8 @@ int frameCount = 0;
 int frameRefCount = 90;
 double totalElapsedTime = 0.0;
 
+#define    MATRIX_SIZE_LINE    3//3
+#define  SIZE_PER_BONE		1
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
 #define    JOINT_SIZE    100
@@ -69,9 +71,27 @@ int iClass=2;
 #define STRINGIFY(A) #A
 
 const char * vertexShader = STRINGIFY(
+	uniform vec4 matrixLine[100 * 3];	
+uniform int		boneNumber;  
+attribute vec4  blendIndices ;
+attribute vec4 blendWeights;
 void main()
 {
-    gl_Position    = ftransform();
+	vec4 blendPos = vec4(0, 0, 0, 0);
+	int i=0;
+	for (;i<boneNumber;i++)
+	{
+		int idx = int(blendIndices[i]+0.5) * 3 ;
+		mat4 worldMatrix;
+		worldMatrix[0] = matrixLine[idx];
+		worldMatrix[1] = matrixLine[idx + 1];
+		worldMatrix[2] = matrixLine[idx + 2];
+		worldMatrix[3] = vec4(0);
+
+		blendPos += worldMatrix * gl_Vertex * blendWeights[i];
+	}
+
+	gl_Position    = gl_ModelViewProjectionMatrix * blendPos;
 }
 );
 
@@ -432,205 +452,9 @@ SimpleGLSample::disableGL(HWND hWnd, HDC hDC, HGLRC hRC)
 #endif
 
 int 
-SimpleGLSample::setupSimpleGL()
+SimpleGLSample::setupSL()
 {
-    pos = (cl_float*)malloc(meshWidth * meshHeight * sizeof(cl_float4));
-    CHECK_ALLOCATION(pos, "Failed to allocate host memory. (pos)");
-
-    memset(pos, 0, 4 * meshWidth * meshHeight * sizeof(cl_float));
-    return SDK_SUCCESS;
-}
-
-int SimpleGLSample::initializeGLAndGetCLContext(cl_platform_id platform, 
-                        cl_context &context, 
-                        cl_device_id &interopDevice)
-{
-#ifndef _WIN32
-    cl_int status = SDK_SUCCESS;
-    displayName = XOpenDisplay(NULL);
-    int screenNumber = ScreenCount(displayName);
-    std::cout<<"Number of displays "<<screenNumber<<std::endl;
-    XCloseDisplay(displayName);
-
-    for (int i = 0; i < screenNumber; i++)
-    {
-        if (isDeviceIdEnabled())
-        {
-            if (i < deviceId)
-            {
-            continue;
-            }
-        }
-        char disp[100];
-        sprintf(disp, "DISPLAY=:0.%d", i);
-        putenv(disp);
-        displayName = XOpenDisplay(0);	
-        int nelements;
-        GLXFBConfig *fbc = glXChooseFBConfig(displayName, DefaultScreen(displayName), 0, &nelements);
-        static int attributeList[] = { GLX_RGBA, 
-                           GLX_DOUBLEBUFFER, 
-                           GLX_RED_SIZE, 
-                           1, 
-                           GLX_GREEN_SIZE, 
-                           1, 
-                           GLX_BLUE_SIZE, 
-                           1, 
-                           None 
-                         };
-        XVisualInfo *vi = glXChooseVisual(displayName, 
-                    DefaultScreen(displayName),
-                    attributeList);
-
-        XSetWindowAttributes swa;
-        swa.colormap = XCreateColormap(displayName, RootWindow(displayName, vi->screen), vi->visual, AllocNone);
-        swa.border_pixel = 0;
-        swa.event_mask = StructureNotifyMask;
-        win = XCreateWindow(displayName,
-                                RootWindow(displayName, vi->screen),
-                                10,
-                                10,
-                                WINDOW_WIDTH,
-                                WINDOW_HEIGHT,
-                                0,
-                                vi->depth,
-                                InputOutput,
-                                vi->visual,
-                                CWBorderPixel|CWColormap|CWEventMask,
-                                &swa);
-
-        XMapWindow (displayName, win);
-
-        std::cout << "glXCreateContextAttribsARB " 
-          << (void*) glXGetProcAddress((const GLubyte*)"glXCreateContextAttribsARB") 
-          << std::endl;
-
-        GLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (GLXCREATECONTEXTATTRIBSARBPROC) 
-                                    glXGetProcAddress((const GLubyte*)"glXCreateContextAttribsARB");
-
-        int attribs[] = {
-                        GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-                        GLX_CONTEXT_MINOR_VERSION_ARB, 0,
-                        0
-                        };
-
-        GLXContext ctx = glXCreateContextAttribsARB(displayName, *fbc, 0, true, attribs);
-        glXMakeCurrent (displayName, win, ctx);	
-        gGlCtx = glXGetCurrentContext();
-        cl_context_properties cpsGL[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
-                                          CL_GLX_DISPLAY_KHR, (intptr_t) glXGetCurrentDisplay(),
-                                          CL_GL_CONTEXT_KHR, (intptr_t) gGlCtx, 0
-                                        };
-        if (!clGetGLContextInfoKHR)
-        {
-            clGetGLContextInfoKHR = (clGetGLContextInfoKHR_fn) clGetExtensionFunctionAddressForPlatform(platform, "clGetGLContextInfoKHR");
-            if (!clGetGLContextInfoKHR)
-                {
-                    std::cout << "Failed to query proc address for clGetGLContextInfoKHR";
-                }
-        }
-
-        size_t deviceSize = 0;
-        status = clGetGLContextInfoKHR(cpsGL,
-                                   CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
-                                   0,
-                                   NULL,
-                                   &deviceSize);
-        CHECK_OPENCL_ERROR(status, "clGetGLContextInfoKHR failed!!");
-
-        int numDevices = (deviceSize / sizeof(cl_device_id));
-        std::cout<<"Number of interoperable devices "<<numDevices<<std::endl;
-
-        if (numDevices == 0)
-        {
-            //glXMakeCurrent(glXGetCurrentDisplay(), glXGetCurrentDrawable(), 0 );
-            glXDestroyContext(glXGetCurrentDisplay(), gGlCtx);
-            continue;
-        }
-        else 
-        {
-            //Interoperable device found
-            break;
-        }
-    }
-    cl_context_properties cpsGL[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
-                                      CL_GLX_DISPLAY_KHR, (intptr_t) glXGetCurrentDisplay(),
-                                      CL_GL_CONTEXT_KHR, (intptr_t) gGlCtx, 0
-                                    };
-    if (deviceType.compare("gpu") == 0)
-    {
-        status = clGetGLContextInfoKHR( cpsGL,
-                                    CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
-                                    sizeof(cl_device_id),
-                                    &interopDeviceId,
-                                    NULL);
-        CHECK_OPENCL_ERROR(status, "clGetGLContextInfoKHR failed!!");
-
-        std::cout<<"Interop Device ID is "<<interopDeviceId<<std::endl; 
-
-        // Create OpenCL context from device's id
-        context = clCreateContext(cpsGL,
-                                 1,
-                                 &interopDeviceId,
-                                 0,
-                                 0,
-                                 &status);
-        CHECK_OPENCL_ERROR(status, "clCreateContext failed.");
-    }
-    else 
-    {
-        context = clCreateContextFromType(cpsGL,
-                    CL_DEVICE_TYPE_CPU,
-                    NULL,
-                    NULL,
-                    &status);
-        CHECK_OPENCL_ERROR(status, "clCreateContextFromType failed!!");
-    }
-    // GL init
-    glewInit();
-    if (! glewIsSupported("GL_VERSION_2_0 " "GL_ARB_pixel_buffer_object"))
-    {
-          std::cout << "Support for necessary OpenGL extensions missing."
-                    << std::endl;
-          return SDK_FAILURE;
-    }
-
-    glEnable(GL_TEXTURE_2D);
-    glClearColor(0.0, 0.0, 0.0, 1.0);
-    glDisable(GL_DEPTH_TEST);
-
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(
-        60.0,
-        (GLfloat)WINDOW_WIDTH / (GLfloat) WINDOW_HEIGHT,
-        0.1,
-        10.0);
-#endif
-    return SDK_SUCCESS;
-}
-
-
-int 
-SimpleGLSample::setupCL()
-{
-    cl_int status = CL_SUCCESS;
-
-    cl_device_type dType;
-    if(deviceType.compare("cpu") == 0)
-    {
-        dType = CL_DEVICE_TYPE_CPU;
-    }
-    else //deviceType = "gpu" 
-    {
-        dType = CL_DEVICE_TYPE_GPU;
-        if(isThereGPU() == false)
-        {
-            std::cout << "GPU not found. Falling back to CPU device" << std::endl;
-            dType = CL_DEVICE_TYPE_CPU;
-        }
-    }
+	cl_int status = CL_SUCCESS;
 
     /*
      * Have a look at the available platforms and pick either
@@ -641,86 +465,14 @@ SimpleGLSample::setupCL()
     CHECK_ERROR(retValue, SDK_SUCCESS, "sampleCommon::getPlatform() failed");
 
     // Display available devices.
-    retValue = sampleCommon->displayDevices(platform, dType);
-    CHECK_ERROR(retValue, SDK_SUCCESS, "sampleCommon::displayDevices() failed");
+    //retValue = sampleCommon->displayDevices(platform, dType);
+   // CHECK_ERROR(retValue, SDK_SUCCESS, "sampleCommon::displayDevices() failed");
 
-#ifdef _WIN32
     retValue = enableGLAndGetGLContext(gHwnd, gHdc, gGlCtx, platform, context, interopDeviceId);
     if (retValue != SDK_SUCCESS)
     {
         return retValue;
     }
-#else
-    retValue = initializeGLAndGetCLContext(platform, 
-                   context, 
-                   interopDeviceId);
-    if (retValue != SDK_SUCCESS)
-    {
-        return retValue;
-    }
-#endif 
-    if (dType == CL_DEVICE_TYPE_CPU)
-    {
-        // getting device on which to run the sample
-        status = sampleCommon->getDevices(context, &devices, deviceId, isDeviceIdEnabled());
-        CHECK_ERROR(status, SDK_SUCCESS, "sampleCommon::getDevices() failed");
-        interopDeviceId = devices[deviceId];
-    }
-     // Create command queue
-    commandQueue = clCreateCommandQueue(
-        context,
-        interopDeviceId,
-        0,
-        &status);
-    CHECK_OPENCL_ERROR(status, "clCreateCommandQueue failed.");
-
-    //Set device info of given cl_device_id
-    retValue = deviceInfo.setDeviceInfo(interopDeviceId);
-    CHECK_ERROR(retValue, SDK_SUCCESS, "SDKDeviceInfo::setDeviceInfo() failed");
-#if 0
-    // Create Vertex buffer object
-    glGenBuffers(1, &vertexObj);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexObj);
-
-    // initialize buffer object
-    unsigned int size = meshWidth * meshHeight * sizeof(cl_float4);
-    cl_float4 *fdata = (cl_float4 *)malloc(size);
-    memset(fdata, 0x1, size);
-    glBufferData(GL_ARRAY_BUFFER, size, (GLvoid *)fdata, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // create OpenCL buffer from GL VBO
-    posBuf = clCreateFromGLBuffer(context, CL_MEM_WRITE_ONLY, vertexObj, &status);
-    CHECK_OPENCL_ERROR(status, "clCreateFromGLBuffer failed. (posBuf)");
-#endif
-    // create a CL program using the kernel source 
-    streamsdk::buildProgramData buildData;
-    buildData.kernelName = std::string("SimpleGL_Kernels.cl");
-    buildData.devices = &interopDeviceId;
-    buildData.deviceId = 0;
-    buildData.flagsStr = std::string("");
-    if(isLoadBinaryEnabled())
-        buildData.binaryName = std::string(loadBinary.c_str());
-
-    if(isComplierFlagsSpecified())
-        buildData.flagsFileName = std::string(flags.c_str());
-
-    retValue = sampleCommon->buildOpenCLProgram(program, context, buildData);
-    CHECK_ERROR(retValue, SDK_SUCCESS, "sampleCommon::buildOpenCLProgram() failed");
-
-    // get a kernel object handle for a kernel with the given name
-    kernel = clCreateKernel(
-        program,
-        "updateVectorByMatrix4",
-        &status);
-    CHECK_OPENCL_ERROR(status, "clCreateKernel failed.");
-
-    // Load texture
-//     if(loadTexture(&texture) == SDK_FAILURE)
-//     {
-//         std::cout << "ERROR: Failed to load texture " << std::endl;
-//         return SDK_FAILURE;
-//     }
 
     // Compile Vertex and Pixel shaders and create glProgram
 	glProgram = compileProgram(vertexShader, pixelShader);
@@ -736,148 +488,16 @@ SimpleGLSample::setupCL()
 int 
 SimpleGLSample::setup()
 {
-    if (setupSimpleGL() != SDK_SUCCESS)
-        return SDK_FAILURE;
-
-    cl_int retValue = setupCL();
+  
+    cl_int retValue = setupSL();
     if (retValue != SDK_SUCCESS)
     return retValue;
 
 	PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[iClass] ;
 	mvm.initialize( PROBLEM_SIZE, JOINT_SIZE , sampleCommon, &_timeValueList );
 
-    return SDK_SUCCESS;
-}
+	mvm.setupVBO( context, interopDeviceId, kernel, commandQueue , _locationAttrib);
 
-int 
-SimpleGLSample::setupCLKernels()
-{
-#if 1
-
-	mvm.SetupKernelVBO( context, interopDeviceId, kernel, commandQueue );
-
-#else
-	cl_int status;
-
-    // Set appropriate arguments to the kernel
-
-    // Output buffer for position vector
-    status = clSetKernelArg(
-        kernel,
-        0,
-        sizeof(cl_mem),
-        (void*)&posBuf);
-    CHECK_OPENCL_ERROR(status, "clSetKernelArg failed. (posBuf)");
-
-    // Mesh Width
-    status = clSetKernelArg(
-        kernel,
-        1,
-        sizeof(cl_uint),
-        (void *)&meshWidth);
-    CHECK_OPENCL_ERROR(status, "clSetKernelArg failed. (meshWidth)");
-
-    // Mesh Height 
-    status = clSetKernelArg(
-        kernel,
-        2,
-        sizeof(cl_uint),
-        (void *)&meshHeight);
-    CHECK_OPENCL_ERROR(status, "clSetKernelArg failed. (meshHeight)");
-
-    // animation value
-    status = clSetKernelArg(
-        kernel,
-        3,
-        sizeof(cl_float),
-        (void *)&animate);
-    CHECK_OPENCL_ERROR(status, "clSetKernelArg failed. (animate)");
-
-    // Check group size against group size returned by kernel
-    status = kernelInfo.setKernelWorkGroupInfo(kernel, interopDeviceId);
-        /*clGetKernelWorkGroupInfo(kernel,
-        interopDeviceId,
-        CL_KERNEL_WORK_GROUP_SIZE,
-        sizeof(size_t),
-        &kernelWorkGroupSize,
-        0);*/
-    CHECK_OPENCL_ERROR(status, "kernelInfo.setKernelWorkGroupInfo failed.");
-
-    if(groupSize > kernelInfo.kernelWorkGroupSize)
-    {
-        std::cout << "Out of Resources!" << std::endl;
-        std::cout << "Group Size specified : " << groupSize << std::endl;
-        std::cout << "Max Group Size supported on the kernel : " 
-                  << kernelInfo.kernelWorkGroupSize << std::endl;
-        std::cout << "Falling back to " << kernelInfo.kernelWorkGroupSize << std::endl;
-        groupSize = kernelInfo.kernelWorkGroupSize;
-    }
-#endif
-    return SDK_SUCCESS;
-}
-
-int 
-SimpleGLSample::executeKernel()
-{	
-#if 1
-
-	mvm.ExecuteKernelVBO( );
-
-#else
-    cl_int status = CL_SUCCESS;
-    // Set local and global work group sizes
-    size_t localX = (size_t)sqrt((double)groupSize);
-    size_t globalWorkSize[2] = {meshWidth, meshHeight};
-    size_t localWorkSize[2] = {groupSize, 1};
-
-	int timer = getTimerCurrent(2);
-	resetTimer(timer);
-	startTimer(timer);
-    
-	// Acquire GL buffer
-    status = clEnqueueAcquireGLObjects(commandQueue, 1, &posBuf, 0, 0, NULL);
-    CHECK_OPENCL_ERROR(status, "clEnqueueAcquireGLObjects failed.");
-
-	stopTimer(timer);
-	double dTime = readTimer(timer);
-	insertTimer("1.1.AcquireGLObjects", dTime);
-
-    // Set kernel argument animate with updated value
-    status = clSetKernelArg(kernel, 3, sizeof(float), &animate);
-    CHECK_OPENCL_ERROR(status, "clSetKernelArg failed(animate).");
-
-	resetTimer(timer);
-	startTimer(timer);
-
-    // Execute kernel on given device
-    cl_event  eventND[1];
-    status = clEnqueueNDRangeKernel(commandQueue, kernel, 2, NULL, globalWorkSize, localWorkSize, 0, 0, eventND );
-    CHECK_OPENCL_ERROR(status, "clEnqueueNDRangeKernel failed.");
-
-    status = clFlush(commandQueue);
-    CHECK_OPENCL_ERROR(status, "clFlush() failed");
-
-    status = sampleCommon->waitForEventAndRelease(&eventND[0]);
-    CHECK_ERROR(status, SDK_SUCCESS, "WaitForEventAndRelease(eventND[0]) Failed");
-
-	stopTimer(timer);
-	dTime = readTimer(timer);
-	insertTimer("1.2.Kernel", dTime);
-
-	resetTimer(timer);
-	startTimer(timer);
-
-    // Release GL buffer
-    status = clEnqueueReleaseGLObjects(commandQueue, 1, &posBuf, 0, 0, 0);
-    CHECK_OPENCL_ERROR(status, "clEnqueueReleaseGLObjects failed.");
-
-	stopTimer(timer);
-	dTime = readTimer(timer);
-	insertTimer("1.3.ReleaseGLObjects", dTime);
-
-    status = clFinish(commandQueue);
-    CHECK_OPENCL_ERROR(status, "clFinish failed.");
-#endif
     return SDK_SUCCESS;
 }
 
@@ -932,26 +552,7 @@ SimpleGLSample::cleanup()
     // Releases OpenCL resources (Context, Memory etc.)
 	mvm.unInitialize();
 
-    cl_int status;
-#if 0
-    glBindBuffer(1, vertexObj);
-    glDeleteBuffers(1, &vertexObj);
-
-    status = clReleaseMemObject(posBuf);
-    CHECK_OPENCL_ERROR(status, "clReleaseMemObject failed.(posBuf)");
-#endif
-    status = clReleaseKernel(kernel);
-    CHECK_OPENCL_ERROR(status, "clReleaseKernel failed.(kernel)");
-
-    status = clReleaseProgram(program);
-    CHECK_OPENCL_ERROR(status, "clReleaseProgram failed.(program)");
-
-    status = clReleaseCommandQueue(commandQueue);
-    CHECK_OPENCL_ERROR(status, "clReleaseCommandQueue failed.(commandQueue)");
-
-    status = clReleaseContext(context);
-    CHECK_OPENCL_ERROR(status, "clReleaseContext failed. (context)");
-    return SDK_SUCCESS;
+	return SDK_SUCCESS;
 }
 
 int 
@@ -1004,9 +605,6 @@ int
 SimpleGLSample::run()
 {
     int status = 0;
-    // Arguments are set and execution call is enqueued on command buffer
-    if (setupCLKernels() != SDK_SUCCESS)
-        return SDK_FAILURE;
 
     if(!quiet && !verify)
     {
@@ -1044,8 +642,6 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
-//                executeKernel();
-
 				stopTimer(timer);
 				double dTime = (cl_double)readTimer(timer);
 				insertTimer("1.executeKernelOCL", dTime);
@@ -1056,7 +652,7 @@ SimpleGLSample::run()
 				startTimer(timer);
 
 #if 1//!VECTOR_FLOAT4
-				mvm.ExecuteNativeCPP();
+				//mvm.ExecuteNativeCPP();
 #else
 				mvm.ExecuteNativeSSE();
 #endif
@@ -1077,26 +673,22 @@ SimpleGLSample::run()
 				startTimer(timer);
 
                 // render from the vbo
-                glBindBuffer(GL_ARRAY_BUFFER, mvm.vertexObj);
-                glVertexPointer(4, GL_FLOAT, 0, 0);
 
-                glUseProgram(glProgram);
-                glEnableClientState(GL_VERTEX_ARRAY);
-                glColor3f(1.0, 0.0, 0.0);
-                glDrawArrays(GL_POINTS, 0, mvm._vertexesStatic.nSize );
-                glDisableClientState(GL_VERTEX_ARRAY);
+				glUniform1i( _locationUniform[1], SIZE_PER_BONE );
+				glUniform4fv( _locationUniform[0], mvm._joints.nSize * MATRIX_SIZE_LINE, (float*)mvm._joints.pMatrix );
+				glUseProgram(glProgram);
 
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
+				mvm.renderVBO();
 
                 glFinish();
-
-                SwapBuffers(gHdc);
 
 				stopTimer(timer);
 				dTime = (cl_double)readTimer(timer);
 				insertTimer("2.render", dTime);
 #endif
-                t2 = clock() * CLOCKS_PER_SEC;
+ 
+				SwapBuffers(gHdc);
+               t2 = clock() * CLOCKS_PER_SEC;
                 totalElapsedTime += (double)(t2 - t1);
                 if(1&&frameCount && frameCount > frameRefCount)
                 {
@@ -1250,32 +842,7 @@ SimpleGLSample::run()
     }
 #endif
     }
-    else
-    {
-        if(verify || timing)
-        {
-            executeKernel();
-/*
-            // Copy vertex buffer values to host ptr for correctness verification
-            glBindBufferARB(GL_ARRAY_BUFFER, vertexObj); 
-
-            // map the buffer object into client's memory
-            float* ptr = (float*)glMapBufferARB(GL_ARRAY_BUFFER, GL_READ_ONLY_ARB);
-
-            if(ptr == NULL)
-            {
-                std::cout << "glMapBufferARB failed to map.";
-                return SDK_FAILURE;
-            }
- 
-            memcpy(pos, ptr, meshWidth * meshHeight * sizeof(cl_float4));
-            glUnmapBufferARB(GL_ARRAY_BUFFER); 
-*/
-        }
-        if(!quiet)
-            sampleCommon->printArray<cl_float>("Output", pos, 256, 1);
-    }
-
+   
     return SDK_SUCCESS;
 }
 
@@ -1319,6 +886,11 @@ GLuint SimpleGLSample::compileProgram(const char * vsrc, const char * psrc)
     glAttachShader(program, pixelShader);
 
     glLinkProgram(program);
+
+	_locationUniform[0] = glGetUniformLocation( program, "matrixLine");
+	_locationUniform[1] = glGetUniformLocation( program, "boneNumber");
+	_locationAttrib[0] = glGetAttribLocation( program, "blendIndices");
+	_locationAttrib[1] = glGetAttribLocation( program, "blendWeights");
 
     // check if program linked
     err = 0;

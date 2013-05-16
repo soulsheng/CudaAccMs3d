@@ -7,6 +7,8 @@
 #include <SDKCommon.hpp>
 #include <map>
 
+#define  SIZE_VBO		3
+
 typedef std::multimap<std::string, double> TimerList;
 typedef std::multimap<std::string, double>::iterator TimerListItr;
 
@@ -25,16 +27,13 @@ public:
 
 	// 执行各种算法
 	void ExecuteNativeCPP();
-	void ExecuteNativeSSE();
 	
 	// 验证结果是否正确
 	bool verifyEqual();
 
-	void SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue);
-	void SetupKernel(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue);
-	void SetupWorksize( );
-	bool ExecuteKernel();
-	bool ExecuteKernelVBO();
+	void setupVBO(cl_context	pContext, cl_device_id pDevice_ID, cl_kernel pKernel, cl_command_queue pCmdQueue, int* nLocationAttrib);
+
+	void  renderVBO();
 
 public:
 	/**
@@ -82,10 +81,10 @@ public:
 	Joints		_joints;//关节矩阵
 
 	//	cl_mem objects used as parameters for kernels
-	cl_mem g_pfInputBuffer ;
-	cl_mem g_pfOCLOutputBuffer ;
-	cl_mem g_pfOCLIndex ;
-	cl_mem g_pfOCLMatrix ;
+// 	cl_mem g_pfInputBuffer ;
+// 	cl_mem g_pfOCLOutputBuffer ;
+// 	cl_mem g_pfOCLIndex ;
+// 	cl_mem g_pfOCLMatrix ;
 
 	cl_context	_context ;
 	cl_device_id _device_ID ;
@@ -96,7 +95,10 @@ public:
 	size_t localWorkSize[2];
 
 	// vbo
-	GLuint vertexObj;                   /**< Vertex object */
+	GLuint vertexVAO;                   /**< Vertex Array object */
+	GLuint vertexObj[SIZE_VBO];                   /**< Vertex object */
+
+	int*   _locationAttrib;
 
 	// Timer
 	streamsdk::SDKCommon * sampleCommon;    /**< SDKCommon class object */	
