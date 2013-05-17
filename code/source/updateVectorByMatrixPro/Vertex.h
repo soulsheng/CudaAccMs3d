@@ -15,6 +15,8 @@ enum Matrix_Sort_Mode {
 	CROSS_SORT	//	交叉排序，相邻顶点关联相邻矩阵，构造合并条件
 };// 顶点以矩阵id为索引的排序方式
 
+#define		SIZE_BONE		4
+
 //顶点坐标---------------------------------------------------------
 //typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w
 template<typename F4>
@@ -141,20 +143,20 @@ struct Vertexes{
 		}
 
 		// Index matrix
-		pIndex = new F4[nSize];
+		pIndex = new float1[nSize*SIZE_BONE];
 
 		if( bDevice ){
-			cudaMalloc( &pIndexDevice, sizeof(F4) * nSize ) ;//Vertex[nSize];
+			cudaMalloc( &pIndexDevice, sizeof(float1) * nSize*SIZE_BONE ) ;//Vertex[nSize];
 		}
 		else{
 			pIndexDevice = NULL;
 		}
 
 		// Weight matrix
-		pWeight = new F4[nSize];
+		pWeight = new float1[nSize*SIZE_BONE];
 
 		if( bDevice ){
-			cudaMalloc( &pWeightDevice, sizeof(F4) * nSize ) ;//Vertex[nSize];
+			cudaMalloc( &pWeightDevice, sizeof(float1) * nSize*SIZE_BONE ) ;//Vertex[nSize];
 		}
 		else{
 			pWeightDevice = NULL;
@@ -171,15 +173,10 @@ struct Vertexes{
 			pVertex[i].z = rand() * 1.0f;
 			pVertex[i].w = 1.0f;
 
-			pIndex[i].x = rand() % nSizeJoint;
-			pIndex[i].y = rand() % nSizeJoint;
-			pIndex[i].z = rand() % nSizeJoint;
-			pIndex[i].w = rand() % nSizeJoint;
-
-			pWeight[i].x = rand() % nSizeJoint / (nSizeJoint*2.0f);
-			pWeight[i].y = rand() % nSizeJoint / (nSizeJoint*2.0f);
-			pWeight[i].z = rand() % nSizeJoint / (nSizeJoint*2.0f);
-			pWeight[i].w = rand() % nSizeJoint / (nSizeJoint*2.0f);
+			for(int j=0;j<SIZE_BONE;j++) {
+			pIndex[i + j*nSize].x = rand() % nSizeJoint;
+			pWeight[i + j*nSize].x = rand() % nSizeJoint / (nSizeJoint*2.0f);
+			}
 		}
 
 		switch( eSort )
@@ -198,8 +195,8 @@ struct Vertexes{
 
 		if( bDevice ){
 			cudaMemcpy( pVertexDevice, pVertex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
-			cudaMemcpy( pIndexDevice, pIndex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
-			cudaMemcpy( pWeightDevice, pWeight, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pIndexDevice, pIndex, sizeof(float1) * nSize * SIZE_BONE, cudaMemcpyHostToDevice );
+			cudaMemcpy( pWeightDevice, pWeight, sizeof(float1) * nSize * SIZE_BONE, cudaMemcpyHostToDevice );
 		}
 		
 	}
@@ -225,14 +222,14 @@ struct Vertexes{
 			cudaMemcpy( pVertexDevice, pVertex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
 
 		if( pIndex!=NULL && ref.pIndex!=NULL )
-			memcpy( pIndex, ref.pIndex, sizeof(F4) * nSize );
+			memcpy( pIndex, ref.pIndex, sizeof(float1) * nSize * SIZE_BONE );
 		if( pIndexDevice!=NULL )
-			cudaMemcpy( pIndexDevice, pIndex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pIndexDevice, pIndex, sizeof(float1) * nSize * SIZE_BONE, cudaMemcpyHostToDevice );
 
 		if( pWeight!=NULL && ref.pWeight!=NULL )
-			memcpy( pWeight, ref.pWeight, sizeof(F4) * nSize );
+			memcpy( pWeight, ref.pWeight, sizeof(float1) * nSize * SIZE_BONE );
 		if( pVertexDevice!=NULL )
-			cudaMemcpy( pWeightDevice, pWeight, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pWeightDevice, pWeight, sizeof(float1) * nSize * SIZE_BONE, cudaMemcpyHostToDevice );
 	}
 
 	F4*  pVertex, *pVertexDevice;
@@ -240,8 +237,8 @@ struct Vertexes{
 	int   nSizeJoint;// 关节的数目
 	Matrix_Sort_Mode		eSort;
 
-	F4*		pIndex, *pIndexDevice;
-	F4*		pWeight, *pWeightDevice;
+	float1*		pIndex, *pIndexDevice;
+	float1*		pWeight, *pWeightDevice;
 };// 顶点的集合
 
 #endif//VERTEX_H__

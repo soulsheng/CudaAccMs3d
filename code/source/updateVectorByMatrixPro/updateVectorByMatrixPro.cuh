@@ -15,7 +15,6 @@
 #define		KERNEL_MEMORY_PREPARE	1	// 预备数据， 1表示开，0表示关
 
 #define		IPL		2// 1 2 4 8
-#define		SIZE_BONE		1
 
 __constant__		Vector4		const_pMatrix_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
 __constant__		Vector4		const_pMatrixPrevious_v4[ JOINT_SIZE * MATRIX_SIZE_LINE ];
@@ -257,7 +256,7 @@ __global__ void updateVectorByMatrix(F4* pVertexIn, int size, F1* pMatrix, F4* p
 
 template<typename F4>
 __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix, F4* pVertexOut, F4* pMatrixPrevious, Matrix_Separate_Mode	modeSeparete,
-																		F4* pIndexIn, F4* pWeightIn)
+																		float1* pIndexIn, float1* pWeightIn)
 {
 	const int indexBase = ( gridDim.x * blockIdx.y + blockIdx.x ) * blockDim.x + threadIdx.x;
 #if KERNEL_MEMORY_ACCESS
@@ -322,31 +321,20 @@ __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix,
 		// 读取操作数：初始的顶点坐标
 		F4   vertexIn = pVertexIn[i];
 
-		F4   indexIn = pIndexIn[i];
-		F4   weightIn = pWeightIn[i];
 		int m=0;
-		int      matrixIndex[4];//= int(vertexIn.w + 0.5);// float to int
-		matrixIndex[0] = int(indexIn.x + 0.5);
-		matrixIndex[1] = int(indexIn.y + 0.5);
-		matrixIndex[2] = int(indexIn.z + 0.5);
-		matrixIndex[3] = int(indexIn.w + 0.5);
-
-		float   matrixWeight[4];
-		matrixWeight[0] = weightIn.x;
-		matrixWeight[1] = weightIn.y;
-		matrixWeight[2] = weightIn.z;
-		matrixWeight[3] = weightIn.w;
 		for(; m< SIZE_BONE ; m++) 
 		{
 		
-			// 读取操作数：顶点对应的矩阵
+		// 读取操作数：顶点对应的矩阵
+		int      matrixIndex = (int)pIndexIn[ i + m*size ].x;
+		float1   matrixWeight = pWeightIn[ i + m*size ];
 
 		switch( modeSeparete )
 		{
 		case NO_SEPARATE:
 			{
 				for(int i=0; i<JOINT_WIDTH; i++){
-					matrix[i].x += matrixShared[matrixIndex[m] * JOINT_WIDTH + i].x * matrixWeight[m];
+					matrix[i].x += matrixShared[matrixIndex * JOINT_WIDTH + i].x * matrixWeight.x;
 				}
 			}
 			break;
@@ -355,7 +343,7 @@ __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix,
 			{
 				for(int i=0; i<MATRIX_SIZE_LINE; i++){
 					for(int j=0; j<4; j++){
-						matrix[i*4+j].x += matrixShared[ (matrixIndex[m] + JOINT_SIZE * i)*4 +j ].x * matrixWeight[m];
+						matrix[i*4+j].x += matrixShared[ (matrixIndex + JOINT_SIZE * i)*4 +j ].x * matrixWeight.x;
 					}
 				}
 			}
@@ -364,7 +352,7 @@ __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix,
 		case COMPLETE_SEPARATE:
 			{
 				for(int i=0; i<JOINT_WIDTH; i++){
-					matrix[i].x += matrixShared[matrixIndex[m] + JOINT_SIZE * i].x * matrixWeight[m];
+					matrix[i].x += matrixShared[matrixIndex + JOINT_SIZE * i].x * matrixWeight.x;
 				}
 			}
 			break;
