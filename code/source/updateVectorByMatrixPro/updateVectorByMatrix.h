@@ -141,32 +141,77 @@ pVertexOut : 动态坐标数组结果输出
 */
 #if !SEPERATE_STRUCT_FULLY
 template<typename F4, typename F1>
-void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F1>* pJoints, F4* pVertexOut, Matrix_Separate_Mode mode){
+void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F1>* pJoints, F4* pVertexOut, Matrix_Separate_Mode mode,
+													F4* pIndexIn, F4* pWeightIn){
 #pragma omp parallel for
 	for(int i=0;i<size;i++){
 		
 		F4   matrix[MATRIX_SIZE_LINE];		
+		for(int j=0;j< MATRIX_SIZE_LINE;j++)
+		{
+				matrix[j].x = matrix[j].y = matrix[j].z = matrix[j].w = 0;
+		}
 
 		// 读取操作数：初始的顶点坐标
 		F4   vertexIn = pVertexIn[i];
 
+		F4   indexIn = pIndexIn[i];
+		F4   weightIn = pWeightIn[i];
+
+		for(int m=0; m< SIZE_BONE ; m++) {
 		// 读取操作数：顶点对应的矩阵
-		int      matrixIndex = int(vertexIn.w + 0.5);// float to int
+			int      matrixIndex ;//= int(vertexIn.w + 0.5);// float to int
+			float   matrixWeight;
+			switch( m )
+			{
+			case 0:
+				matrixIndex = int(indexIn.x + 0.5);
+				matrixWeight = weightIn.x;
+				break;
+			case 1:
+				matrixIndex = int(indexIn.y + 0.5);
+				matrixWeight = weightIn.y;
+				break;
+			case 2:
+				matrixIndex = int(indexIn.z + 0.5);
+				matrixWeight = weightIn.z;
+				break;
+			default:
+				matrixIndex = int(indexIn.w + 0.5);
+				matrixWeight = weightIn.w;
+				break;
+			}
+
+			F4   matrixTmp[MATRIX_SIZE_LINE];		
+			for(int k=0;k< MATRIX_SIZE_LINE;k++)
+			{
+				matrixTmp[k].x = matrixTmp[k].y = matrixTmp[k].z = matrixTmp[k].w = 0;
+			}
 
 		switch( mode )
 		{
 		case NO_SEPARATE:
-			indexByFloat44Host( (F4*)pJoints->pMatrix, matrix, matrixIndex );
+			indexByFloat44Host( (F4*)pJoints->pMatrix, matrixTmp, matrixIndex );
 			break;
 
 		case HALF_SEPARATE:
-			indexByFloat4Host( (F4*)pJoints->pMatrix, matrix, matrixIndex );
+			indexByFloat4Host( (F4*)pJoints->pMatrix, matrixTmp, matrixIndex );
 			break;
 
 		case COMPLETE_SEPARATE:
-			indexByFloat1Host( pJoints->pMatrix, (F1*)matrix, matrixIndex );
+			indexByFloat1Host( pJoints->pMatrix, (F1*)matrixTmp, matrixIndex );
 			break;
 		}
+
+		for(int k=0;k< MATRIX_SIZE_LINE;k++)
+		{
+			matrix[k].x += matrixTmp[k].x * matrixWeight;
+			matrix[k].y += matrixTmp[k].y * matrixWeight;
+			matrix[k].z += matrixTmp[k].z * matrixWeight;
+			matrix[k].w += matrixTmp[k].w * matrixWeight;
+		}
+
+		}//for j
 
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		transformVec3ByMatrix4Host( &vertexIn, matrix, pVertexOut+i);

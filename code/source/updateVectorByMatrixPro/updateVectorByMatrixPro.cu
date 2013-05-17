@@ -23,7 +23,7 @@ int iProblem=3;			// 问题规模最大值，16M/512M显存、32M/1G显存
 int bAligned = 1;	// 结构体是否对齐
 Matrix_Separate_Mode	eSeparate = HALF_SEPARATE;	// 结构体拆分模式，不拆分、半拆分、全拆分
 
-int bQuiet = 1;		// 静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒
+int bQuiet = 0;		// 静默方式，屏蔽提示信息的输出，只输出时间，单位是毫秒
 Matrix_Sort_Mode eSort=SERIAL_SORT;			// 顶点以矩阵id为索引的排序方式，不排序、顺序排序、交叉排序
 Matrix_Memory_Mode	eMemory=SHARED_MEMORY;	// 矩阵存储位置，全局显存、常量显存、共享显存
 
@@ -299,7 +299,8 @@ void runCuda(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F4>&ver
 			{
 				updateVectorByMatrixShared<F4><<<nBlocksPerGrid, nThreadsPerBlock, nSizeSharedMemoryDynamic>>>
 					( vertexesStatic.pVertexDevice, vertexesDynamic.nSize, (F4*)joints.pMatrixDevice, vertexesDynamic.pVertexDevice ,
-					(F4*)joints.pMatrixDevicePrevious, eSeparate );
+					(F4*)joints.pMatrixDevicePrevious, eSeparate ,
+					vertexesStatic.pIndexDevice, vertexesStatic.pWeightDevice);
 			}
 			break;
 
@@ -332,7 +333,7 @@ bool confirmResult(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F
 #if SEPERATE_STRUCT_FULLY
 	updateVectorByMatrixGoldFully(_vertexesStatic.pVertex, _vertexesDynamic.pVertex, _vertexesDynamic.nSize, _joints.pMatrix, _joints.pMatrixPrevious );
 #else
-	updateVectorByMatrixGold<F4>( vertexesStatic.pVertex, vertexesDynamic.nSize, &joints, vertexesDynamic.pVertex, eSeparate);
+	updateVectorByMatrixGold<F4>( vertexesStatic.pVertex, vertexesDynamic.nSize, &joints, vertexesDynamic.pVertex, eSeparate, vertexesStatic.pIndex, vertexesStatic.pWeight );
 #endif
 	// 获取GPU运算结果
 	F4 *pVertex = new F4[vertexesDynamic.nSize];
@@ -340,6 +341,9 @@ bool confirmResult(  Joints<F1>& joints, Vertexes<F4>&vertexesStatic, Vertexes<F
 
 	// 比较结果
 	bResult = equalVector( vertexesDynamic.pVertex , vertexesDynamic.nSize, pVertex );
+	shrLogEx( LOGBOTH|APPENDMODE, 0, "(%.2f  %.2f  %.2f)  (%.2f  %.2f  %.2f)\n", 
+		vertexesDynamic.pVertex[0].x, vertexesDynamic.pVertex[0].y, vertexesDynamic.pVertex[0].z, 
+		pVertex[0].x, pVertex[0].y, pVertex[0].z);		
 
 	return bResult;
 }

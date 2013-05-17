@@ -139,6 +139,26 @@ struct Vertexes{
 		else{
 			pVertexDevice = NULL;
 		}
+
+		// Index matrix
+		pIndex = new F4[nSize];
+
+		if( bDevice ){
+			cudaMalloc( &pIndexDevice, sizeof(F4) * nSize ) ;//Vertex[nSize];
+		}
+		else{
+			pIndexDevice = NULL;
+		}
+
+		// Weight matrix
+		pWeight = new F4[nSize];
+
+		if( bDevice ){
+			cudaMalloc( &pWeightDevice, sizeof(F4) * nSize ) ;//Vertex[nSize];
+		}
+		else{
+			pWeightDevice = NULL;
+		}
 	}
 
 	//  设置初始值
@@ -149,7 +169,17 @@ struct Vertexes{
 			pVertex[i].x = rand() * 1.0f;
 			pVertex[i].y = rand() * 1.0f;
 			pVertex[i].z = rand() * 1.0f;
-			pVertex[i].w = rand() % nSizeJoint  * 1.0f;
+			pVertex[i].w = 1.0f;
+
+			pIndex[i].x = rand() % nSizeJoint;
+			pIndex[i].y = rand() % nSizeJoint;
+			pIndex[i].z = rand() % nSizeJoint;
+			pIndex[i].w = rand() % nSizeJoint;
+
+			pWeight[i].x = rand() % nSizeJoint / (nSizeJoint*2.0f);
+			pWeight[i].y = rand() % nSizeJoint / (nSizeJoint*2.0f);
+			pWeight[i].z = rand() % nSizeJoint / (nSizeJoint*2.0f);
+			pWeight[i].w = rand() % nSizeJoint / (nSizeJoint*2.0f);
 		}
 
 		switch( eSort )
@@ -168,6 +198,8 @@ struct Vertexes{
 
 		if( bDevice ){
 			cudaMemcpy( pVertexDevice, pVertex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pIndexDevice, pIndex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
+			cudaMemcpy( pWeightDevice, pWeight, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
 		}
 		
 	}
@@ -176,7 +208,13 @@ struct Vertexes{
 	void unInitialize()
 	{
 		if (pVertex) delete[] pVertex;
-		if (pVertexDevice) cudaFree(pVertex) ;
+		if (pVertexDevice) cudaFree(pVertexDevice) ;
+
+		if (pIndex) delete[] pIndex;
+		if (pIndexDevice) cudaFree(pIndexDevice) ;
+
+		if (pWeight) delete[] pWeight;
+		if (pWeightDevice) cudaFree(pWeightDevice) ;
 	}
 	
 	void copy( Vertexes& ref )
@@ -185,12 +223,25 @@ struct Vertexes{
 			memcpy( pVertex, ref.pVertex, sizeof(F4) * nSize );
 		if( pVertexDevice!=NULL )
 			cudaMemcpy( pVertexDevice, pVertex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
+
+		if( pIndex!=NULL && ref.pIndex!=NULL )
+			memcpy( pIndex, ref.pIndex, sizeof(F4) * nSize );
+		if( pIndexDevice!=NULL )
+			cudaMemcpy( pIndexDevice, pIndex, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
+
+		if( pWeight!=NULL && ref.pWeight!=NULL )
+			memcpy( pWeight, ref.pWeight, sizeof(F4) * nSize );
+		if( pVertexDevice!=NULL )
+			cudaMemcpy( pWeightDevice, pWeight, sizeof(F4) * nSize, cudaMemcpyHostToDevice );
 	}
 
 	F4*  pVertex, *pVertexDevice;
 	int   nSize;// 顶点的数目
 	int   nSizeJoint;// 关节的数目
 	Matrix_Sort_Mode		eSort;
+
+	F4*		pIndex, *pIndexDevice;
+	F4*		pWeight, *pWeightDevice;
 };// 顶点的集合
 
 #endif//VERTEX_H__
