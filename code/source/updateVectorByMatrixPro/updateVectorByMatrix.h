@@ -157,8 +157,19 @@ void updateVectorByMatrixGold(F4* pVertexIn, int size, Joints<F1>* pJoints, F4* 
 
 		for(int m=0; m< SIZE_BONE ; m++) {
 		// 读取操作数：顶点对应的矩阵
-			int      matrixIndex = (int)pIndexIn[ i + m*size ].x;
-			float1   matrixWeight = pWeightIn[ i + m*size ];
+			int      matrixIndex;
+			float1   matrixWeight;
+			if( SIZE_BONE > 1 ) {
+				float1   tmpIndex = pIndexIn[ i + m*size ];
+				matrixIndex = (int)tmpIndex.x;
+				matrixWeight = pWeightIn[ i + m*size ];
+			}
+			else
+			{
+				matrixIndex = (int)vertexIn.w;
+				matrixWeight.x = 1.0f;
+			}
+
 
 			F4   matrixTmp[MATRIX_SIZE_LINE];		
 			for(int k=0;k< MATRIX_SIZE_LINE;k++)

@@ -15,7 +15,7 @@ enum Matrix_Sort_Mode {
 	CROSS_SORT	//	交叉排序，相邻顶点关联相邻矩阵，构造合并条件
 };// 顶点以矩阵id为索引的排序方式
 
-#define		SIZE_BONE		4
+#define		SIZE_BONE		1
 
 //顶点坐标---------------------------------------------------------
 //typedef float4 Vertex; // 坐标：(x,y,z);关节索引：w

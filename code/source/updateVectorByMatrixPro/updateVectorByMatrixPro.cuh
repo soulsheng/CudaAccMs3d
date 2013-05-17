@@ -326,8 +326,18 @@ __global__ void updateVectorByMatrixShared(F4* pVertexIn, int size, F4* pMatrix,
 		{
 		
 		// 读取操作数：顶点对应的矩阵
-		int      matrixIndex = (int)pIndexIn[ i + m*size ].x;
-		float1   matrixWeight = pWeightIn[ i + m*size ];
+			int      matrixIndex;
+			float1   matrixWeight;
+			if( SIZE_BONE > 1 ) {
+			float1   tmpIndex = pIndexIn[ i + m*size ];
+			matrixIndex = (int)tmpIndex.x;
+			matrixWeight = pWeightIn[ i + m*size ];
+			}
+			else
+			{
+				matrixIndex = (int)vertexIn.w;
+				matrixWeight.x = 1.0f;
+			}
 
 		switch( modeSeparete )
 		{
