@@ -88,7 +88,7 @@ public:
 	//	cl_mem objects used as parameters for kernels
 	cl_mem g_pfInputBuffer ;
 	cl_mem g_pfOCLOutputBuffer ;
-	cl_mem g_pfOCLIndex ;
+	cl_mem g_pfOCLIndex , g_pfOCLWeight;
 	cl_mem g_pfOCLMatrix ;
 
 	cl_context	_context ;

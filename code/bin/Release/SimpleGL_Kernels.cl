@@ -45,8 +45,10 @@ void sineWave(
 
 
 __kernel void
-updateVectorByMatrix4( const __global float4 *pInput, const __global int *pIndex,__constant float4 *pMatrix,__global float4 *pOutput)
+updateVectorByMatrix4( const __global float4 *pInput, const __global float *pIndex,__constant float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight)
 {
+	/*
 	size_t index = get_global_id(0) + get_global_id(1) *get_global_size(0);
 	
 	int offset = pIndex[index]*3;
@@ -58,5 +60,5 @@ updateVectorByMatrix4( const __global float4 *pInput, const __global int *pIndex
 		vIn.x * pMatrix[offset+1].x + vIn.y * pMatrix[offset+1].y + vIn.z * pMatrix[offset+1].z  + pMatrix[offset+1].w ,
 		vIn.x * pMatrix[offset+2].x + vIn.y * pMatrix[offset+2].y + vIn.z * pMatrix[offset+2].z  + pMatrix[offset+2].w ,
 		1.0f);
-
+		*/
 }

@@ -10,6 +10,9 @@
 #define  LocalWorkX		8
 #define  LocalWorkY		8
 
+#define  VBO_MAP		1
+#define  USE_OPENMP		1
+
 /** Performing the transpose of a 4x4 matrix of single precision floating
     point values.
     Arguments r0, r1, r2, and r3 are __m128 values whose elements
@@ -86,7 +89,12 @@ void CMatrixMulVector::ExecuteNativeSSE()
 
 void CMatrixMulVector::ExecuteNativeCPP()
 {
-#if 1//use_openmp
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	cl_float4* pVertex = (cl_float4*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#endif
+
+#if USE_OPENMP//use_openmp
 #pragma omp parallel for
 #endif
 	for(int i=0;i<_vertexesStatic.nSize;i++){
@@ -98,6 +106,8 @@ void CMatrixMulVector::ExecuteNativeCPP()
 		// 执行操作：对坐标执行矩阵变换，得到新坐标
 		MatrixVectorMul( _vertexesStatic.pVertex+4*i, _vertexesDynamicRef.pVertex+4*i, pMat);
 #else
+
+		if( SIZE_PER_BONE>1 ){
 		cl_float4  blendpos, lastpos;
 
 		for(int j= 0 ; j< SIZE_PER_BONE; j++){
@@ -108,24 +118,44 @@ void CMatrixMulVector::ExecuteNativeCPP()
 				lastpos.s[k]= 0.0f;
 			}
 
-			cl_float4 indexes = _vertexesStatic.pIndex[i];
-			cl_float4 *pMat =  _joints.pMatrix + (int)indexes.s[j]*MATRIX_SIZE_LINE;
+			int      matrixIndex = (int)_vertexesStatic.pIndex[i + j*_vertexesStatic.nSize];
+
+			cl_float4 *pMat =  _joints.pMatrix + matrixIndex*MATRIX_SIZE_LINE;
 			
 			MatrixVectorMul( _vertexesStatic.pVertex+i, &blendpos, pMat);
 			
-			cl_float4  weight = _vertexesStatic.pWeight[i];
+			cl_float  weight = _vertexesStatic.pWeight[i + j*_vertexesStatic.nSize];
 			for (int k=0;k<3;k++)
 			{
-				lastpos.s[k]+= blendpos.s[k] * weight.s[j];
+				lastpos.s[k]+= blendpos.s[k] * weight;
 			}
 		}
 
 		for (int k=0;k<3;k++)
 		{
+#if  VBO_MAP
+			pVertex[i].s[k] = lastpos.s[k] ;
+#else
 			_vertexesDynamicRef.pVertex[i].s[k] = lastpos.s[k] ;
+#endif
+		}
+		}
+		else{
+			int  matrixIndex = (int)_vertexesStatic.pVertex[i].s[3];
+			// 读取操作数：顶点对应的矩阵
+			cl_float4 *pMat =  _joints.pMatrix + matrixIndex*MATRIX_SIZE_LINE;
+
+			// 执行操作：对坐标执行矩阵变换，得到新坐标
+			MatrixVectorMul( _vertexesStatic.pVertex+i, _vertexesDynamicRef.pVertex+i, pMat);
+
 		}
 #endif
 	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
 }
 
 bool CMatrixMulVector::verifyEqual( cl_float4 *v, cl_float4* vRef, int size )
@@ -245,14 +275,14 @@ void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_
 
 	// 	Create Vertex buffer object: 顶点属性 矩阵索引
 	glBindBuffer(GL_ARRAY_BUFFER, vertexObj[1]);
-	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float4), (GLvoid *)_vertexesStatic.pIndex, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float)* SIZE_PER_BONE, (GLvoid *)_vertexesStatic.pIndex, GL_DYNAMIC_DRAW);
 
 	glEnableVertexAttribArray( _locationAttrib[0] );
 	glVertexAttribPointer( _locationAttrib[0], 4, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	// 	Create Vertex buffer object: 顶点属性 矩阵权重
 	glBindBuffer(GL_ARRAY_BUFFER, vertexObj[2]);
-	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float4), (GLvoid *)_vertexesStatic.pWeight, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_float)* SIZE_PER_BONE, (GLvoid *)_vertexesStatic.pWeight, GL_DYNAMIC_DRAW);
 
 	glEnableVertexAttribArray( _locationAttrib[1] );
 	glVertexAttribPointer( _locationAttrib[1], 4, GL_FLOAT, GL_FALSE, 0, NULL);
@@ -266,7 +296,9 @@ void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_
 	cl_int errcode_ret;
 	g_pfInputBuffer = clCreateBuffer(_context, INFlags,  _vertexesStatic.nSize * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
 	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE* _joints.nSize , _joints.pMatrix, NULL);
-	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_short)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
+
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_float)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pIndex, NULL);   
+	g_pfOCLWeight = clCreateBuffer(_context, INFlags, sizeof(cl_float)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pWeight, NULL);   
 
 	//Set kernel arguments
 	cl_kernel	kernel = _kernel;
@@ -274,6 +306,7 @@ void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_
 	clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLIndex);
 	clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &g_pfOCLMatrix);
 	clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
+	clSetKernelArg(kernel, 4, sizeof(cl_mem), (void *) &g_pfOCLWeight);
 
 	SetupWorksize();
 }
@@ -298,7 +331,8 @@ void CMatrixMulVector::SetupKernel(cl_context	pContext, cl_device_id pDevice_ID,
 	g_pfOCLOutputBuffer = clCreateBuffer(_context, OUTFlags, sizeof(cl_float4) *  _vertexesStatic.nSize , _vertexesDynamic.pVertex, NULL);
 #endif
 
-	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_short)* _vertexesStatic.nSize , _vertexesStatic.pIndex, NULL);   
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_float)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pIndex, NULL);   
+	g_pfOCLWeight = clCreateBuffer(_context, INFlags, sizeof(cl_float)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pWeight, NULL);   
 
 	//Set kernel arguments
 	cl_kernel	kernel = _kernel;
@@ -306,6 +340,7 @@ void CMatrixMulVector::SetupKernel(cl_context	pContext, cl_device_id pDevice_ID,
 	clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *) &g_pfOCLIndex);
 	clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *) &g_pfOCLMatrix);
 	clSetKernelArg(kernel, 3, sizeof(cl_mem), (void *) &g_pfOCLOutputBuffer);
+	clSetKernelArg(kernel, 4, sizeof(cl_mem), (void *) &g_pfOCLWeight);
 
 	SetupWorksize();
 }

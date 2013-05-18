@@ -58,9 +58,8 @@ int frameCount = 0;
 int frameRefCount = 90;
 double totalElapsedTime = 0.0;
 
+#define		GLSL_4CPP				0// GLSL replace cpp
 #define    MATRIX_SIZE_LINE    3//3
-
-#define  SIZE_PER_BONE		1
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
 #define    JOINT_SIZE    100
@@ -1083,10 +1082,12 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
+#if !GLSL_4CPP
 #if 1//!VECTOR_FLOAT4
-				//mvm.ExecuteNativeCPP();
+				mvm.ExecuteNativeCPP();
 #else
 				mvm.ExecuteNativeSSE();
+#endif
 #endif
 				stopTimer(timer);
 				dTime = (cl_double)readTimer(timer);
@@ -1104,11 +1105,12 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
-				//glUniform1i( _locationUniform[1], SIZE_PER_BONE );
-				//glUniform4fv( _locationUniform[0], mvm._joints.nSize * MATRIX_SIZE_LINE, (float*)mvm._joints.pMatrix );
+#if GLSL_4CPP
+				glUniform1i( _locationUniform[1], SIZE_PER_BONE );
+				glUniform4fv( _locationUniform[0], mvm._joints.nSize * MATRIX_SIZE_LINE, (float*)mvm._joints.pMatrix );
 
- 				//glUseProgram(glProgram);
-               
+ 				glUseProgram(glProgram);
+#endif  
 				mvm.renderVBO();
 
                 glFinish();
