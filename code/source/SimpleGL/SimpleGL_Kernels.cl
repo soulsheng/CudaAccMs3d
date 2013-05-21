@@ -278,3 +278,46 @@ updateVectorByMatrix4SharedCoalesce( const __global float4 *pInput, const __glob
 		pOutput[ threadIndex ] = accumVecPos;
 
 }
+
+__kernel void
+updateVectorByMatrix4Ideal1( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
+{
+
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	
+	float4 sourceVec = pInput[threadIndex];
+
+	pOutput[ threadIndex ] = sourceVec;
+
+}
+
+__kernel void
+updateVectorByMatrix4Ideal2( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
+{
+
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	float4 sourceVec = pInput[threadIndex], accumVecPos;
+
+	ushort matrixIndex = pIndex[threadIndex]*MATRIX_SIZE_LINE;
+
+				accumVecPos.x +=
+					(pMatrix[matrixIndex+0].x * sourceVec.x +
+					pMatrix[matrixIndex+0].y * sourceVec.y +
+					pMatrix[matrixIndex+0].z * sourceVec.z +
+					pMatrix[matrixIndex+0].w);
+				accumVecPos.y +=
+					(pMatrix[matrixIndex+1].x * sourceVec.x +
+					pMatrix[matrixIndex+1].y * sourceVec.y +
+					pMatrix[matrixIndex+1].z * sourceVec.z +
+					pMatrix[matrixIndex+1].w) ;
+				accumVecPos.z +=
+					(pMatrix[matrixIndex+2].x * sourceVec.x +
+					pMatrix[matrixIndex+2].y * sourceVec.y +
+					pMatrix[matrixIndex+2].z * sourceVec.z +
+					pMatrix[matrixIndex+2].w) ;
+
+	pOutput[ threadIndex ] = accumVecPos;
+
+}

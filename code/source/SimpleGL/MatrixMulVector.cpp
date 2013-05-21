@@ -790,30 +790,14 @@ bool CMatrixMulVector::ExecuteKernel()
 }
 bool CMatrixMulVector::ExecuteKernelVBO()
 {
-	int timer = createTimer();
-	resetTimer(timer);
-	startTimer(timer);
 
 	// Acquire GL buffer
 	clEnqueueAcquireGLObjects(_cmd_queue, 1, &g_pfOCLOutputBuffer, 0, 0, NULL);
-	
-	stopTimer(timer);
-	double dTime = (cl_double)readTimer(timer);
-	insertTimer("11.Acquire GL", dTime);
 
-	resetTimer(timer);
-	startTimer(timer);
 
 	cl_event g_perf_event = NULL;
 	clEnqueueNDRangeKernel(_cmd_queue, _kernel, 2, NULL, globalWorkSize, localWorkSize, 0, NULL, &g_perf_event);
 	clWaitForEvents(1, &g_perf_event);
-
-	stopTimer(timer);
-	dTime = (cl_double)readTimer(timer);
-	insertTimer("12.executingKernel", dTime);
-
-	resetTimer(timer);
-	startTimer(timer);
 
 	static bool bRunOnce = false;
 	if ( !bRunOnce)
@@ -822,20 +806,10 @@ bool CMatrixMulVector::ExecuteKernelVBO()
 		bRunOnce = true;
 	}
 	
-	stopTimer(timer);
-	dTime = (cl_double)readTimer(timer);
-	insertTimer("13.ReadBuffer", dTime);
-
-	resetTimer(timer);
-	startTimer(timer);
 
 	// Release GL buffer
 	clEnqueueReleaseGLObjects(_cmd_queue, 1, &g_pfOCLOutputBuffer, 0, 0, 0);
 	
-	stopTimer(timer);
-	dTime = (cl_double)readTimer(timer);
-	insertTimer("14.Release GL", dTime);
-
 	clFinish(_cmd_queue);
 
 	return true;

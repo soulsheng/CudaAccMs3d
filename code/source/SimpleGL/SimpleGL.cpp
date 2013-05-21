@@ -738,7 +738,7 @@ SimpleGLSample::setupCL()
     // get a kernel object handle for a kernel with the given name
     kernel = clCreateKernel(
         program,
-        "updateVectorByMatrix4SharedCoalesce",
+        "updateVectorByMatrix4Ideal2",
         &status);
     CHECK_OPENCL_ERROR(status, "clCreateKernel failed.");
 
