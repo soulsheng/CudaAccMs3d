@@ -1083,11 +1083,11 @@ SimpleGLSample::run()
 				startTimer(timer);
 
 #if !GLSL_4CPP
-#if 1//!VECTOR_FLOAT4
-				mvm.ExecuteNativeCPP();
-#else
-				mvm.ExecuteNativeSSE();
-#endif
+
+				//mvm.ExecuteNativeCPP();
+
+				mvm.ExecuteNativeSSEOMP();
+
 #endif
 				stopTimer(timer);
 				dTime = (cl_double)readTimer(timer);

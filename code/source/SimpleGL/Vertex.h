@@ -40,7 +40,7 @@ struct Vertexes{
 #else
 
 #define    VERTEX_VECTOR_SIZE    4
-#define  SIZE_PER_BONE		4
+#define  SIZE_PER_BONE		1
 
 struct Vertexes{
 
@@ -50,7 +50,7 @@ struct Vertexes{
 		//pVertex = new float[nSize*VERTEX_VECTOR_SIZE];
 		//pIndex = new int[nSize];
 		pVertex = (cl_float4*) _aligned_malloc(nSize * sizeof(cl_float4), 16);
-		pIndex = (cl_float*) _aligned_malloc(nSize * sizeof(cl_float) * SIZE_PER_BONE, 16);
+		pIndex = (cl_uchar*) _aligned_malloc(nSize * sizeof(cl_uchar) * SIZE_PER_BONE, 16);
 		pWeight = (cl_float*) _aligned_malloc(nSize * sizeof(cl_float) * SIZE_PER_BONE, 16);
 
 		for(int i=0;i<nSize;i++){
@@ -76,7 +76,7 @@ struct Vertexes{
 
 	cl_float4*  pVertex;
 	int   nSize;// 顶点的数目
-	cl_float*		pIndex;
+	cl_uchar*		pIndex;
 	cl_float*		pWeight;
 
 };// 顶点的集合

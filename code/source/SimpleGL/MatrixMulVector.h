@@ -28,6 +28,8 @@ public:
 	// 执行各种算法
 	void ExecuteNativeCPP();
 	void ExecuteNativeSSE();
+	void ExecuteNativeCPPOMP();
+	void ExecuteNativeSSEOMP();
 	
 	// 验证结果是否正确
 	bool verifyEqual();
@@ -110,3 +112,23 @@ public:
 	TimerList*	_timeValueList;
 
 };
+
+  /** Returns raw offseted of the given pointer.
+    @note
+        The offset are in bytes, no matter what type of the pointer.
+    */
+    template <class T>
+    static FORCEINLINE T* rawOffsetPointer(T* ptr, ptrdiff_t offset)
+    {
+        return (T*)((char*)(ptr) + offset);
+    }
+
+    /** Advance the pointer with raw offset.
+    @note
+        The offset are in bytes, no matter what type of the pointer.
+    */
+    template <class T>
+    static FORCEINLINE void advanceRawPointer(T*& ptr, ptrdiff_t offset)
+    {
+        ptr = rawOffsetPointer(ptr, offset);
+    }
