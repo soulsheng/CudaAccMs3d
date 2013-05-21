@@ -14,7 +14,8 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************/
 
-
+#define  SIZE_PER_BONE   4
+#define MATRIX_SIZE_LINE 3
 ///////////////////////////////////////////////////////////////////////////////
 //! Simple kernel to modify vertex positions in sine wave pattern
 //! @param data  data in global memory
@@ -45,8 +46,10 @@ void sineWave(
 
 
 __kernel void
-updateVectorByMatrix4( const __global float4 *pInput, const __global int *pIndex,__constant float4 *pMatrix,__global float4 *pOutput)
+updateVectorByMatrix4( const __global float4 *pInput, const __global ushort *pIndex,__global float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight)
 {
+	/*
 	size_t index = get_global_id(0) + get_global_id(1) *get_global_size(0);
 	
 	int offset = pIndex[index]*3;
@@ -58,5 +61,68 @@ updateVectorByMatrix4( const __global float4 *pInput, const __global int *pIndex
 		vIn.x * pMatrix[offset+1].x + vIn.y * pMatrix[offset+1].y + vIn.z * pMatrix[offset+1].z  + pMatrix[offset+1].w ,
 		vIn.x * pMatrix[offset+2].x + vIn.y * pMatrix[offset+2].y + vIn.z * pMatrix[offset+2].z  + pMatrix[offset+2].w ,
 		1.0f);
+		*/
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	float4 sourceVec = pInput[threadIndex], accumVecPos;
+
+		// Load accumulators
+		accumVecPos = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+
+		// Loop per blend weight
+		//
+		// Note: Don't change "unsigned short" here!!! If use "size_t" instead,
+		// VC7.1 unroll this loop to four blend weights pre-iteration, and then
+		// loss performance 10% in this function. Ok, this give a hint that we
+		// should unroll this loop manually for better performance, will do that
+		// later.
+		//
+		for (unsigned short blendIdx = 0; blendIdx < SIZE_PER_BONE; ++blendIdx)
+		{
+			// Blend by multiplying source by blend matrix and scaling by weight
+			// Add to accumulator
+			// NB weights must be normalised!!
+			float weight = 1.0f;
+			switch( SIZE_PER_BONE )
+			{
+			case 2:
+				if( !blendIdx )
+					weight = 1.0f - pWeight[ 1+ SIZE_PER_BONE*threadIndex ];
+				else
+					weight = pWeight[ 1+ SIZE_PER_BONE*threadIndex ];
+				break;
+
+			case 3:
+			case 4:
+				weight = pWeight[ blendIdx + SIZE_PER_BONE*threadIndex ];
+				break;
+			default:
+				break;
+			}
+
+			if (weight)
+			{
+				// Blend position, use 3x4 matrix
+				ushort matrixIndex = pIndex[blendIdx + SIZE_PER_BONE*threadIndex]*MATRIX_SIZE_LINE;
+				accumVecPos.x +=
+					(pMatrix[matrixIndex+0].x * sourceVec.x +
+					pMatrix[matrixIndex+0].y * sourceVec.y +
+					pMatrix[matrixIndex+0].z * sourceVec.z +
+					pMatrix[matrixIndex+0].w)
+					* weight;
+				accumVecPos.y +=
+					(pMatrix[matrixIndex+1].x * sourceVec.x +
+					pMatrix[matrixIndex+1].y * sourceVec.y +
+					pMatrix[matrixIndex+1].z * sourceVec.z +
+					pMatrix[matrixIndex+1].w)
+					* weight;
+				accumVecPos.z +=
+					(pMatrix[matrixIndex+2].x * sourceVec.x +
+					pMatrix[matrixIndex+2].y * sourceVec.y +
+					pMatrix[matrixIndex+2].z * sourceVec.z +
+					pMatrix[matrixIndex+2].w)
+					* weight;
+			}
+		}
+		pOutput[ threadIndex ] = accumVecPos;
 
 }

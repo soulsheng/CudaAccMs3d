@@ -1071,7 +1071,7 @@ SimpleGLSample::run()
 				resetTimer(timer);
 				startTimer(timer);
 
-//                executeKernel();
+               executeKernel();
 
 				stopTimer(timer);
 				double dTime = (cl_double)readTimer(timer);
@@ -1086,7 +1086,7 @@ SimpleGLSample::run()
 
 				//mvm.ExecuteNativeCPP();
 
-				mvm.ExecuteNativeSSEOMP();
+				//mvm.ExecuteNativeSSE();
 
 #endif
 				stopTimer(timer);

@@ -219,7 +219,7 @@ void CMatrixMulVector::ExecuteNativeSSE()
 #endif
 
 	float *pBlendWeight = _vertexesStatic.pWeight;
-	cl_uchar* pBlendIndex = _vertexesStatic.pIndex;
+	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
 	cl_float4 *blendMatrices =  _joints.pMatrix;
 
 	cl_float4 *pSrcPos = _vertexesStatic.pVertex;
@@ -228,7 +228,7 @@ void CMatrixMulVector::ExecuteNativeSSE()
 	srcPosStride = destPosStride = sizeof(cl_float4);
 	int blendWeightStride, blendIndexStride;
 	blendWeightStride = sizeof(float) * SIZE_PER_BONE;
-	blendIndexStride = sizeof(cl_uchar) * SIZE_PER_BONE;
+	blendIndexStride = sizeof(cl_ushort) * SIZE_PER_BONE;
 #if 1
 //#pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++){
@@ -294,7 +294,7 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 		// 读取操作数：顶点对应的矩阵
 
 		float *pBlendWeight = _vertexesStatic.pWeight + i*SIZE_PER_BONE;
-		cl_uchar* pBlendIndex = _vertexesStatic.pIndex + i*SIZE_PER_BONE;
+		cl_ushort* pBlendIndex = _vertexesStatic.pIndex + i*SIZE_PER_BONE;
 
 		__m128 m00, m01, m02;
 		_collapseOneMatrix(
@@ -341,7 +341,7 @@ void CMatrixMulVector::ExecuteNativeCPP()
 #endif
 
 	float *pBlendWeight = _vertexesStatic.pWeight;
-	cl_uchar* pBlendIndex = _vertexesStatic.pIndex;
+	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
 	cl_float4 *blendMatrices =  _joints.pMatrix;
 
 	cl_float4 *pSrcPos = _vertexesStatic.pVertex;
@@ -353,7 +353,7 @@ void CMatrixMulVector::ExecuteNativeCPP()
 	srcPosStride = destPosStride = sizeof(cl_float4);
 	int blendWeightStride, blendIndexStride;
 	blendWeightStride = sizeof(float) * SIZE_PER_BONE;
-	blendIndexStride = sizeof(cl_uchar) * SIZE_PER_BONE;
+	blendIndexStride = sizeof(cl_ushort) * SIZE_PER_BONE;
 
 #if USE_OPENMP//use_openmp
 #pragma omp parallel for
@@ -448,7 +448,7 @@ void CMatrixMulVector::ExecuteNativeCPPOMP()
 #endif
 
 	float *pBlendWeight = _vertexesStatic.pWeight;
-	cl_uchar* pBlendIndex = _vertexesStatic.pIndex;
+	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
 	cl_float4 *blendMatrices =  _joints.pMatrix;
 
 	cl_float4 *pSrcPos = _vertexesStatic.pVertex;
@@ -536,7 +536,7 @@ bool CMatrixMulVector::verifyEqual( cl_float4 *v, cl_float4* vRef, int size )
 {
 	for(int i=0;i<size;i++)
 	{
-		for (int j=0;j<4;j++)
+		for (int j=0;j<3;j++)
 		{
 			float f1=fabs(v[i].s[j] - vRef[i].s[j]);
 			float f2=fabs(v[i].s[j]);
@@ -649,7 +649,7 @@ void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_
 
 	// 	Create Vertex buffer object: 顶点属性 矩阵索引
 	glBindBuffer(GL_ARRAY_BUFFER, vertexObj[1]);
-	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_uchar)* SIZE_PER_BONE, (GLvoid *)_vertexesStatic.pIndex, GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, _vertexesStatic.nSize * sizeof(cl_ushort)* SIZE_PER_BONE, (GLvoid *)_vertexesStatic.pIndex, GL_DYNAMIC_DRAW);
 
 	glEnableVertexAttribArray( _locationAttrib[0] );
 	glVertexAttribPointer( _locationAttrib[0], 4, GL_FLOAT, GL_FALSE, 0, NULL);
@@ -671,7 +671,7 @@ void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_
 	g_pfInputBuffer = clCreateBuffer(_context, INFlags,  _vertexesStatic.nSize * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
 	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE* _joints.nSize , _joints.pMatrix, NULL);
 
-	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_uchar)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pIndex, NULL);   
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_ushort)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pIndex, NULL);   
 	g_pfOCLWeight = clCreateBuffer(_context, INFlags, sizeof(cl_float)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pWeight, NULL);   
 
 	//Set kernel arguments
@@ -695,17 +695,12 @@ void CMatrixMulVector::SetupKernel(cl_context	pContext, cl_device_id pDevice_ID,
 	const cl_mem_flags OUTFlags = CL_MEM_COPY_HOST_PTR | CL_MEM_READ_WRITE;
 	cl_int errcode_ret;
 	// allocate buffers
-#if !VECTOR_FLOAT4
-	g_pfInputBuffer = clCreateBuffer(_context, INFlags, _vertexesStatic.nSize*VERTEX_VECTOR_SIZE * sizeof(cl_float) , _vertexesStatic.pVertex, &errcode_ret);
-	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * MATRIX_SIZE_LINE*_joints.nSize , _joints.pMatrix, NULL);
-	g_pfOCLOutputBuffer = clCreateBuffer(_context, OUTFlags, sizeof(cl_float)*VERTEX_VECTOR_SIZE * _vertexesStatic.nSize , _vertexesDynamic.pVertex, NULL);
-#else
+
 	g_pfInputBuffer = clCreateBuffer(_context, INFlags,  _vertexesStatic.nSize * sizeof(cl_float4) , _vertexesStatic.pVertex, &errcode_ret);
 	g_pfOCLMatrix = clCreateBuffer(_context, INFlags, sizeof(cl_float4) * MATRIX_SIZE_LINE* _joints.nSize , _joints.pMatrix, NULL);
 	g_pfOCLOutputBuffer = clCreateBuffer(_context, OUTFlags, sizeof(cl_float4) *  _vertexesStatic.nSize , _vertexesDynamic.pVertex, NULL);
-#endif
 
-	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_uchar)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pIndex, NULL);   
+	g_pfOCLIndex = clCreateBuffer(_context, INFlags, sizeof(cl_ushort)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pIndex, NULL);   
 	g_pfOCLWeight = clCreateBuffer(_context, INFlags, sizeof(cl_float)* _vertexesStatic.nSize * SIZE_PER_BONE , _vertexesStatic.pWeight, NULL);   
 
 	//Set kernel arguments
