@@ -62,7 +62,7 @@ double totalElapsedTime = 0.0;
 #define    MATRIX_SIZE_LINE    3//3
 
 #define    MEGA_SIZE     (1<<20)  // Mega, or million
-#define    JOINT_SIZE    100
+#define    JOINT_SIZE    (1<<6)
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
@@ -738,7 +738,7 @@ SimpleGLSample::setupCL()
     // get a kernel object handle for a kernel with the given name
     kernel = clCreateKernel(
         program,
-        "updateVectorByMatrix4",
+        "updateVectorByMatrix4Shared",
         &status);
     CHECK_OPENCL_ERROR(status, "clCreateKernel failed.");
 
