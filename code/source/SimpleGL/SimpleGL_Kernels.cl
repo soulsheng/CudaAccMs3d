@@ -46,7 +46,7 @@ void sineWave(
 
 
 __kernel void
-updateVectorByMatrix4( const __global float4 *pInput, const __global ushort *pIndex,__global float4 *pMatrix,__global float4 *pOutput
+updateVectorByMatrix4( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
 						,  const __global float *pWeight)
 {
 	/*
