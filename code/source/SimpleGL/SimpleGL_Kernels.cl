@@ -49,7 +49,7 @@ void sineWave(
 
 __kernel void
 updateVectorByMatrix4( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
-						,  const __global float *pWeight, __local float4* pMatrixShared)
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
 {
 
 	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
@@ -120,7 +120,7 @@ updateVectorByMatrix4( const __global float4 *pInput, const __global ushort *pIn
 
 __kernel void
 updateVectorByMatrix4Shared( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
-						,  const __global float *pWeight, __local float4* pMatrixShared)
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
 {	
 
 	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
@@ -174,6 +174,87 @@ updateVectorByMatrix4Shared( const __global float4 *pInput, const __global ushor
 			{
 				// Blend position, use 3x4 matrix
 				ushort matrixIndex = pIndex[blendIdx + SIZE_PER_BONE*threadIndex]*MATRIX_SIZE_LINE;
+				accumVecPos.x +=
+					(pMatrixShared[matrixIndex+0].x * sourceVec.x +
+					pMatrixShared[matrixIndex+0].y * sourceVec.y +
+					pMatrixShared[matrixIndex+0].z * sourceVec.z +
+					pMatrixShared[matrixIndex+0].w)
+					* weight;
+				accumVecPos.y +=
+					(pMatrixShared[matrixIndex+1].x * sourceVec.x +
+					pMatrixShared[matrixIndex+1].y * sourceVec.y +
+					pMatrixShared[matrixIndex+1].z * sourceVec.z +
+					pMatrixShared[matrixIndex+1].w)
+					* weight;
+				accumVecPos.z +=
+					(pMatrixShared[matrixIndex+2].x * sourceVec.x +
+					pMatrixShared[matrixIndex+2].y * sourceVec.y +
+					pMatrixShared[matrixIndex+2].z * sourceVec.z +
+					pMatrixShared[matrixIndex+2].w)
+					* weight;
+			}
+		}
+		pOutput[ threadIndex ] = accumVecPos;
+
+}
+
+
+__kernel void
+updateVectorByMatrix4SharedCoalesce( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
+{	
+
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+
+	size_t localIndex = get_local_id(0) +  get_local_id(1) *get_local_size(0);
+	if( localIndex < JOINT_SIZE )
+	{
+		pMatrixShared[ localIndex*MATRIX_SIZE_LINE ] = pMatrix[ localIndex*MATRIX_SIZE_LINE ];
+		pMatrixShared[ localIndex*MATRIX_SIZE_LINE+1 ] = pMatrix[ localIndex*MATRIX_SIZE_LINE+1 ];
+		pMatrixShared[ localIndex*MATRIX_SIZE_LINE+2 ] = pMatrix[ localIndex*MATRIX_SIZE_LINE+2 ];
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	float4 sourceVec = pInput[threadIndex], accumVecPos;
+
+		// Load accumulators
+		accumVecPos = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+
+		// Loop per blend weight
+		//
+		// Note: Don't change "unsigned short" here!!! If use "size_t" instead,
+		// VC7.1 unroll this loop to four blend weights pre-iteration, and then
+		// loss performance 10% in this function. Ok, this give a hint that we
+		// should unroll this loop manually for better performance, will do that
+		// later.
+		//
+		for (unsigned short blendIdx = 0; blendIdx < SIZE_PER_BONE; ++blendIdx)
+		{
+			// Blend by multiplying source by blend matrix and scaling by weight
+			// Add to accumulator
+			// NB weights must be normalised!!
+			float weight = 1.0f;
+			switch( SIZE_PER_BONE )
+			{
+			case 2:
+				if( !blendIdx )
+					weight = 1.0f - pWeight[ 1*nSize+ threadIndex ];
+				else
+					weight = pWeight[ 1*nSize+ threadIndex ];
+				break;
+
+			case 3:
+			case 4:
+				weight = pWeight[ blendIdx*nSize + threadIndex ];
+				break;
+			default:
+				break;
+			}
+
+			if (weight)
+			{
+				// Blend position, use 3x4 matrix
+				ushort matrixIndex = pIndex[blendIdx*nSize + threadIndex]*MATRIX_SIZE_LINE;
 				accumVecPos.x +=
 					(pMatrixShared[matrixIndex+0].x * sourceVec.x +
 					pMatrixShared[matrixIndex+0].y * sourceVec.y +

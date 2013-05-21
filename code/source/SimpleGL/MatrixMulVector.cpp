@@ -683,6 +683,8 @@ void CMatrixMulVector::SetupKernelVBO(cl_context	pContext, cl_device_id pDevice_
 	clSetKernelArg(kernel, 4, sizeof(cl_mem), (void *) &g_pfOCLWeight);
 
 	clSetKernelArg(kernel, 5, sizeof(cl_float4) * MATRIX_SIZE_LINE* _joints.nSize, NULL);
+	
+	clSetKernelArg(kernel, 6, sizeof(int) , &_vertexesStatic.nSize);
 
 	SetupWorksize();
 }
