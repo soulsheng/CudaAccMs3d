@@ -8,6 +8,7 @@
 #include <map>
 
 #define  SIZE_VBO		3
+#define  STRUCT_OCL	0
 
 typedef std::multimap<std::string, double> TimerList;
 typedef std::multimap<std::string, double>::iterator TimerListItr;
@@ -31,6 +32,11 @@ public:
 	void ExecuteNativeCPPOMP();
 	void ExecuteNativeSSEOMP();
 	
+	void ExecuteNativeCPPT1();
+	void ExecuteNativeSSET1();
+	void ExecuteNativeCPPOMPT1();
+	void ExecuteNativeSSEOMPT1();
+
 	// 验证结果是否正确
 	bool verifyEqual();
 
@@ -83,9 +89,15 @@ private:
 
 public:
 	// 数据定义
-	Vertexes  _vertexesStatic;//静态顶点坐标
-	Vertexes  _vertexesDynamic, _vertexesDynamicRef;//动态顶点坐标
-	Joints		_joints;//关节矩阵
+#if STRUCT_OCL
+	Vertexes<cl_float4>  _vertexesStatic;//静态顶点坐标
+	Vertexes<cl_float4>  _vertexesDynamic, _vertexesDynamicRef;//动态顶点坐标
+	Joints<cl_float4>		_joints;//关节矩阵
+#else
+	Vertexes<float>  _vertexesStatic;//静态顶点坐标
+	Vertexes<float>  _vertexesDynamic, _vertexesDynamicRef;//动态顶点坐标
+	Joints<float>		_joints;//关节矩阵
+#endif
 
 	//	cl_mem objects used as parameters for kernels
 	cl_mem g_pfInputBuffer ;

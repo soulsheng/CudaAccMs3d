@@ -42,6 +42,7 @@ struct Vertexes{
 #define    VERTEX_VECTOR_SIZE    4
 #define  SIZE_PER_BONE		2
 
+template<typename F>
 struct Vertexes{
 
 	// 获取顶点坐标 模拟
@@ -49,15 +50,20 @@ struct Vertexes{
 		nSize = size;
 		//pVertex = new float[nSize*VERTEX_VECTOR_SIZE];
 		//pIndex = new int[nSize];
-		pVertex = (cl_float4*) _aligned_malloc(nSize * sizeof(cl_float4), 16);
-		pIndex = (cl_ushort*) _aligned_malloc(nSize * sizeof(cl_ushort) * SIZE_PER_BONE, 16);
-		pWeight = (cl_float*) _aligned_malloc(nSize * sizeof(cl_float) * SIZE_PER_BONE, 16);
+		pVertex = (F*) _aligned_malloc(nSize * sizeof(float)*4, 16);
+		pIndex = (unsigned short*) _aligned_malloc(nSize * sizeof(unsigned short) * SIZE_PER_BONE, 16);
+		pWeight = (float*) _aligned_malloc(nSize * sizeof(float) * SIZE_PER_BONE, 16);
 
+		float* pFormat = (float*)pVertex;
 		for(int i=0;i<nSize;i++){
-			pVertex[i].s[0] = rand() * 1.0f;
-			pVertex[i].s[1] = rand() * 1.0f;
-			pVertex[i].s[2] = rand() * 1.0f;
-			pVertex[i].s[3] = 1.0f;
+			for(int j=0;j<4;j++){
+				if ( j%3 )				{
+					pVertex[i*4+j] = rand() * 1.0f;
+				} 
+				else				{
+					pVertex[i*4+j] = 1.0f;
+				}
+			}
 			
 			for(int j=0;j<SIZE_PER_BONE;j++) {
 				pIndex[i + j*nSize] = rand() % sizeJoint;
@@ -74,10 +80,10 @@ struct Vertexes{
 		if (pWeight) _aligned_free(pWeight);
 	}
 
-	cl_float4*  pVertex;
+	F*  pVertex;
 	int   nSize;// 顶点的数目
-	cl_ushort*		pIndex;
-	cl_float*		pWeight;
+	unsigned short*		pIndex;
+	float*		pWeight;
 
 };// 顶点的集合
 

@@ -39,18 +39,19 @@ struct Joints{
 
 #else
 
+template<typename F>
 struct Joints{
 
 	// 获取关节矩阵 模拟
 	void initialize( int size ){
 		nSize = size;
 		//pMatrix = new float[nSize*MATRIX_SIZE_LINE*4];
-		pMatrix = (cl_float4*) _aligned_malloc(nSize*MATRIX_SIZE_LINE * sizeof(cl_float4), 16);
+		pMatrix = (F*) _aligned_malloc(nSize*MATRIX_SIZE_LINE * sizeof(float)*4, 16);
 
 		for(int i=0;i<nSize;i++){
 			for(int j=0;j<MATRIX_SIZE_LINE;j++){
 				for(int k=0;k<4;k++){
-					pMatrix[i*MATRIX_SIZE_LINE +j].s[k] = rand() % nSize / (nSize * 1.0f);
+					pMatrix[ (i*MATRIX_SIZE_LINE +j)*4 + k] = rand() % nSize / (nSize * 1.0f);
 				}
 			}
 		}
@@ -62,7 +63,7 @@ struct Joints{
 		if (pMatrix)  _aligned_free(pMatrix);
 	}
 
-	cl_float4*  pMatrix;
+	F*  pMatrix;
 	int   nSize;// 关节的数目
 
 };// 关节的集合

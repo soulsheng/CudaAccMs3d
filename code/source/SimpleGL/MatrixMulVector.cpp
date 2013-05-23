@@ -53,7 +53,7 @@
 
 /// Same as _mm_load_ps, but can help VC generate more optimised code.
 #define __MM_LOAD_PS(p)                                                             \
-	(*(__m128*)(p.s))
+	(*(__m128*)(p))
 
 /// Same as _mm_store_ps, but can help VC generate more optimised code.
 #define __MM_STORE_PS(p, v)                                                         \
@@ -70,7 +70,7 @@
 //---------------------------------------------------------------------
 // Some useful macro for collapse matrices.
 //---------------------------------------------------------------------
-
+#if STRUCT_OCL
 #define __LOAD_MATRIX(row0, row1, row2, pMatrix)                        \
 	{                                                                   \
 	row0 = __MM_LOAD_PS(pMatrix[0]);                             \
@@ -98,7 +98,37 @@
 	row1 = __MM_MADD_PS(__MM_LOAD_PS(pMatrix[1]), weight, row1); \
 	row2 = __MM_MADD_PS(__MM_LOAD_PS(pMatrix[2]), weight, row2); \
 	}
+#else
 
+#define __LOAD_MATRIX(row0, row1, row2, pMatrix)                        \
+	{                                                                   \
+	row0 = __MM_LOAD_PS(pMatrix);                             \
+	row1 = __MM_LOAD_PS(pMatrix+4);                             \
+	row2 = __MM_LOAD_PS(pMatrix+8);                             \
+	}
+
+#define __LERP_MATRIX(row0, row1, row2, weight, pMatrix)                \
+	{                                                                   \
+	row0 = __MM_LERP_PS(weight, row0, __MM_LOAD_PS(pMatrix)); \
+	row1 = __MM_LERP_PS(weight, row1, __MM_LOAD_PS(pMatrix+4)); \
+	row2 = __MM_LERP_PS(weight, row2, __MM_LOAD_PS(pMatrix+8)); \
+	}
+
+#define __LOAD_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix)       \
+	{                                                                   \
+	row0 = _mm_mul_ps(__MM_LOAD_PS(pMatrix), weight);         \
+	row1 = _mm_mul_ps(__MM_LOAD_PS(pMatrix+4), weight);         \
+	row2 = _mm_mul_ps(__MM_LOAD_PS(pMatrix+8), weight);         \
+	}
+
+#define __ACCUM_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix)      \
+	{                                                                   \
+	row0 = __MM_MADD_PS(__MM_LOAD_PS(pMatrix), weight, row0); \
+	row1 = __MM_MADD_PS(__MM_LOAD_PS(pMatrix+4), weight, row1); \
+	row2 = __MM_MADD_PS(__MM_LOAD_PS(pMatrix+8), weight, row2); \
+	}
+
+#endif
 /** Fill vector of single precision floating point with selected value.
     Argument 'fp' is a digit[0123] that represents the fp of argument 'v'.
 */
@@ -184,7 +214,7 @@
     {                                                                           \
         /* Important Note: If reuse pMatrixXXX frequently, M$ VC7.1 will */     \
         /* generate wrong code here!!!                                   */     \
-        cl_float4 * pMatrix0, *pMatrix1, *pMatrix2, *pMatrix3;               \
+        float * pMatrix0, *pMatrix1, *pMatrix2, *pMatrix3;               \
         __m128 weight, weights;                                                 \
                                                                                 \
         switch (numWeightsPerVertex)                                            \
@@ -213,22 +243,22 @@ void CMatrixMulVector::ExecuteNativeSSE()
 {
 #if  VBO_MAP
 	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
-	cl_float4* pDestPos = (cl_float4*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
 #else
-	cl_float4 *pDestPos  = _vertexesDynamic.pVertex;
+	float *pDestPos  = _vertexesDynamic.pVertex;
 #endif
 
 	float *pBlendWeight = _vertexesStatic.pWeight;
-	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
-	cl_float4 *blendMatrices =  _joints.pMatrix;
+	unsigned short* pBlendIndex = _vertexesStatic.pIndex;
+	float *blendMatrices =  _joints.pMatrix;
 
-	cl_float4 *pSrcPos = _vertexesStatic.pVertex;
+	__m128 *pSrcPos = (__m128*)_vertexesStatic.pVertex;
 
 	int srcPosStride, destPosStride;
-	srcPosStride = destPosStride = sizeof(cl_float4);
+	srcPosStride = destPosStride = sizeof(float)*4;
 	int blendWeightStride, blendIndexStride;
 	blendWeightStride = sizeof(float) * SIZE_PER_BONE;
-	blendIndexStride = sizeof(cl_ushort) * SIZE_PER_BONE;
+	blendIndexStride = sizeof(unsigned short) * SIZE_PER_BONE;
 #if 1
 //#pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++){
@@ -254,16 +284,16 @@ void CMatrixMulVector::ExecuteNativeSSE()
 
 		// Load source position
 		__m128 vI0, vI1, vI2;
-		vI0 = _mm_load_ps1( &pSrcPos->s[0] );
-		vI1 = _mm_load_ps1( &pSrcPos->s[1] );
-		vI2 = _mm_load_ps1( &pSrcPos->s[2] );
+		vI0 = __MM_SELECT(*pSrcPos, 0);  //_mm_load_ps1( &pSrcPos->s[0] );
+		vI1 = __MM_SELECT(*pSrcPos, 1);  // _mm_load_ps1( &pSrcPos->s[1] );
+		vI2 = __MM_SELECT(*pSrcPos, 2);  //_mm_load_ps1( &pSrcPos->s[2] );
 
 		// Transform by collapsed matrix
 		__m128 vO = __MM_DOT4x3_PS(m02, m03, m00, m01, vI0, vI1, vI2);   // z 0 x y
 
 		// Store blended position, no aligned requirement
-		_mm_storeh_pi((__m64*)(&pDestPos->s[0]) , vO);
-		_mm_store_ss(&pDestPos->s[2], vO);
+		_mm_storeh_pi((__m64*)(&pDestPos[0]) , vO);
+		_mm_store_ss(&pDestPos[2], vO);
 
 		advanceRawPointer(pSrcPos, srcPosStride);
 		advanceRawPointer(pDestPos, destPosStride);
@@ -280,14 +310,14 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 {
 #if  VBO_MAP
 	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
-	cl_float4* pDestPos = (cl_float4*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
 #else
-	cl_float4 *pDestPos  = _vertexesDynamic.pVertex;
+	float *pDestPos  = _vertexesDynamic.pVertex;
 #endif
 
-	cl_float4 *blendMatrices =  _joints.pMatrix;
+	float *blendMatrices =  _joints.pMatrix;
 
-	cl_float4 *pSrcPos = _vertexesStatic.pVertex;
+	float *pSrcPos = _vertexesStatic.pVertex;
 
 #pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++){
@@ -312,16 +342,16 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 
 		// Load source position
 		__m128 vI0, vI1, vI2;
-		vI0 = _mm_load_ps1( &pSrcPos[i].s[0] );
-		vI1 = _mm_load_ps1( &pSrcPos[i].s[1] );
-		vI2 = _mm_load_ps1( &pSrcPos[i].s[2] );
+		vI0 = _mm_load_ps1( &pSrcPos[i+0] );
+		vI1 = _mm_load_ps1( &pSrcPos[i+1] );
+		vI2 = _mm_load_ps1( &pSrcPos[i+2] );
 
 		// Transform by collapsed matrix
 		__m128 vO = __MM_DOT4x3_PS(m02, m03, m00, m01, vI0, vI1, vI2);   // z 0 x y
 
 		// Store blended position, no aligned requirement
-		_mm_storeh_pi((__m64*)(&pDestPos[i].s[0]) , vO);
-		_mm_store_ss(&pDestPos[i].s[2], vO);
+		_mm_storeh_pi((__m64*)(&pDestPos[i+0]) , vO);
+		_mm_store_ss(&pDestPos[i+2], vO);
 	}
 
 
@@ -335,25 +365,25 @@ void CMatrixMulVector::ExecuteNativeCPP()
 {
 #if  VBO_MAP
 	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
-	cl_float4* pDestPos = (cl_float4*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
 #else
-	cl_float4 *pDestPos  = _vertexesDynamicRef.pVertex;
+	float *pDestPos  = _vertexesDynamicRef.pVertex;
 #endif
 
 	float *pBlendWeight = _vertexesStatic.pWeight;
 	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
-	cl_float4 *blendMatrices =  _joints.pMatrix;
+	float *blendMatrices =  _joints.pMatrix;
 
-	cl_float4 *pSrcPos = _vertexesStatic.pVertex;
+	float *pSrcPos = _vertexesStatic.pVertex;
 
 
-	cl_float4 sourceVec, accumVecPos;
+	float sourceVec[3], accumVecPos[3];
 
 	int srcPosStride, destPosStride;
-	srcPosStride = destPosStride = sizeof(cl_float4);
+	srcPosStride = destPosStride = sizeof(float)*4;
 	int blendWeightStride, blendIndexStride;
 	blendWeightStride = sizeof(float) * SIZE_PER_BONE;
-	blendIndexStride = sizeof(cl_ushort) * SIZE_PER_BONE;
+	blendIndexStride = sizeof(unsigned short) * SIZE_PER_BONE;
 
 #if USE_OPENMP//use_openmp
 #pragma omp parallel for
@@ -361,14 +391,12 @@ void CMatrixMulVector::ExecuteNativeCPP()
 	for(int i=0;i<_vertexesStatic.nSize;i++)
 	{
 		// Load source vertex elements
-		sourceVec.s[0] = pSrcPos->s[0];
-		sourceVec.s[1] = pSrcPos->s[1];
-		sourceVec.s[2] = pSrcPos->s[2];
-
-		// Load accumulators
-		for(int j=0;j<4;j++)
-		accumVecPos.s[j] = 0.0f ;
-
+		for(int j=0;j<3;j++)
+		{
+			sourceVec[j] = pSrcPos[j];
+			accumVecPos[j] = 0.0f ;
+		}
+	
 		// Loop per blend weight
 		//
 		// Note: Don't change "unsigned short" here!!! If use "size_t" instead,
@@ -400,30 +428,30 @@ void CMatrixMulVector::ExecuteNativeCPP()
 			if (weight)
 			{
 				// Blend position, use 3x4 matrix
-				const cl_float4* mat = blendMatrices + pBlendIndex[blendIdx]*MATRIX_SIZE_LINE;
-				accumVecPos.s[0] +=
-					(mat[0].s[0] * sourceVec.s[0] +
-					mat[0].s[1] * sourceVec.s[1] +
-					mat[0].s[2] * sourceVec.s[2] +
-					mat[0].s[3])
+				const float* mat = blendMatrices + pBlendIndex[blendIdx]*MATRIX_SIZE_LINE;
+				accumVecPos[0] +=
+					(mat[0*4+0] * sourceVec[0] +
+					mat[0*4+1] * sourceVec[1] +
+					mat[0*4+2] * sourceVec[2] +
+					mat[0*4+3])
 					* weight;
-				accumVecPos.s[1] +=
-					(mat[1].s[0] * sourceVec.s[0] +
-					mat[1].s[1] * sourceVec.s[1] +
-					mat[1].s[2] * sourceVec.s[2] +
-					mat[1].s[3])
+				accumVecPos[1] +=
+					(mat[1*4+0] * sourceVec[0] +
+					mat[1*4+1] * sourceVec[1] +
+					mat[1*4+2] * sourceVec[2] +
+					mat[1*4+3])
 					* weight;
-				accumVecPos.s[2] +=
-					(mat[2].s[0] * sourceVec.s[0] +
-					mat[2].s[1] * sourceVec.s[1] +
-					mat[2].s[2] * sourceVec.s[2] +
-					mat[2].s[3])
+				accumVecPos[2] +=
+					(mat[2*4+0] * sourceVec[0] +
+					mat[2*4+1] * sourceVec[1] +
+					mat[2*4+2] * sourceVec[2] +
+					mat[2*4+3])
 					* weight;
 			}
 		}
-		pDestPos->s[0] = accumVecPos.s[0];
-		pDestPos->s[1] = accumVecPos.s[1];
-		pDestPos->s[2] = accumVecPos.s[2];
+		pDestPos[0] = accumVecPos[0];
+		pDestPos[1] = accumVecPos[1];
+		pDestPos[2] = accumVecPos[2];
 
 		advanceRawPointer(pSrcPos, srcPosStride);
 		advanceRawPointer(pDestPos, destPosStride);
@@ -442,31 +470,32 @@ void CMatrixMulVector::ExecuteNativeCPPOMP()
 {
 #if  VBO_MAP
 	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
-	cl_float4* pDestPos = (cl_float4*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
 #else
-	cl_float4 *pDestPos  = _vertexesDynamic.pVertex;
+	float *pDestPos  = _vertexesDynamic.pVertex;
 #endif
 
 	float *pBlendWeight = _vertexesStatic.pWeight;
 	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
-	cl_float4 *blendMatrices =  _joints.pMatrix;
+	float *blendMatrices =  _joints.pMatrix;
 
-	cl_float4 *pSrcPos = _vertexesStatic.pVertex;
+	float *pSrcPos = _vertexesStatic.pVertex;
 
 
 #pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++)
 	{
-		cl_float4 sourceVec, accumVecPos;
+		float sourceVec[3];
+		float accumVecPos[3];
 
 		// Load source vertex elements
-		sourceVec.s[0] = pSrcPos[i].s[0];
-		sourceVec.s[1] = pSrcPos[i].s[1];
-		sourceVec.s[2] = pSrcPos[i].s[2];
+		for(int j=0;j<3;j++)
+		{
+			sourceVec[j] = pSrcPos[j+4*i];
+			accumVecPos[j] = 0.0f ;
+		}
 
 		// Load accumulators
-		for(int j=0;j<4;j++)
-			accumVecPos.s[j] = 0.0f ;
 
 		// Loop per blend weight
 		//
@@ -500,30 +529,30 @@ void CMatrixMulVector::ExecuteNativeCPPOMP()
 			if (weight)
 			{
 				// Blend position, use 3x4 matrix
-				const cl_float4* mat = blendMatrices + pBlendIndex[i*SIZE_PER_BONE +blendIdx]*MATRIX_SIZE_LINE;
-				accumVecPos.s[0] +=
-					(mat[0].s[0] * sourceVec.s[0] +
-					mat[0].s[1] * sourceVec.s[1] +
-					mat[0].s[2] * sourceVec.s[2] +
-					mat[0].s[3])
+				const float* mat = blendMatrices + pBlendIndex[i*SIZE_PER_BONE +blendIdx]*MATRIX_SIZE_LINE;
+				accumVecPos[0] +=
+					(mat[0*4+0] * sourceVec[0] +
+					mat[0*4+1] * sourceVec[1] +
+					mat[0*4+2] * sourceVec[2] +
+					mat[0*4+3])
 					* weight;
-				accumVecPos.s[1] +=
-					(mat[1].s[0] * sourceVec.s[0] +
-					mat[1].s[1] * sourceVec.s[1] +
-					mat[1].s[2] * sourceVec.s[2] +
-					mat[1].s[3])
+				accumVecPos[1] +=
+					(mat[1*4+0] * sourceVec[0] +
+					mat[1*4+1] * sourceVec[1] +
+					mat[1*4+2] * sourceVec[2] +
+					mat[1*4+3])
 					* weight;
-				accumVecPos.s[2] +=
-					(mat[2].s[0] * sourceVec.s[0] +
-					mat[2].s[1] * sourceVec.s[1] +
-					mat[2].s[2] * sourceVec.s[2] +
-					mat[2].s[3])
+				accumVecPos[2] +=
+					(mat[2*4+0] * sourceVec[0] +
+					mat[2*4+1] * sourceVec[1] +
+					mat[2*4+2] * sourceVec[2] +
+					mat[2*4+3])
 					* weight;
 			}
 		}
-		pDestPos[i].s[0] = accumVecPos.s[0];
-		pDestPos[i].s[1] = accumVecPos.s[1];
-		pDestPos[i].s[2] = accumVecPos.s[2];
+		pDestPos[0+4*i] = accumVecPos[0];
+		pDestPos[1+4*i] = accumVecPos[1];
+		pDestPos[2+4*i] = accumVecPos[2];
 	}
 
 #if  VBO_MAP
@@ -833,4 +862,93 @@ void CMatrixMulVector::renderVBO()
 	
 	glBindVertexArray( NULL );
 
+}
+
+void CMatrixMulVector::ExecuteNativeCPPT1()
+{
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	float *pDestPos  = _vertexesDynamicRef.pVertex;
+#endif
+
+	float *pSrcPos = _vertexesStatic.pVertex;
+
+	for(int i=0;i<_vertexesStatic.nSize*4;i++)
+	{
+		pDestPos[i] = pSrcPos[i];
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
+
+void CMatrixMulVector::ExecuteNativeCPPOMPT1()
+{
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	float *pDestPos  = _vertexesDynamicRef.pVertex;
+#endif
+
+	float *pSrcPos = _vertexesStatic.pVertex;
+
+#pragma omp parallel for
+	for(int i=0;i<_vertexesStatic.nSize*4;i++)
+	{
+		pDestPos[i] = pSrcPos[i];
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
+
+void CMatrixMulVector::ExecuteNativeSSET1()
+{
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	__m128* pDestPos = (__m128*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	__m128 *pDestPos  = (__m128*)_vertexesDynamic.pVertex;
+#endif
+
+	__m128 *pSrcPos = (__m128*)_vertexesStatic.pVertex;
+
+	for(int i=0;i<_vertexesStatic.nSize;i++){
+		*(pDestPos++) = *(pSrcPos++);
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
+
+void CMatrixMulVector::ExecuteNativeSSEOMPT1()
+{
+
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	__m128* pDestPos = (__m128*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	__m128 *pDestPos  = (__m128*)_vertexesDynamic.pVertex;
+#endif
+
+	__m128 *pSrcPos = (__m128*)_vertexesStatic.pVertex;
+
+#pragma omp parallel for
+	for(int i=0;i<_vertexesStatic.nSize;i++){
+		pDestPos[i] = pSrcPos[i];
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
 }
