@@ -140,7 +140,7 @@
 */
 #define __COLLAPSE_MATRIX_W1(row0, row1, row2, ppMatrices, pIndices, pWeights)  \
     {                                                                           \
-        pMatrix0 = blendMatrices +pIndices[0]*MATRIX_SIZE_LINE;                                  \
+        pMatrix0 = blendMatrices +pIndices[0]*MATRIX_SIZE_LINE*4;                                  \
         __LOAD_MATRIX(row0, row1, row2, pMatrix0);                              \
     }
 
@@ -151,9 +151,9 @@
 #define __COLLAPSE_MATRIX_W2(row0, row1, row2, ppMatrices, pIndices, pWeights)  \
     {                                                                           \
         weight = _mm_load_ps1(pWeights + 1);                                    \
-        pMatrix0 = ppMatrices +pIndices[0]*MATRIX_SIZE_LINE;                                     \
+        pMatrix0 = ppMatrices +pIndices[0]*MATRIX_SIZE_LINE*4;                                     \
         __LOAD_MATRIX(row0, row1, row2, pMatrix0);                              \
-        pMatrix1 = ppMatrices +pIndices[1]*MATRIX_SIZE_LINE;                                     \
+        pMatrix1 = ppMatrices +pIndices[1]*MATRIX_SIZE_LINE*4;                                     \
         __LERP_MATRIX(row0, row1, row2, weight, pMatrix1);                      \
     }
 
@@ -162,13 +162,13 @@
 #define __COLLAPSE_MATRIX_W3(row0, row1, row2, ppMatrices, pIndices, pWeights)  \
     {                                                                           \
         weight = _mm_load_ps1(pWeights + 0);                                    \
-        pMatrix0 = ppMatrices + pIndices[0]*MATRIX_SIZE_LINE;                                     \
+        pMatrix0 = ppMatrices + pIndices[0]*MATRIX_SIZE_LINE*4;                                     \
         __LOAD_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix0);             \
         weight = _mm_load_ps1(pWeights + 1);                                    \
-        pMatrix1 = ppMatrices + pIndices[1]*MATRIX_SIZE_LINE;                                     \
+        pMatrix1 = ppMatrices + pIndices[1]*MATRIX_SIZE_LINE*4;                                     \
         __ACCUM_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix1);            \
         weight = _mm_load_ps1(pWeights + 2);                                    \
-        pMatrix2 = ppMatrices + pIndices[2]*MATRIX_SIZE_LINE;                                     \
+        pMatrix2 = ppMatrices + pIndices[2]*MATRIX_SIZE_LINE*4;                                     \
         __ACCUM_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix2);            \
     }
 
@@ -179,16 +179,16 @@
         /* Load four blend weights at one time, they will be shuffled later */  \
         weights = _mm_loadu_ps(pWeights);                                       \
                                                                                 \
-        pMatrix0 = ppMatrices + pIndices[0]*MATRIX_SIZE_LINE;                                     \
+        pMatrix0 = ppMatrices + pIndices[0]*MATRIX_SIZE_LINE*4;                                     \
         weight = __MM_SELECT(weights, 0);                                       \
         __LOAD_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix0);             \
-        pMatrix1 = ppMatrices + pIndices[1]*MATRIX_SIZE_LINE;                                     \
+        pMatrix1 = ppMatrices + pIndices[1]*MATRIX_SIZE_LINE*4;                                     \
         weight = __MM_SELECT(weights, 1);                                       \
         __ACCUM_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix1);            \
-        pMatrix2 = ppMatrices + pIndices[2]*MATRIX_SIZE_LINE;                                     \
+        pMatrix2 = ppMatrices + pIndices[2]*MATRIX_SIZE_LINE*4;                                     \
         weight = __MM_SELECT(weights, 2);                                       \
         __ACCUM_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix2);            \
-        pMatrix3 = ppMatrices + pIndices[3]*MATRIX_SIZE_LINE;                                     \
+        pMatrix3 = ppMatrices + pIndices[3]*MATRIX_SIZE_LINE*4;                                     \
         weight = __MM_SELECT(weights, 3);                                       \
         __ACCUM_WEIGHTED_MATRIX(row0, row1, row2, weight, pMatrix3);            \
     }
@@ -317,14 +317,14 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 
 	float *blendMatrices =  _joints.pMatrix;
 
-	float *pSrcPos = _vertexesStatic.pVertex;
+	__m128 *pSrcPos = (__m128 *)_vertexesStatic.pVertex;
 
 #pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++){
 		// 读取操作数：顶点对应的矩阵
 
 		float *pBlendWeight = _vertexesStatic.pWeight + i*SIZE_PER_BONE;
-		cl_ushort* pBlendIndex = _vertexesStatic.pIndex + i*SIZE_PER_BONE;
+		unsigned short* pBlendIndex = _vertexesStatic.pIndex + i*SIZE_PER_BONE;
 
 		__m128 m00, m01, m02;
 		_collapseOneMatrix(
@@ -342,16 +342,16 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 
 		// Load source position
 		__m128 vI0, vI1, vI2;
-		vI0 = _mm_load_ps1( &pSrcPos[i+0] );
-		vI1 = _mm_load_ps1( &pSrcPos[i+1] );
-		vI2 = _mm_load_ps1( &pSrcPos[i+2] );
+		vI0 = __MM_SELECT( pSrcPos[i], 0);  //_mm_load_ps1( &pSrcPos->s[0] );
+		vI1 = __MM_SELECT( pSrcPos[i], 1);  // _mm_load_ps1( &pSrcPos->s[1] );
+		vI2 = __MM_SELECT( pSrcPos[i], 2);  //_mm_load_ps1( &pSrcPos->s[2] );
 
 		// Transform by collapsed matrix
 		__m128 vO = __MM_DOT4x3_PS(m02, m03, m00, m01, vI0, vI1, vI2);   // z 0 x y
 
 		// Store blended position, no aligned requirement
-		_mm_storeh_pi((__m64*)(&pDestPos[i+0]) , vO);
-		_mm_store_ss(&pDestPos[i+2], vO);
+		_mm_storeh_pi((__m64*)(&pDestPos[i*4+0]) , vO);
+		_mm_store_ss(&pDestPos[i*4+2], vO);
 	}
 
 
@@ -428,7 +428,7 @@ void CMatrixMulVector::ExecuteNativeCPP()
 			if (weight)
 			{
 				// Blend position, use 3x4 matrix
-				const float* mat = blendMatrices + pBlendIndex[blendIdx]*MATRIX_SIZE_LINE;
+				const float* mat = blendMatrices + pBlendIndex[blendIdx]*MATRIX_SIZE_LINE*4;
 				accumVecPos[0] +=
 					(mat[0*4+0] * sourceVec[0] +
 					mat[0*4+1] * sourceVec[1] +
@@ -529,7 +529,7 @@ void CMatrixMulVector::ExecuteNativeCPPOMP()
 			if (weight)
 			{
 				// Blend position, use 3x4 matrix
-				const float* mat = blendMatrices + pBlendIndex[i*SIZE_PER_BONE +blendIdx]*MATRIX_SIZE_LINE;
+				const float* mat = blendMatrices + pBlendIndex[i*SIZE_PER_BONE +blendIdx]*MATRIX_SIZE_LINE*4;
 				accumVecPos[0] +=
 					(mat[0*4+0] * sourceVec[0] +
 					mat[0*4+1] * sourceVec[1] +

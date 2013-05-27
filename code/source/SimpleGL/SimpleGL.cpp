@@ -1084,11 +1084,11 @@ SimpleGLSample::run()
 
 #if !GLSL_4CPP
 
-				//mvm.ExecuteNativeCPPOMPT1();
-				//mvm.ExecuteNativeCPPT1();
+				//mvm.ExecuteNativeCPPOMP();
+				//mvm.ExecuteNativeCPP();
 
-				mvm.ExecuteNativeSSEOMPT1();
-				//mvm.ExecuteNativeSSET1();
+				mvm.ExecuteNativeSSEOMP();
+				//mvm.ExecuteNativeSSE();
 
 #endif
 				stopTimer(timer);
