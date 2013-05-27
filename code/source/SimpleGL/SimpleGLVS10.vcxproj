@@ -179,6 +179,7 @@ copy SimpleGL.bmp  "$(OUTDIR)"\SimpleGL.bmp</Command>
     <ClCompile Include="SimpleGL.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\TimeCounterEx.h" />
     <ClInclude Include="Joint.h" />
     <ClInclude Include="MatrixMulVector.h" />
     <ClInclude Include="SimpleGL.hpp" />
