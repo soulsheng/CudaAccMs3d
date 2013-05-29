@@ -14,7 +14,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************/
 
-#define  SIZE_PER_BONE   2
+#define  SIZE_PER_BONE   4
 #define MATRIX_SIZE_LINE 3
 #define    JOINT_SIZE    (1<<6)
 
@@ -299,6 +299,8 @@ updateVectorByMatrix4Ideal2( const __global float4 *pInput, const __global ushor
 
 	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
 	float4 sourceVec = pInput[threadIndex], accumVecPos;
+	
+	accumVecPos = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
 
 	ushort matrixIndex = pIndex[threadIndex]*MATRIX_SIZE_LINE;
 
@@ -319,5 +321,128 @@ updateVectorByMatrix4Ideal2( const __global float4 *pInput, const __global ushor
 					pMatrix[matrixIndex+2].w) ;
 
 	pOutput[ threadIndex ] = accumVecPos;
+
+}
+
+
+__kernel void
+updateVectorByMatrix4TwoWeight( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
+{
+
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	float4 sourceVec = pInput[threadIndex];
+	sourceVec.w = 1.0f;
+
+		ushort matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex]*MATRIX_SIZE_LINE;
+		ushort matrixIndex2 = pIndex[SIZE_PER_BONE*threadIndex +1]*MATRIX_SIZE_LINE;
+		float weight = pWeight[ 1+ SIZE_PER_BONE*threadIndex ];
+
+		float4 weight1 = (float4)(1-weight, 1-weight, 1-weight, 1-weight);
+		float4 weight2 = (float4)(weight, weight, weight, weight);
+
+		float4 mat0 = pMatrix[matrixIndex1+0] * weight1 + pMatrix[matrixIndex2+0] * weight2;
+		float4  xResult = mat0 * sourceVec;
+
+		float4 mat1 = pMatrix[matrixIndex1+1] * weight1 + pMatrix[matrixIndex2+1] * weight2;
+		float4  yResult = mat1 * sourceVec;
+		
+		float4 mat2 = pMatrix[matrixIndex1+2] * weight1 + pMatrix[matrixIndex2+2] * weight2;
+		float4  zResult = mat2 * sourceVec;
+
+		float4 xResultT = (float4)(xResult.x, yResult.x, zResult.x, 0.0f);
+		float4 yResultT = (float4)(xResult.y, yResult.y, zResult.y, 0.0f);
+		float4 zResultT = (float4)(xResult.z, yResult.z, zResult.z, 0.0f);
+		float4 wResultT = (float4)(xResult.w, yResult.w, zResult.w, 0.0f);
+
+		pOutput[threadIndex] = xResultT + yResultT + zResultT + wResultT;
+		/*
+		pOutput[ threadIndex ].x =
+					(pMatrix[matrixIndex1+0].x * (1-weight) + pMatrix[matrixIndex2+0].x * weight  )* sourceVec.x +
+					(pMatrix[matrixIndex1+0].y * (1-weight) + pMatrix[matrixIndex2+0].y * weight  ) * sourceVec.y +
+					(pMatrix[matrixIndex1+0].z * (1-weight) + pMatrix[matrixIndex2+0].z * weight  ) * sourceVec.z +
+					(pMatrix[matrixIndex1+0].w * (1-weight) + pMatrix[matrixIndex2+0].w * weight  );
+
+		pOutput[ threadIndex ].y =
+					(pMatrix[matrixIndex1+1].x * (1-weight) + pMatrix[matrixIndex2+1].x * weight  ) * sourceVec.x +
+					(pMatrix[matrixIndex1+1].y * (1-weight) + pMatrix[matrixIndex2+1].y * weight  ) * sourceVec.y +
+					(pMatrix[matrixIndex1+1].z * (1-weight) + pMatrix[matrixIndex2+1].z * weight  ) * sourceVec.z +
+					(pMatrix[matrixIndex1+1].w * (1-weight) + pMatrix[matrixIndex2+1].w * weight  );
+
+		pOutput[ threadIndex ].z =
+					(pMatrix[matrixIndex1+2].x * (1-weight) + pMatrix[matrixIndex2+2].x * weight  ) * sourceVec.x +
+					(pMatrix[matrixIndex1+2].y * (1-weight) + pMatrix[matrixIndex2+2].y * weight  ) * sourceVec.y +
+					(pMatrix[matrixIndex1+2].z * (1-weight) + pMatrix[matrixIndex2+2].z * weight  ) * sourceVec.z +
+					(pMatrix[matrixIndex1+2].w * (1-weight) + pMatrix[matrixIndex2+2].w * weight  );
+		*/
+}
+
+
+__kernel void
+updateVectorByMatrix4OneWeight( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
+{
+
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	float4 sourceVec = pInput[threadIndex];
+	float weight = sourceVec.w;
+	sourceVec.w = 1.0f;
+
+		ushort matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex]*MATRIX_SIZE_LINE;
+
+		float4 weight1 = (float4)(weight, weight, weight, weight);
+
+		float4 mat0 = pMatrix[matrixIndex1+0] * weight1 ;
+		float4  xResult = mat0 * sourceVec;
+
+		float4 mat1 = pMatrix[matrixIndex1+1] * weight1 ;
+		float4  yResult = mat1 * sourceVec;
+		
+		float4 mat2 = pMatrix[matrixIndex1+2] * weight1 ;
+		float4  zResult = mat2 * sourceVec;
+
+		float4 xResultT = (float4)(xResult.x, yResult.x, zResult.x, 0.0f);
+		float4 yResultT = (float4)(xResult.y, yResult.y, zResult.y, 0.0f);
+		float4 zResultT = (float4)(xResult.z, yResult.z, zResult.z, 0.0f);
+		float4 wResultT = (float4)(xResult.w, yResult.w, zResult.w, 0.0f);
+
+		pOutput[threadIndex] = xResultT + yResultT + zResultT + wResultT;
+}
+
+
+__kernel void
+updateVectorByMatrix4MultiWeight( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
+{
+
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	float4 sourceVec = pInput[threadIndex];
+	sourceVec.w = 1.0f;
+
+	float4 mat0=(float4)(0.0f, 0.0f, 0.0f, 0.0f);
+	float4 mat1=(float4)(0.0f, 0.0f, 0.0f, 0.0f);
+	float4 mat2=(float4)(0.0f, 0.0f, 0.0f, 0.0f);
+
+	for(int i=0; i<SIZE_PER_BONE; i++)
+	{
+		ushort matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex + i]*MATRIX_SIZE_LINE;
+		float weight1 = pWeight[ SIZE_PER_BONE*threadIndex + i ];
+		float4 weight11 = (float4)(weight1, weight1, weight1, weight1);
+
+		mat0 += pMatrix[matrixIndex1+0] * weight11;
+		mat1 += pMatrix[matrixIndex1+1] * weight11;
+		mat2 += pMatrix[matrixIndex1+2] * weight11;
+	}
+
+	float4  xResult = mat0 * sourceVec;
+	float4  yResult = mat1 * sourceVec;
+	float4  zResult = mat2 * sourceVec;
+
+	float4 xResultT = (float4)(xResult.x, yResult.x, zResult.x, 0.0f);
+	float4 yResultT = (float4)(xResult.y, yResult.y, zResult.y, 0.0f);
+	float4 zResultT = (float4)(xResult.z, yResult.z, zResult.z, 0.0f);
+	float4 wResultT = (float4)(xResult.w, yResult.w, zResult.w, 0.0f);
+
+	pOutput[threadIndex] = xResultT + yResultT + zResultT + wResultT;
 
 }

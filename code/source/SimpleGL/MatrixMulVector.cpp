@@ -9,8 +9,12 @@
 
 #define  LocalWorkX		8
 #define  LocalWorkY		8
-
+#if VERIFY_RESULT
+#define  VBO_MAP		0
+#else
 #define  VBO_MAP		1
+#endif
+
 #define  USE_OPENMP		0
 
 /** Performing the transpose of a 4x4 matrix of single precision floating
@@ -465,6 +469,85 @@ void CMatrixMulVector::ExecuteNativeCPP()
 #endif
 }
 
+
+void CMatrixMulVector::ExecuteNativeCPPSimple()
+{
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	float *pDestPos  = _vertexesDynamicRef.pVertex;
+#endif
+
+	float *pBlendWeight = _vertexesStatic.pWeight;
+	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
+	float *blendMatrices =  _joints.pMatrix;
+
+	float *pSrcPos = _vertexesStatic.pVertex;
+
+
+	float sourceVec[3], accumVecPos[3];
+
+	int srcPosStride, destPosStride;
+	srcPosStride = destPosStride = sizeof(float)*4;
+	int blendWeightStride, blendIndexStride;
+	blendWeightStride = sizeof(float) * SIZE_PER_BONE;
+	blendIndexStride = sizeof(unsigned short) * SIZE_PER_BONE;
+
+
+	for(int i=0;i<_vertexesStatic.nSize;i++)
+	{
+		// Load source vertex elements
+		for(int j=0;j<3;j++)
+		{
+			sourceVec[j] = pSrcPos[j];
+			accumVecPos[j] = 0.0f ;
+		}
+
+		for (unsigned short blendIdx = 0; blendIdx < SIZE_PER_BONE; ++blendIdx)
+		{
+			// Blend by multiplying source by blend matrix and scaling by weight
+			// Add to accumulator
+			// NB weights must be normalised!!
+			float weight  = pBlendWeight[ blendIdx ];
+
+			// Blend position, use 3x4 matrix
+			const float* mat = blendMatrices + pBlendIndex[blendIdx]*MATRIX_SIZE_LINE*4;
+			accumVecPos[0] +=
+				(mat[0*4+0] * sourceVec[0] +
+				mat[0*4+1] * sourceVec[1] +
+				mat[0*4+2] * sourceVec[2] +
+				mat[0*4+3])
+				* weight;
+			accumVecPos[1] +=
+				(mat[1*4+0] * sourceVec[0] +
+				mat[1*4+1] * sourceVec[1] +
+				mat[1*4+2] * sourceVec[2] +
+				mat[1*4+3])
+				* weight;
+			accumVecPos[2] +=
+				(mat[2*4+0] * sourceVec[0] +
+				mat[2*4+1] * sourceVec[1] +
+				mat[2*4+2] * sourceVec[2] +
+				mat[2*4+3])
+				* weight;
+
+		}
+		pDestPos[0] = accumVecPos[0];
+		pDestPos[1] = accumVecPos[1];
+		pDestPos[2] = accumVecPos[2];
+
+		advanceRawPointer(pSrcPos, srcPosStride);
+		advanceRawPointer(pDestPos, destPosStride);
+		advanceRawPointer(pBlendWeight, blendWeightStride);
+		advanceRawPointer(pBlendIndex, blendIndexStride);
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
 
 void CMatrixMulVector::ExecuteNativeCPPOMP()
 {

@@ -40,7 +40,6 @@ struct Vertexes{
 #else
 
 #define    VERTEX_VECTOR_SIZE    4
-#define  SIZE_PER_BONE		2
 
 template<typename F>
 struct Vertexes{

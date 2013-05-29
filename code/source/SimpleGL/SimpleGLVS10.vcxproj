@@ -180,6 +180,7 @@ copy SimpleGL.bmp  "$(OUTDIR)"\SimpleGL.bmp</Command>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\TimeCounterEx.h" />
+    <ClInclude Include="definition.h" />
     <ClInclude Include="Joint.h" />
     <ClInclude Include="MatrixMulVector.h" />
     <ClInclude Include="SimpleGL.hpp" />

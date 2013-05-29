@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define    MATRIX_SIZE_LINE    3//3
-#define    VECTOR_FLOAT4    1//3
+#include "definition.h"
 
 //¹Ø½Ú¾ØÕó---------------------------------------------------------
 //typedef float4  Matrix[3];// ¾ØÕó
