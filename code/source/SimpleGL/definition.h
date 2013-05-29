@@ -6,6 +6,6 @@
 #define		VERIFY_RESULT			0
 
 #define    JOINT_SIZE    (1<<6)
-#define  SIZE_PER_BONE   4
+#define  SIZE_PER_BONE   2
 
 #endif

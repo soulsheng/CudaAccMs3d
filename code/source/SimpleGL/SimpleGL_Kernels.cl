@@ -14,7 +14,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************/
 
-#define  SIZE_PER_BONE   4
+#define  SIZE_PER_BONE   2
 #define MATRIX_SIZE_LINE 3
 #define    JOINT_SIZE    (1<<6)
 
@@ -409,40 +409,95 @@ updateVectorByMatrix4OneWeight( const __global float4 *pInput, const __global us
 		pOutput[threadIndex] = xResultT + yResultT + zResultT + wResultT;
 }
 
-
 __kernel void
 updateVectorByMatrix4MultiWeight( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
 						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
 {
-
 	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
 	float4 sourceVec = pInput[threadIndex];
-	sourceVec.w = 1.0f;
 
-	float4 mat0=(float4)(0.0f, 0.0f, 0.0f, 0.0f);
-	float4 mat1=(float4)(0.0f, 0.0f, 0.0f, 0.0f);
-	float4 mat2=(float4)(0.0f, 0.0f, 0.0f, 0.0f);
+	ushort matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex ]*MATRIX_SIZE_LINE;
+	float weight1 = pWeight[ SIZE_PER_BONE*threadIndex ];
+	float4 weight11 = (float4)(weight1, weight1, weight1, weight1);
 
-	for(int i=0; i<SIZE_PER_BONE; i++)
+	float4 mat[3] ;
+	mat[0] = pMatrix[matrixIndex1+0] * weight11; 
+	mat[1] = pMatrix[matrixIndex1+1] * weight11; 
+	mat[2] = pMatrix[matrixIndex1+2] * weight11; 
+	
+
+	for(int i=1; i<SIZE_PER_BONE; i++)
 	{
-		ushort matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex + i]*MATRIX_SIZE_LINE;
-		float weight1 = pWeight[ SIZE_PER_BONE*threadIndex + i ];
-		float4 weight11 = (float4)(weight1, weight1, weight1, weight1);
+		matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex + i]*MATRIX_SIZE_LINE;
+		weight1 = pWeight[ SIZE_PER_BONE*threadIndex + i ];
+		weight11 = (float4)(weight1, weight1, weight1, weight1);
 
-		mat0 += pMatrix[matrixIndex1+0] * weight11;
-		mat1 += pMatrix[matrixIndex1+1] * weight11;
-		mat2 += pMatrix[matrixIndex1+2] * weight11;
+		mat[0] += pMatrix[matrixIndex1+0] * weight11; 
+		mat[1] += pMatrix[matrixIndex1+1] * weight11; 
+		mat[2] += pMatrix[matrixIndex1+2] * weight11; 
 	}
-
-	float4  xResult = mat0 * sourceVec;
-	float4  yResult = mat1 * sourceVec;
-	float4  zResult = mat2 * sourceVec;
+	
+	float4  xResult = mat[0] * sourceVec;
+	float4  yResult = mat[1] * sourceVec;
+	float4  zResult = mat[2] * sourceVec;
 
 	float4 xResultT = (float4)(xResult.x, yResult.x, zResult.x, 0.0f);
 	float4 yResultT = (float4)(xResult.y, yResult.y, zResult.y, 0.0f);
 	float4 zResultT = (float4)(xResult.z, yResult.z, zResult.z, 0.0f);
 	float4 wResultT = (float4)(xResult.w, yResult.w, zResult.w, 0.0f);
-
 	pOutput[threadIndex] = xResultT + yResultT + zResultT + wResultT;
+}
 
+__kernel void
+updateVectorByMatrix4MultiWeightShared( const __global float4 *pInput, const __global ushort *pIndex, __constant  float4 *pMatrix,__global float4 *pOutput
+						,  const __global float *pWeight, __local float4* pMatrixShared, int nSize)
+{
+#if 1
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+
+	size_t localIndex = get_local_id(0) +  get_local_id(1) *get_local_size(0);
+	if( localIndex < JOINT_SIZE )
+	{
+		pMatrixShared[ localIndex*MATRIX_SIZE_LINE ] = pMatrix[ localIndex*MATRIX_SIZE_LINE ];
+		pMatrixShared[ localIndex*MATRIX_SIZE_LINE+1 ] = pMatrix[ localIndex*MATRIX_SIZE_LINE+1 ];
+		pMatrixShared[ localIndex*MATRIX_SIZE_LINE+2 ] = pMatrix[ localIndex*MATRIX_SIZE_LINE+2 ];
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	float4 sourceVec = pInput[threadIndex];
+
+	ushort matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex ]*MATRIX_SIZE_LINE;
+	float weight1 = pWeight[ SIZE_PER_BONE*threadIndex ];
+	float4 weight11 = (float4)(weight1, weight1, weight1, weight1);
+
+	float4 mat[3] ;
+	mat[0] = pMatrixShared[matrixIndex1+0] * weight11; 
+	mat[1] = pMatrixShared[matrixIndex1+1] * weight11; 
+	mat[2] = pMatrixShared[matrixIndex1+2] * weight11; 
+	
+
+	for(int i=1; i<SIZE_PER_BONE; i++)
+	{
+		matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex + i]*MATRIX_SIZE_LINE;
+		weight1 = pWeight[ SIZE_PER_BONE*threadIndex + i ];
+		weight11 = (float4)(weight1, weight1, weight1, weight1);
+
+		mat[0] += pMatrixShared[matrixIndex1+0] * weight11; 
+		mat[1] += pMatrixShared[matrixIndex1+1] * weight11; 
+		mat[2] += pMatrixShared[matrixIndex1+2] * weight11; 
+	}
+	
+	float4  xResult = mat[0] * sourceVec;
+	float4  yResult = mat[1] * sourceVec;
+	float4  zResult = mat[2] * sourceVec;
+
+	float4 xResultT = (float4)(xResult.x, yResult.x, zResult.x, 0.0f);
+	float4 yResultT = (float4)(xResult.y, yResult.y, zResult.y, 0.0f);
+	float4 zResultT = (float4)(xResult.z, yResult.z, zResult.z, 0.0f);
+	float4 wResultT = (float4)(xResult.w, yResult.w, zResult.w, 0.0f);
+	pOutput[threadIndex] = xResultT + yResultT + zResultT + wResultT;
+#else
+	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
+	pOutput[threadIndex] = pInput[threadIndex];
+#endif
 }
