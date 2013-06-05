@@ -908,7 +908,11 @@ bool CMatrixMulVector::ExecuteKernelVBO()
 
 
 	cl_event g_perf_event = NULL;
+#if DEFAULT_LOCAL_SIZE
+	clEnqueueNDRangeKernel(_cmd_queue, _kernel, 2, NULL, globalWorkSize, NULL, 0, NULL, &g_perf_event);
+#else
 	clEnqueueNDRangeKernel(_cmd_queue, _kernel, 2, NULL, globalWorkSize, localWorkSize, 0, NULL, &g_perf_event);
+#endif
 	clWaitForEvents(1, &g_perf_event);
 
 	static bool bRunOnce = false;
@@ -1028,6 +1032,35 @@ void CMatrixMulVector::ExecuteNativeSSEOMPT1()
 #pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++){
 		pDestPos[i] = pSrcPos[i];
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
+
+
+void CMatrixMulVector::ExecuteNativeSSEOMPT2()
+{
+
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	__m128* pDestPos = (__m128*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	__m128 *pDestPos  = (__m128*)_vertexesDynamic.pVertex;
+#endif
+
+	__m128 *pSrcPos = (__m128*)_vertexesStatic.pVertex;
+	__m128 *pSrcMat = (__m128*)_joints.pMatrix;
+
+#pragma omp parallel for
+	for(int i=0;i<_vertexesStatic.nSize;i++){
+		unsigned short matrixIndex = _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE;
+
+		pDestPos[i] = _mm_mul_ps( pSrcPos[i], pSrcMat[matrixIndex]);
+		pDestPos[i] = _mm_add_ps( pDestPos[i], _mm_mul_ps( pSrcPos[i], pSrcMat[matrixIndex+1]) );
+		pDestPos[i] = _mm_add_ps( pDestPos[i], _mm_mul_ps( pSrcPos[i], pSrcMat[matrixIndex+2]) );
 	}
 
 #if  VBO_MAP

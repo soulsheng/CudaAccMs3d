@@ -14,7 +14,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************/
 
-#define  SIZE_PER_BONE   2
+#define  SIZE_PER_BONE   4
 #define MATRIX_SIZE_LINE 3
 #define    JOINT_SIZE    (1<<6)
 
@@ -304,21 +304,9 @@ updateVectorByMatrix4Ideal2( const __global float4 *pInput, const __global ushor
 
 	ushort matrixIndex = pIndex[threadIndex]*MATRIX_SIZE_LINE;
 
-				accumVecPos.x +=
-					(pMatrix[matrixIndex+0].x * sourceVec.x +
-					pMatrix[matrixIndex+0].y * sourceVec.y +
-					pMatrix[matrixIndex+0].z * sourceVec.z +
-					pMatrix[matrixIndex+0].w);
-				accumVecPos.y +=
-					(pMatrix[matrixIndex+1].x * sourceVec.x +
-					pMatrix[matrixIndex+1].y * sourceVec.y +
-					pMatrix[matrixIndex+1].z * sourceVec.z +
-					pMatrix[matrixIndex+1].w) ;
-				accumVecPos.z +=
-					(pMatrix[matrixIndex+2].x * sourceVec.x +
-					pMatrix[matrixIndex+2].y * sourceVec.y +
-					pMatrix[matrixIndex+2].z * sourceVec.z +
-					pMatrix[matrixIndex+2].w) ;
+	accumVecPos = sourceVec * pMatrix[matrixIndex+0];
+	accumVecPos += sourceVec * pMatrix[matrixIndex+1];
+	accumVecPos += sourceVec * pMatrix[matrixIndex+2];
 
 	pOutput[ threadIndex ] = accumVecPos;
 

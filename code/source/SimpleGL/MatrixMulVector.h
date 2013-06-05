@@ -37,6 +37,8 @@ public:
 	void ExecuteNativeCPPOMPT1();
 	void ExecuteNativeSSEOMPT1();
 
+	void ExecuteNativeSSEOMPT2();
+
 	void ExecuteNativeCPPSimple();
 
 	// 验证结果是否正确

@@ -702,6 +702,9 @@ SimpleGLSample::setupCL()
     //Set device info of given cl_device_id
     retValue = deviceInfo.setDeviceInfo(interopDeviceId);
     CHECK_ERROR(retValue, SDK_SUCCESS, "SDKDeviceInfo::setDeviceInfo() failed");
+
+	int  preferredIntVecWidth = deviceInfo.preferredIntVecWidth;
+	std::cout << "CL_DEVICE_PREFERRED_VECTOR_WIDTH_INT = " << preferredIntVecWidth << std::endl;
 #if 0
     // Create Vertex buffer object
     glGenBuffers(1, &vertexObj);
@@ -1068,9 +1071,9 @@ SimpleGLSample::run()
 				int timer = getTimerCurrent(0);
 				resetTimer(timer);
 				startTimer(timer);
-
+#if ENABLE_OCL
                executeKernel();
-
+#endif
 				stopTimer(timer);
 				double dTime = (cl_double)readTimer(timer);
 				insertTimer("1.executeKernelOCL", dTime);
@@ -1081,16 +1084,17 @@ SimpleGLSample::run()
 				startTimer(timer);
 
 #if VERIFY_RESULT
-				mvm.ExecuteNativeCPPSimple();
+				mvm.ExecuteNativeCPP();
 #endif
 
 #if !GLSL_4CPP
 
+#if  !ENABLE_OCL
 				//mvm.ExecuteNativeCPPOMP();
 
-				//mvm.ExecuteNativeSSEOMP();
+				mvm.ExecuteNativeSSEOMPT2();
 				//mvm.ExecuteNativeSSE();
-
+#endif
 #endif
 				stopTimer(timer);
 				dTime = (cl_double)readTimer(timer);
