@@ -404,8 +404,11 @@ updateVectorByMatrix4MultiWeight( const __global float4 *pInput, const __global 
 	size_t threadIndex = get_global_id(0) + get_global_id(1) *get_global_size(0);
 	float4 sourceVec = pInput[threadIndex];
 
-	ushort matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex ]*MATRIX_SIZE_LINE;
-	float weight1 = pWeight[ SIZE_PER_BONE*threadIndex ];
+	__global float *pBlendWeight = pWeight + threadIndex*SIZE_PER_BONE;
+	__global ushort* pBlendIndex = pIndex + threadIndex*SIZE_PER_BONE;
+
+	ushort matrixIndex1 = pBlendIndex[0 ]*MATRIX_SIZE_LINE;
+	float weight1 = pBlendWeight[ 0 ];
 	float4 weight11 = (float4)(weight1, weight1, weight1, weight1);
 
 	float4 mat[3] ;
@@ -416,8 +419,8 @@ updateVectorByMatrix4MultiWeight( const __global float4 *pInput, const __global 
 
 	for(int i=1; i<SIZE_PER_BONE; i++)
 	{
-		matrixIndex1 = pIndex[SIZE_PER_BONE*threadIndex + i]*MATRIX_SIZE_LINE;
-		weight1 = pWeight[ SIZE_PER_BONE*threadIndex + i ];
+		matrixIndex1 = pBlendIndex[ i]*MATRIX_SIZE_LINE;
+		weight1 = pBlendWeight[  i ];
 		weight11 = (float4)(weight1, weight1, weight1, weight1);
 
 		mat[0] += pMatrix[matrixIndex1+0] * weight11; 

@@ -1092,7 +1092,7 @@ SimpleGLSample::run()
 #if  !ENABLE_OCL
 				//mvm.ExecuteNativeCPPOMP();
 
-				mvm.ExecuteNativeSSEOMPT2();
+				mvm.ExecuteNativeSSEOMP();
 				//mvm.ExecuteNativeSSE();
 #endif
 #endif
