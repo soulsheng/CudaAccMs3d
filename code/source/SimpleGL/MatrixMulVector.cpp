@@ -243,6 +243,131 @@
     }
 
 
+
+/// Calculate multiply of two vector and plus another vector
+__m128 MM_MADD_PS(__m128 a, __m128 b, __m128 c)                                                      
+{
+	return _mm_add_ps(_mm_mul_ps(a, b), c);
+}
+
+/// Linear interpolation
+__m128 MM_LERP_PS(__m128 t, __m128 a, __m128 b)                                                      
+{
+	return MM_MADD_PS(_mm_sub_ps(b, a), t, a);
+}
+
+void LOAD_MATRIX(__m128*row0, __m128*row1, __m128*row2, float *pMatrix)                        
+	{                                                                   
+	*row0 = *(__m128*)(pMatrix);                             
+	*row1 = *(__m128*)(pMatrix+4);                             
+	*row2 = *(__m128*)(pMatrix+8);                             
+	}
+
+void LERP_MATRIX(__m128*row0, __m128*row1, __m128*row2, __m128 *weight, float *pMatrix)                
+	{                                                                   
+	*row0 = MM_LERP_PS(*weight, *row0, *(__m128*)(pMatrix)); 
+	*row1 = MM_LERP_PS(*weight, *row1, *(__m128*)(pMatrix+4)); 
+	*row2 = MM_LERP_PS(*weight, *row2, *(__m128*)(pMatrix+8)); 
+	}
+
+void LOAD_WEIGHTED_MATRIX(__m128*row0, __m128*row1, __m128*row2, __m128 *weight, float *pMatrix)       
+	{                                                                   
+	*row0 = _mm_mul_ps(*(__m128*)(pMatrix), *weight);         
+	*row1 = _mm_mul_ps(*(__m128*)(pMatrix+4), *weight);         
+	*row2 = _mm_mul_ps(*(__m128*)(pMatrix+8), *weight);         
+	}
+
+void ACCUM_WEIGHTED_MATRIX(__m128*row0, __m128*row1, __m128*row2, __m128 *weight, float *pMatrix)      
+	{                                                                   
+	*row0 = MM_MADD_PS(*(__m128*)(pMatrix), *weight, *row0); 
+	*row1 = MM_MADD_PS(*(__m128*)(pMatrix+4), *weight, *row1); 
+	*row2 = MM_MADD_PS(*(__m128*)(pMatrix+8), *weight, *row2); 
+	}
+
+void  COLLAPSE_MATRIX_W1(__m128*row0, __m128*row1, __m128*row2, float *ppMatrices, unsigned short *pIndices, float *pWeights)  
+	{                                                                           
+		float * pMatrix0;               
+	pMatrix0 = ppMatrices +pIndices[0]*MATRIX_SIZE_LINE*4;                                  
+	LOAD_MATRIX(row0, row1, row2, pMatrix0);                             
+	}
+
+void  COLLAPSE_MATRIX_W2(__m128*row0, __m128*row1, __m128*row2, float *ppMatrices, unsigned short *pIndices, float *pWeights) 
+    {                                                                          
+		__m128 weight = _mm_load_ps1(pWeights + 1);                                   
+		float * pMatrix0, *pMatrix1;               
+        pMatrix0 = ppMatrices +pIndices[0]*MATRIX_SIZE_LINE*4;                                    
+        LOAD_MATRIX(row0, row1, row2, pMatrix0);                              
+        pMatrix1 = ppMatrices +pIndices[1]*MATRIX_SIZE_LINE*4;                                    
+        LERP_MATRIX(row0, row1, row2, &weight, pMatrix1);                      
+    }
+
+/** Collapse three-weighted matrix.
+*/
+void  COLLAPSE_MATRIX_W3(__m128*row0, __m128*row1, __m128*row2, float *ppMatrices, unsigned short *pIndices, float *pWeights)  
+    {                                                                           
+        __m128 weight = _mm_load_ps1(pWeights + 0);                                    
+		float * pMatrix0, *pMatrix1, *pMatrix2;               
+        pMatrix0 = ppMatrices + pIndices[0]*MATRIX_SIZE_LINE*4;                                     
+        LOAD_WEIGHTED_MATRIX(row0, row1, row2, &weight, pMatrix0);             
+        weight = _mm_load_ps1(pWeights + 1);                                    
+        pMatrix1 = ppMatrices + pIndices[1]*MATRIX_SIZE_LINE*4;                                    
+        ACCUM_WEIGHTED_MATRIX(row0, row1, row2, &weight, pMatrix1);           
+        weight = _mm_load_ps1(pWeights + 2);                                   
+        pMatrix2 = ppMatrices + pIndices[2]*MATRIX_SIZE_LINE*4;                                     
+        ACCUM_WEIGHTED_MATRIX(row0, row1, row2, &weight, pMatrix2);            
+    }
+
+/** Collapse four-weighted matrix.
+*/
+void COLLAPSE_MATRIX_W4(__m128*row0, __m128*row1, __m128*row2, float *ppMatrices, unsigned short *pIndices, float *pWeights)  
+    {                                                                           
+        /* Load four blend weights at one time, they will be shuffled later */  
+        __m128 weights = _mm_loadu_ps(pWeights);                                       
+                                                                                
+		float * pMatrix0, *pMatrix1, *pMatrix2, *pMatrix3;               
+        pMatrix0 = ppMatrices + pIndices[0]*MATRIX_SIZE_LINE*4;                                     
+         __m128 weight = __MM_SELECT(weights, 0);                                      
+        LOAD_WEIGHTED_MATRIX(row0, row1, row2, &weight, pMatrix0);             
+        pMatrix1 = ppMatrices + pIndices[1]*MATRIX_SIZE_LINE*4;                                    
+        weight = __MM_SELECT(weights, 1);                                       
+        ACCUM_WEIGHTED_MATRIX(row0, row1, row2, &weight, pMatrix1);            
+        pMatrix2 = ppMatrices + pIndices[2]*MATRIX_SIZE_LINE*4;                                    
+        weight = __MM_SELECT(weights, 2);                                       
+        ACCUM_WEIGHTED_MATRIX(row0, row1, row2, &weight, pMatrix2);           
+        pMatrix3 = ppMatrices + pIndices[3]*MATRIX_SIZE_LINE*4;                                     
+        weight = __MM_SELECT(weights, 3);                                      
+        ACCUM_WEIGHTED_MATRIX(row0, row1, row2, &weight, pMatrix3);            
+    }
+
+void collapseOneMatrix( __m128* m00, __m128*m01, __m128*m02,                                                     
+	float *pBlendWeight, unsigned short *pBlendIndex,                                             
+	float *blendMatrices,                                                         
+	int blendWeightStride, int blendIndexStride,                                    
+	int numWeightsPerVertex)                                                   
+	{                                                                           
+	/* Important Note: If reuse pMatrixXXX frequently, M$ VC7.1 will */    
+	/* generate wrong code here!!!                                   */    
+				unsigned short matrixIndex1 = pBlendIndex[0 ]*MATRIX_SIZE_LINE*4;
+
+				__m128 weight = _mm_load_ps1(pBlendWeight);                                   
+
+				* m00 = _mm_mul_ps( *(__m128*)(blendMatrices+matrixIndex1+0) , weight ); 
+				* m01 = _mm_mul_ps( *(__m128*)(blendMatrices+matrixIndex1+4) , weight ); 
+				* m02 = _mm_mul_ps( *(__m128*)(blendMatrices+matrixIndex1+8) , weight ); 
+
+
+				for(int i=1; i<SIZE_PER_BONE; i++)
+				{
+					matrixIndex1 = pBlendIndex[ i ]*MATRIX_SIZE_LINE*4;
+					weight = _mm_load_ps1(pBlendWeight+i);  
+
+					* m00 = _mm_add_ps( _mm_mul_ps( *(__m128*)(blendMatrices+matrixIndex1+0) ,  weight ),  * m00 );
+					* m01 = _mm_add_ps( _mm_mul_ps( *(__m128*)(blendMatrices+matrixIndex1+4) ,  weight ),  * m01 ); 
+					* m02 = _mm_add_ps( _mm_mul_ps( *(__m128*)(blendMatrices+matrixIndex1+8) ,  weight ),  * m02 );
+				}
+		
+	}
+
 void CMatrixMulVector::ExecuteNativeSSE()
 {
 #if  VBO_MAP
@@ -267,7 +392,7 @@ void CMatrixMulVector::ExecuteNativeSSE()
 //#pragma omp parallel for
 	for(int i=0;i<_vertexesStatic.nSize;i++){
 		// 读取操作数：顶点对应的矩阵
-
+#if 0
 		__m128 m00, m01, m02;
 		_collapseOneMatrix(
 			m00, m01, m02,
@@ -275,7 +400,15 @@ void CMatrixMulVector::ExecuteNativeSSE()
 			blendMatrices,
 			0, 0,
 			SIZE_PER_BONE);
-
+#else
+		__m128 m00, m01, m02;
+		collapseOneMatrix(
+			&m00, &m01, &m02,
+			pBlendWeight, pBlendIndex,
+			blendMatrices,
+			0, 0,
+			SIZE_PER_BONE);
+#endif
 		// Advance blend weight and index pointers
 		advanceRawPointer(pBlendWeight, blendWeightStride );
 		advanceRawPointer(pBlendIndex, blendIndexStride );
@@ -330,6 +463,7 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 		float *pBlendWeight = _vertexesStatic.pWeight + i*SIZE_PER_BONE;
 		unsigned short* pBlendIndex = _vertexesStatic.pIndex + i*SIZE_PER_BONE;
 
+#if 0
 		__m128 m00, m01, m02;
 		_collapseOneMatrix(
 			m00, m01, m02,
@@ -337,7 +471,15 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 			blendMatrices,
 			0, 0,
 			SIZE_PER_BONE);
-
+#else
+		__m128 m00, m01, m02;
+		collapseOneMatrix(
+			&m00, &m01, &m02,
+			pBlendWeight, pBlendIndex,
+			blendMatrices,
+			0, 0,
+			SIZE_PER_BONE);
+#endif
 		//------------------------------------------------------------------
 
 		// Rearrange to column-major matrix with rows shuffled order to: Z 0 X Y
