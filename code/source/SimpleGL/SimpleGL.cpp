@@ -1064,24 +1064,9 @@ SimpleGLSample::run()
 
                 // OpenGL animation code goes here		
 
-                t1 = clock() * CLOCKS_PER_SEC;
-                frameCount++;
-
-                // run OpenCL kernel to generate vertex positions
-				int timer = getTimerCurrent(0);
-				resetTimer(timer);
-				startTimer(timer);
 #if ENABLE_OCL
                executeKernel();
 #endif
-				stopTimer(timer);
-				double dTime = (cl_double)readTimer(timer);
-				insertTimer("1.executeKernelOCL", dTime);
-
-				// run CPP kernel to generate vertex positions
-				timer = getTimerCurrent(0);
-				resetTimer(timer);
-				startTimer(timer);
 
 #if VERIFY_RESULT
 				mvm.ExecuteNativeCPP();
@@ -1096,9 +1081,6 @@ SimpleGLSample::run()
 				//mvm.ExecuteNativeSSE();
 #endif
 #endif
-				stopTimer(timer);
-				dTime = (cl_double)readTimer(timer);
-				insertTimer("2.executeKernelCPP", dTime);
 
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1108,9 +1090,7 @@ SimpleGLSample::run()
                 glTranslatef(0.0, 0.0, translateZ);
                 glRotatef(rotateX, 1.0, 0.0, 0.0);
                 glRotatef(rotateY, 0.0, 1.0, 0.0);
-#if 1
-				resetTimer(timer);
-				startTimer(timer);
+
 
 #if GLSL_4CPP
 				glUniform1i( _locationUniform[1], SIZE_PER_BONE );
@@ -1124,36 +1104,11 @@ SimpleGLSample::run()
 
                 SwapBuffers(gHdc);
 
-				stopTimer(timer);
-				dTime = (cl_double)readTimer(timer);
-				insertTimer("2.render", dTime);
-#endif
-                t2 = clock() * CLOCKS_PER_SEC;
-                totalElapsedTime += (double)(t2 - t1);
-                if(1&&frameCount && frameCount > frameRefCount)
-                {
-
-                    // set  Window Title
-                    char title[256];
-                    double fMs = (double)((totalElapsedTime / (double)CLOCKS_PER_SEC) / (double) frameCount);
-                    int framesPerSec = (int)(1.0 / (fMs / CLOCKS_PER_SEC));
-            #if defined (_WIN32) && !defined(__MINGW32__)
-                    sprintf_s(title, 256, "OpenCL SimpleGL | %d fps : %lf s", framesPerSec, fMs/ CLOCKS_PER_SEC);
-            #else 
-                    sprintf(title, "OpenCL SimpleGL | %d fps ", framesPerSec);
-            #endif
-                    SetWindowText(gHwnd, title);
-                    frameCount = 0;
-                    totalElapsedTime = 0.0;
-                }
-
-                animate += 0.01f;
-
 				stopTimer(timer1);
 				double dTime1 = (cl_double)readTimer(timer1);
 				insertTimer("run", dTime1);
             }
-            
+           
         }
 #else 
     // OpenGL animation code goes here              
@@ -1445,10 +1400,45 @@ SimpleGLSample::~SimpleGLSample()
 
 void SimpleGLSample::printfTimer()
 {
-	for (TimerListItr itr=_timeValueList.begin(); itr!=_timeValueList.end(); itr++)
+	double dAverageTime = 0.0f;
+	double dMeanSquareError = 0.0f;
+	int    nItem = 0;
+	double dMax = 0.0f;
+	double dMin = 1000.0f;
+	std::vector<double> dValidTimeVec;
+
+	for (TimerListItr itr=_timeValueList.begin(); itr!=_timeValueList.end(); itr++,nItem++)
 	{
 		std::cout << itr->first << ":  " << itr->second << std::endl;
+		if ( nItem >= 10 && nItem < _timeValueList.size() - 10 )
+		{
+			dValidTimeVec.push_back(itr->second);
+
+			if ( dMax < itr->second )
+			{
+				dMax = itr->second ;
+			}
+
+			if ( dMin > itr->second )
+			{
+				dMin = itr->second ;
+			}
+		}
 	}
+
+	for (int i=0; i<dValidTimeVec.size(); i++)
+	{
+		dAverageTime += dValidTimeVec[i];
+	}
+
+	for (int i=0; i<dValidTimeVec.size(); i++)
+	{
+		dMeanSquareError += (dValidTimeVec[i] - dAverageTime)*(dValidTimeVec[i] - dAverageTime);
+	}
+
+	std::cout << "AverageTime is: " << dAverageTime/dValidTimeVec.size() << std::endl;
+	std::cout << "MaxTime is: " << dMax  << ", MinTime is: " << dMin<< std::endl ;
+	std::cout << "MeanSquareError is: " << sqrtl(dMeanSquareError/dValidTimeVec.size() ) << std::endl ;
 	std::cout << std::endl;
 }
 
@@ -1488,16 +1478,8 @@ main(int argc, char* argv[])
     if(status != SDK_SUCCESS)
         return (status == SDK_EXPECTED_FAILURE) ? SDK_SUCCESS : SDK_FAILURE;
 
-	int timer = glSampleObj.getTimerCurrent();
-	glSampleObj.resetTimer(timer);
-	glSampleObj.startTimer(timer);
-
 	if (glSampleObj.run() != SDK_SUCCESS)
 		return SDK_FAILURE;
-
-	glSampleObj.stopTimer(timer);
-	double dTime = (cl_double)glSampleObj.readTimer(timer);
-	glSampleObj.insertTimer("run", dTime);
 
 #ifdef _WIN32
     glSampleObj.disableGL(gHwnd, gHdc, gGlCtx);
