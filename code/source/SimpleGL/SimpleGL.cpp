@@ -1400,17 +1400,17 @@ void SimpleGLSample::printfTimer()
 	double dMax = 0.0f;
 	double dMin = 100.0f;
 	std::vector<double> dValidTimeVec;
-
+	double dLast = 100.0f;
 	for (TimerListItr itr=_timeValueList.begin(); itr!=_timeValueList.end(); itr++,nItem++)
 	{
 		std::cout << itr->first << ":  " << itr->second << std::endl;
 		if ( nItem >= 100 )
 		{
-			if ( dMax > 2*itr->second*1000 )
+			if ( 1.5f*dLast < itr->second )
 			{
 				continue;
 			}
-
+			dLast = itr->second;
 			dValidTimeVec.push_back(itr->second*1000);
 
 			if ( dMax < itr->second*1000 )
