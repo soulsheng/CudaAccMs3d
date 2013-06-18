@@ -58,9 +58,6 @@ int frameCount = 0;
 int frameRefCount = 90;
 double totalElapsedTime = 0.0;
 
-#define		GLSL_4CPP				0// GLSL replace cpp
-
-#define    MEGA_SIZE     (1<<20)  // Mega, or million
 
 float    PROBLEM_SCALE[] ={ 0.25f, 0.5f, 1, 2, 4, 8, 16, 32 }; // 问题规模档次，8档，250K至32M，2倍递增
 int    PROBLEM_SIZE  = MEGA_SIZE * PROBLEM_SCALE[2] ;// 问题规模, 初始设为1M，即一百万
@@ -1064,23 +1061,20 @@ SimpleGLSample::run()
 
                 // OpenGL animation code goes here		
 
-#if ENABLE_OCL
-               executeKernel();
-#endif
+	#if VERIFY_RESULT
+				   mvm.ExecuteNativeCPP();
+	#endif
 
-#if VERIFY_RESULT
-				mvm.ExecuteNativeCPP();
-#endif
+	#if ENABLE_OCL
+			#if !TIME_RENDER_ONLY
+				   executeKernel();
+			#endif
+	#else
+					//mvm.ExecuteNativeCPPOMP();
 
-#if !GLSL_4CPP
-
-#if  !ENABLE_OCL
-				//mvm.ExecuteNativeCPPOMP();
-
-				mvm.ExecuteNativeSSEOMP();
-				//mvm.ExecuteNativeSSE();
-#endif
-#endif
+					mvm.ExecuteNativeSSEOMP();
+					//mvm.ExecuteNativeSSE();
+	#endif
 
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

@@ -1048,6 +1048,7 @@ bool CMatrixMulVector::ExecuteKernelVBO()
 	// Acquire GL buffer
 	clEnqueueAcquireGLObjects(_cmd_queue, 1, &g_pfOCLOutputBuffer, 0, 0, NULL);
 
+#if  !TIME_RENDER_MAP
 
 	cl_event g_perf_event = NULL;
 #if DEFAULT_LOCAL_SIZE
@@ -1064,6 +1065,7 @@ bool CMatrixMulVector::ExecuteKernelVBO()
 		bRunOnce = true;
 	}
 	
+#endif
 
 	// Release GL buffer
 	clEnqueueReleaseGLObjects(_cmd_queue, 1, &g_pfOCLOutputBuffer, 0, 0, 0);

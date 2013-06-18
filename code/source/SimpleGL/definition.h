@@ -12,4 +12,11 @@
 
 #define  ENABLE_OCL   1
 
+#define  TIME_RENDER_ONLY   0
+#define  TIME_RENDER_MAP	1
+
+#define		GLSL_4CPP				0// GLSL replace cpp
+
+#define    MEGA_SIZE     (1<<20)  // Mega, or million
+
 #endif
