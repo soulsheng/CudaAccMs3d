@@ -377,6 +377,8 @@ void CMatrixMulVector::ExecuteNativeSSE()
 	float *pDestPos  = _vertexesDynamic.pVertex;
 #endif
 
+#if  !TIME_RENDER_MAP
+
 	float *pBlendWeight = _vertexesStatic.pWeight;
 	unsigned short* pBlendIndex = _vertexesStatic.pIndex;
 	float *blendMatrices =  _joints.pMatrix;
@@ -437,6 +439,8 @@ void CMatrixMulVector::ExecuteNativeSSE()
 	}
 #endif
 
+#endif
+
 #if  VBO_MAP
 	glUnmapBuffer( GL_ARRAY_BUFFER );
 	glBindBuffer( GL_ARRAY_BUFFER, NULL );
@@ -451,6 +455,8 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 #else
 	float *pDestPos  = _vertexesDynamic.pVertex;
 #endif
+
+#if  !TIME_RENDER_MAP
 
 	float *blendMatrices =  _joints.pMatrix;
 
@@ -499,6 +505,8 @@ void CMatrixMulVector::ExecuteNativeSSEOMP()
 		_mm_storeh_pi((__m64*)(&pDestPos[i*4+0]) , vO);
 		_mm_store_ss(&pDestPos[i*4+2], vO);
 	}
+
+#endif
 
 
 #if  VBO_MAP
@@ -691,6 +699,83 @@ void CMatrixMulVector::ExecuteNativeCPPSimple()
 #endif
 }
 
+
+void CMatrixMulVector::ExecuteNativeCPPSimpleOMP()
+{
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	float *pDestPos  = _vertexesDynamicRef.pVertex;
+#endif
+
+	float *pBlendWeight = _vertexesStatic.pWeight;
+	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
+	float *blendMatrices =  _joints.pMatrix;
+
+	float *pSrcPos = _vertexesStatic.pVertex;
+
+
+
+	int srcPosStride, destPosStride;
+	srcPosStride = destPosStride = sizeof(float)*4;
+	int blendWeightStride, blendIndexStride;
+	blendWeightStride = sizeof(float) * SIZE_PER_BONE;
+	blendIndexStride = sizeof(unsigned short) * SIZE_PER_BONE;
+
+
+#pragma omp parallel for
+	for(int i=0;i<_vertexesStatic.nSize;i++)
+	{
+		float sourceVec[3], accumVecPos[3];
+
+		// Load source vertex elements
+		for(int j=0;j<3;j++)
+		{
+			sourceVec[j] = pSrcPos[j+4*i];
+			accumVecPos[j] = 0.0f ;
+		}
+
+		for (unsigned short blendIdx = 0; blendIdx < SIZE_PER_BONE; ++blendIdx)
+		{
+			// Blend by multiplying source by blend matrix and scaling by weight
+			// Add to accumulator
+			// NB weights must be normalised!!
+			float weight  = pBlendWeight[ i*SIZE_PER_BONE +blendIdx ];
+
+			// Blend position, use 3x4 matrix
+			const float* mat = blendMatrices + pBlendIndex[i*SIZE_PER_BONE +blendIdx]*MATRIX_SIZE_LINE*4;
+			accumVecPos[0] +=
+				(mat[0*4+0] * sourceVec[0] +
+				mat[0*4+1] * sourceVec[1] +
+				mat[0*4+2] * sourceVec[2] +
+				mat[0*4+3])
+				* weight;
+			accumVecPos[1] +=
+				(mat[1*4+0] * sourceVec[0] +
+				mat[1*4+1] * sourceVec[1] +
+				mat[1*4+2] * sourceVec[2] +
+				mat[1*4+3])
+				* weight;
+			accumVecPos[2] +=
+				(mat[2*4+0] * sourceVec[0] +
+				mat[2*4+1] * sourceVec[1] +
+				mat[2*4+2] * sourceVec[2] +
+				mat[2*4+3])
+				* weight;
+
+		}
+		pDestPos[0+4*i] = accumVecPos[0];
+		pDestPos[1+4*i] = accumVecPos[1];
+		pDestPos[2+4*i] = accumVecPos[2];
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
+
 void CMatrixMulVector::ExecuteNativeCPPOMP()
 {
 #if  VBO_MAP
@@ -699,6 +784,8 @@ void CMatrixMulVector::ExecuteNativeCPPOMP()
 #else
 	float *pDestPos  = _vertexesDynamic.pVertex;
 #endif
+
+#if  !TIME_RENDER_MAP
 
 	float *pBlendWeight = _vertexesStatic.pWeight;
 	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
@@ -779,6 +866,8 @@ void CMatrixMulVector::ExecuteNativeCPPOMP()
 		pDestPos[1+4*i] = accumVecPos[1];
 		pDestPos[2+4*i] = accumVecPos[2];
 	}
+
+#endif
 
 #if  VBO_MAP
 	glUnmapBuffer( GL_ARRAY_BUFFER );

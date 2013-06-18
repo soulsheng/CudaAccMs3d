@@ -40,6 +40,7 @@ public:
 	void ExecuteNativeSSEOMPT2();
 
 	void ExecuteNativeCPPSimple();
+	void ExecuteNativeCPPSimpleOMP();
 
 	// 验证结果是否正确
 	bool verifyEqual();

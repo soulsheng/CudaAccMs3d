@@ -1065,16 +1065,16 @@ SimpleGLSample::run()
 				   mvm.ExecuteNativeCPP();
 	#endif
 
+#if !TIME_RENDER_ONLY
 	#if ENABLE_OCL
-			#if !TIME_RENDER_ONLY
 				   executeKernel();
-			#endif
 	#else
 					//mvm.ExecuteNativeCPPOMP();
 
-					mvm.ExecuteNativeSSEOMP();
 					//mvm.ExecuteNativeSSE();
+					mvm.ExecuteNativeCPPSimpleOMP();
 	#endif
+#endif
 
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1398,24 +1398,29 @@ void SimpleGLSample::printfTimer()
 	double dMeanSquareError = 0.0f;
 	int    nItem = 0;
 	double dMax = 0.0f;
-	double dMin = 1000.0f;
+	double dMin = 100.0f;
 	std::vector<double> dValidTimeVec;
 
 	for (TimerListItr itr=_timeValueList.begin(); itr!=_timeValueList.end(); itr++,nItem++)
 	{
 		std::cout << itr->first << ":  " << itr->second << std::endl;
-		if ( nItem >= 10 && nItem < _timeValueList.size() - 10 )
+		if ( nItem >= 100 )
 		{
-			dValidTimeVec.push_back(itr->second);
-
-			if ( dMax < itr->second )
+			if ( dMax > 2*itr->second*1000 )
 			{
-				dMax = itr->second ;
+				continue;
 			}
 
-			if ( dMin > itr->second )
+			dValidTimeVec.push_back(itr->second*1000);
+
+			if ( dMax < itr->second*1000 )
 			{
-				dMin = itr->second ;
+				dMax = itr->second*1000 ;
+			}
+
+			if ( dMin > itr->second*1000 )
+			{
+				dMin = itr->second*1000 ;
 			}
 		}
 	}
@@ -1424,13 +1429,14 @@ void SimpleGLSample::printfTimer()
 	{
 		dAverageTime += dValidTimeVec[i];
 	}
+	dAverageTime /= dValidTimeVec.size();
 
 	for (int i=0; i<dValidTimeVec.size(); i++)
 	{
 		dMeanSquareError += (dValidTimeVec[i] - dAverageTime)*(dValidTimeVec[i] - dAverageTime);
 	}
 
-	std::cout << "AverageTime is: " << dAverageTime/dValidTimeVec.size() << std::endl;
+	std::cout << "AverageTime is: " << std::setprecision(3) << dAverageTime << std::endl;
 	std::cout << "MaxTime is: " << dMax  << ", MinTime is: " << dMin<< std::endl ;
 	std::cout << "MeanSquareError is: " << sqrtl(dMeanSquareError/dValidTimeVec.size() ) << std::endl ;
 	std::cout << std::endl;
@@ -1438,7 +1444,7 @@ void SimpleGLSample::printfTimer()
 
 void SimpleGLSample::insertTimer( std::string item, double time)
 {
-	if ( _timeValueList.size()>100 )
+	if ( _timeValueList.size()>200 )
 	{
 		return;
 	}
