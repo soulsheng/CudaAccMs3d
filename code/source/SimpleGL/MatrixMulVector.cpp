@@ -1301,3 +1301,114 @@ void CMatrixMulVector::ExecuteNativeSSEOMPT2()
 	glBindBuffer( GL_ARRAY_BUFFER, NULL );
 #endif
 }
+
+void CMatrixMulVector::ExecuteNativeSSET2()
+{
+
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	__m128* pDestPos = (__m128*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	__m128 *pDestPos  = (__m128*)_vertexesDynamic.pVertex;
+#endif
+
+	__m128 *pSrcPos = (__m128*)_vertexesStatic.pVertex;
+	__m128 *pSrcMat = (__m128*)_joints.pMatrix;
+
+	for(int i=0;i<_vertexesStatic.nSize;i++){
+		unsigned short matrixIndex = _vertexesStatic.pIndex[i]*MATRIX_SIZE_LINE;
+
+		pDestPos[i] = _mm_mul_ps( pSrcPos[i], pSrcMat[matrixIndex]);
+		pDestPos[i] = _mm_add_ps( pDestPos[i], _mm_mul_ps( pSrcPos[i], pSrcMat[matrixIndex+1]) );
+		pDestPos[i] = _mm_add_ps( pDestPos[i], _mm_mul_ps( pSrcPos[i], pSrcMat[matrixIndex+2]) );
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
+
+
+void CMatrixMulVector::ExecuteNativeCPPT2()
+{
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	float *pDestPos  = _vertexesDynamicRef.pVertex;
+#endif
+
+	float *pSrcPos = _vertexesStatic.pVertex;
+	float *blendMatrices =  _joints.pMatrix;
+	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
+
+
+	for(int i=0;i<_vertexesStatic.nSize*4;i+=4)
+	{
+		//pDestPos[i] = pSrcPos[i];
+		const float* mat = blendMatrices + pBlendIndex[i];
+		pDestPos[i] =
+			(mat[0*4+0] * pSrcPos[i+0] +
+			mat[0*4+1] * pSrcPos[i+1] +
+			mat[0*4+2] * pSrcPos[i+2] +
+			mat[0*4+3]);
+		pDestPos[i+1] =
+			(mat[1*4+0] * pSrcPos[i+0] +
+			mat[1*4+1] * pSrcPos[i+1] +
+			mat[1*4+2] * pSrcPos[i+2] +
+			mat[1*4+3]);
+		pDestPos[i+2] +=
+			(mat[2*4+0] * pSrcPos[i+0] +
+			mat[2*4+1] * pSrcPos[i+1] +
+			mat[2*4+2] * pSrcPos[i+2] +
+			mat[2*4+3]);
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}
+
+void CMatrixMulVector::ExecuteNativeCPPOMPT2()
+{
+#if  VBO_MAP
+	glBindBuffer( GL_ARRAY_BUFFER, vertexObj[0] );
+	float* pDestPos = (float*)glMapBuffer( GL_ARRAY_BUFFER, GL_READ_WRITE );
+#else
+	float *pDestPos  = _vertexesDynamicRef.pVertex;
+#endif
+
+	float *pSrcPos = _vertexesStatic.pVertex;
+	float *blendMatrices =  _joints.pMatrix;
+	cl_ushort* pBlendIndex = _vertexesStatic.pIndex;
+
+
+#pragma omp parallel for
+	for(int i=0;i<_vertexesStatic.nSize*4;i+=4)
+	{
+		//pDestPos[i] = pSrcPos[i];
+		const float* mat = blendMatrices + pBlendIndex[i];
+		pDestPos[i] =
+			(mat[0*4+0] * pSrcPos[i+0] +
+			mat[0*4+1] * pSrcPos[i+1] +
+			mat[0*4+2] * pSrcPos[i+2] +
+			mat[0*4+3]);
+		pDestPos[i+1] =
+			(mat[1*4+0] * pSrcPos[i+0] +
+			mat[1*4+1] * pSrcPos[i+1] +
+			mat[1*4+2] * pSrcPos[i+2] +
+			mat[1*4+3]);
+		pDestPos[i+2] +=
+			(mat[2*4+0] * pSrcPos[i+0] +
+			mat[2*4+1] * pSrcPos[i+1] +
+			mat[2*4+2] * pSrcPos[i+2] +
+			mat[2*4+3]);
+	}
+
+#if  VBO_MAP
+	glUnmapBuffer( GL_ARRAY_BUFFER );
+	glBindBuffer( GL_ARRAY_BUFFER, NULL );
+#endif
+}

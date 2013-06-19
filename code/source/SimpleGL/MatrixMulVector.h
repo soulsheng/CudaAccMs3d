@@ -37,6 +37,9 @@ public:
 	void ExecuteNativeCPPOMPT1();
 	void ExecuteNativeSSEOMPT1();
 
+	void ExecuteNativeCPPT2();
+	void ExecuteNativeSSET2();
+	void ExecuteNativeCPPOMPT2();
 	void ExecuteNativeSSEOMPT2();
 
 	void ExecuteNativeCPPSimple();

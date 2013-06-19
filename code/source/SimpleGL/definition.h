@@ -13,7 +13,7 @@
 #define  ENABLE_OCL   1
 
 #define  TIME_RENDER_ONLY   0
-#define  TIME_RENDER_MAP	1
+#define  TIME_RENDER_MAP	0
 
 #define		GLSL_4CPP				0// GLSL replace cpp
 
